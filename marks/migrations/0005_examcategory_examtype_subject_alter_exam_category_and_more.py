@@ -157,51 +157,11 @@ class Migration(migrations.Migration):
             field=models.ForeignKey(null=True, on_delete=django.db.models.deletion.CASCADE, to='marks.subject'),
         ),
 
-        # Create lookup rows from the legacy strings and point every row at the right FK
+        # Create lookup rows from the legacy strings and point every row at the right FK.
+        # NOTE: the "drop old columns / tighten to non-null" steps live in the NEXT
+        # migration (0005a) on purpose. Postgres refuses to ALTER TABLE a table that
+        # had rows UPDATEd (via this RunPython) earlier in the *same* transaction
+        # ("cannot ALTER TABLE ... because it has pending trigger events"). Splitting
+        # across a migration boundary guarantees a real COMMIT happens in between.
         migrations.RunPython(backfill_fk_data, noop_reverse),
-
-        # Drop the old string columns now that data has been migrated
-        migrations.RemoveField(model_name='exam', name='category_old'),
-        migrations.RemoveField(model_name='exam', name='exam_type_old'),
-        migrations.RemoveField(model_name='examsubjectmaxmark', name='subject_old'),
-        migrations.RemoveField(model_name='mark', name='subject_old'),
-
-        # Tighten the new FK fields to match the real model (not nullable)
-        migrations.AlterField(
-            model_name='exam',
-            name='category',
-            field=models.ForeignKey(help_text='Decides which subjects appear on the marks entry screen.', on_delete=django.db.models.deletion.CASCADE, to='marks.examcategory'),
-        ),
-        migrations.AlterField(
-            model_name='exam',
-            name='exam_type',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='marks.examtype'),
-        ),
-        migrations.AlterField(
-            model_name='examsubjectmaxmark',
-            name='subject',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='marks.subject'),
-        ),
-        migrations.AlterField(
-            model_name='mark',
-            name='subject',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='marks.subject'),
-        ),
-
-        # Restore unique_together now that 'subject' refers to the new FK field again
-        migrations.AlterUniqueTogether(name='examsubjectmaxmark', unique_together={('exam', 'subject')}),
-        migrations.AlterUniqueTogether(name='mark', unique_together={('student', 'exam', 'subject')}),
-
-        migrations.CreateModel(
-            name='GroupCategoryConfig',
-            fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('category', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='marks.examcategory')),
-                ('group', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='accounts.group')),
-                ('subjects', models.ManyToManyField(to='marks.subject')),
-            ],
-            options={
-                'unique_together': {('group', 'category')},
-            },
-        ),
     ]

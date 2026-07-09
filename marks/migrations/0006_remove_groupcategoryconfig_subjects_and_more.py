@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('marks', '0005_examcategory_examtype_subject_alter_exam_category_and_more'),
+        ('marks', '0005a_finalize_exam_category_fields'),
     ]
 
     operations = [
