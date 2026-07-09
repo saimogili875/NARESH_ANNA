@@ -13,7 +13,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('marks', '0005_examcategory_examtype_subject_alter_exam_category_and_more'),
+        ('marks', '0005b_backfill_exam_category_fields'),
     ]
 
     operations = [
