@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from accounts.decorators import admin_required, all_roles_required
+from accounts.decorators import admin_required, all_roles_required, superuser_required
 from django.utils import timezone
 from django.db.models import Sum, Count, Q
 from .models import User, Group, Section, AcademicYear
@@ -207,12 +207,12 @@ def section_delete(request, pk):
     messages.success(request, 'Section deleted.')
     return redirect('group_list')
 
-@admin_required
+@superuser_required
 def user_list(request):
     users = User.objects.exclude(role='admin').order_by('role', 'username')
     return render(request, 'accounts/user_list.html', {'users': users})
 
-@admin_required
+@superuser_required
 def user_add(request):
     form = UserForm(request.POST or None)
     if form.is_valid():
@@ -221,7 +221,7 @@ def user_add(request):
         return redirect('user_list')
     return render(request, 'accounts/user_form.html', {'form': form, 'title': 'Add User'})
 
-@admin_required
+@superuser_required
 def user_edit(request, pk):
     obj = get_object_or_404(User, pk=pk)
     form = UserForm(request.POST or None, instance=obj)
@@ -231,7 +231,7 @@ def user_edit(request, pk):
         return redirect('user_list')
     return render(request, 'accounts/user_form.html', {'form': form, 'title': 'Edit User'})
 
-@admin_required
+@superuser_required
 def user_toggle(request, pk):
     obj = get_object_or_404(User, pk=pk)
     obj.is_active = not obj.is_active
@@ -239,7 +239,7 @@ def user_toggle(request, pk):
     messages.success(request, f"User {'enabled' if obj.is_active else 'disabled'}.")
     return redirect('user_list')
 
-@admin_required
+@superuser_required
 def user_reset_password(request, pk):
     obj = get_object_or_404(User, pk=pk)
     if request.method == 'POST':

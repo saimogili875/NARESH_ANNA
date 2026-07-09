@@ -140,11 +140,6 @@
   <a href="{% url 'faculty_list' %}" class="nav-link {% if 'faculty' in request.resolver_match.url_name %}active{% endif %}">
     <i class="bi bi-person-badge"></i> Faculty
   </a>
-  {% if user.is_admin %}
-  <a href="{% url 'user_list' %}" class="nav-link {% if 'user' in request.resolver_match.url_name %}active{% endif %}">
-    <i class="bi bi-shield-person"></i> Account Users
-  </a>
-  {% endif %}
 
   <div class="nav-label">Data</div>
   <a href="{% url 'reports_home' %}" class="nav-link {% if 'report' in request.resolver_match.url_name %}active{% endif %}">
