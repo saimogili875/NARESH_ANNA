@@ -1,0 +1,197 @@
+{% extends 'base.html' %}
+{% block title %}Lab Performance Report Form{% endblock %}
+{% block page_title %}Lab Performance Report Form{% endblock %}
+{% block content %}
+
+<div class="container-fluid py-4">
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+      <div class="card border-0 shadow-lg">
+        <div class="card-header bg-gradient text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+          <h4 class="mb-0"><i class="bi bi-file-text"></i> Lab Performance Report Form</h4>
+        </div>
+        
+        <div class="card-body p-4">
+          <form method="post" novalidate class="needs-validation">
+            {% csrf_token %}
+            
+            <!-- Student Selection -->
+            <div class="mb-4">
+              <h6 class="text-uppercase text-muted fw-bold mb-3">
+                <i class="bi bi-person-circle"></i> Student Information
+              </h6>
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label class="form-label fw-bold">Student Name *</label>
+                  {{ form.student }}
+                  {% if form.student.errors %}
+                    <div class="text-danger small mt-2">{{ form.student.errors }}</div>
+                  {% endif %}
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label fw-bold">Academic Year *</label>
+                  {{ form.academic_year }}
+                  {% if form.academic_year.errors %}
+                    <div class="text-danger small mt-2">{{ form.academic_year.errors }}</div>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+
+            <hr class="my-4">
+
+            <!-- JEE Main Section -->
+            <div class="mb-4">
+              <h6 class="text-uppercase text-muted fw-bold mb-3">
+                <i class="bi bi-book"></i> JEE Main Mock Tests
+              </h6>
+              <div class="row">
+                <div class="col-md-4 mb-3">
+                  <label class="form-label">Best Score <small class="text-muted">(out of 300)</small></label>
+                  {{ form.jee_best_score }}
+                  {% if form.jee_best_score.errors %}
+                    <div class="text-danger small mt-2">{{ form.jee_best_score.errors }}</div>
+                  {% endif %}
+                </div>
+                <div class="col-md-4 mb-3">
+                  <label class="form-label">Average Score</label>
+                  {{ form.jee_avg_score }}
+                  {% if form.jee_avg_score.errors %}
+                    <div class="text-danger small mt-2">{{ form.jee_avg_score.errors }}</div>
+                  {% endif %}
+                </div>
+                <div class="col-md-4 mb-3">
+                  <label class="form-label">Mocks Attended</label>
+                  {{ form.jee_mocks_attended }}
+                  {% if form.jee_mocks_attended.errors %}
+                    <div class="text-danger small mt-2">{{ form.jee_mocks_attended.errors }}</div>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+
+            <hr class="my-4">
+
+            <!-- EAMCET Section -->
+            <div class="mb-4">
+              <h6 class="text-uppercase text-muted fw-bold mb-3">
+                <i class="bi bi-book"></i> EAMCET Mock Tests
+              </h6>
+              <div class="row">
+                <div class="col-md-4 mb-3">
+                  <label class="form-label">Best Score <small class="text-muted">(out of 160)</small></label>
+                  {{ form.eamcet_best_score }}
+                  {% if form.eamcet_best_score.errors %}
+                    <div class="text-danger small mt-2">{{ form.eamcet_best_score.errors }}</div>
+                  {% endif %}
+                </div>
+                <div class="col-md-4 mb-3">
+                  <label class="form-label">Average Score</label>
+                  {{ form.eamcet_avg_score }}
+                  {% if form.eamcet_avg_score.errors %}
+                    <div class="text-danger small mt-2">{{ form.eamcet_avg_score.errors }}</div>
+                  {% endif %}
+                </div>
+                <div class="col-md-4 mb-3">
+                  <label class="form-label">Mocks Attended</label>
+                  {{ form.eamcet_mocks_attended }}
+                  {% if form.eamcet_mocks_attended.errors %}
+                    <div class="text-danger small mt-2">{{ form.eamcet_mocks_attended.errors }}</div>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+
+            <hr class="my-4">
+
+            <!-- IPE Section -->
+            <div class="mb-4">
+              <h6 class="text-uppercase text-muted fw-bold mb-3">
+                <i class="bi bi-book"></i> IPE - Mid Term
+              </h6>
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Score <small class="text-muted">(out of 440)</small></label>
+                  {{ form.ipe_score }}
+                  {% if form.ipe_score.errors %}
+                    <div class="text-danger small mt-2">{{ form.ipe_score.errors }}</div>
+                  {% endif %}
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Percentage</label>
+                  {{ form.ipe_percentage }}
+                  {% if form.ipe_percentage.errors %}
+                    <div class="text-danger small mt-2">{{ form.ipe_percentage.errors }}</div>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+
+            <hr class="my-4">
+
+            <!-- Weekly Tests Section -->
+            <div class="mb-4">
+              <h6 class="text-uppercase text-muted fw-bold mb-3">
+                <i class="bi bi-graph-up"></i> Weekly Tests
+              </h6>
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Average Score <small class="text-muted">(out of 100)</small></label>
+                  {{ form.weekly_avg_score }}
+                  {% if form.weekly_avg_score.errors %}
+                    <div class="text-danger small mt-2">{{ form.weekly_avg_score.errors }}</div>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+
+            <hr class="my-4">
+
+            <!-- Remarks Section -->
+            <div class="mb-4">
+              <h6 class="text-uppercase text-muted fw-bold mb-3">
+                <i class="bi bi-chat-left-text"></i> Remarks
+              </h6>
+              {{ form.remarks }}
+              {% if form.remarks.errors %}
+                <div class="text-danger small mt-2">{{ form.remarks.errors }}</div>
+              {% endif %}
+            </div>
+
+            <hr class="my-4">
+
+            <!-- Submit Buttons -->
+            <div class="d-flex gap-2 justify-content-between">
+              <a href="{% url 'sai:lab_reports_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-list"></i> View Reports
+              </a>
+              <div>
+                <button type="reset" class="btn btn-outline-warning">
+                  <i class="bi bi-arrow-clockwise"></i> Clear Form
+                </button>
+                <button type="submit" class="btn btn-primary btn-lg">
+                  <i class="bi bi-check-circle"></i> Generate Report
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .form-control, .form-select {
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+  }
+  .form-control:focus, .form-select:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+  }
+</style>
+{% endblock %}

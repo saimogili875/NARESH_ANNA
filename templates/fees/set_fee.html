@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% block title %}Set Fee — {{ student.name }}{% endblock %}
+{% block page_title %}Set Total Fee{% endblock %}
+{% block content %}
+<div class="card border-0 shadow-sm" style="max-width:450px">
+  <div class="card-body p-4">
+    <div class="d-flex align-items-center gap-3 mb-4">
+      {% if student.photo %}
+      <img src="{{ student.photo.url }}" width="50" height="50" style="border-radius:50%;object-fit:cover">
+      {% else %}
+      <div style="width:50px;height:50px;border-radius:50%;background:#e2e8f0;display:flex;align-items:center;justify-content:center">
+        <i class="bi bi-person text-muted fs-4"></i>
+      </div>
+      {% endif %}
+      <div>
+        <div class="fw-bold">{{ student.name }}</div>
+        <div class="small text-muted">{{ student.admission_number }} | {{ student.section|default:"No section" }}</div>
+      </div>
+    </div>
+
+    {% if student_fee.total_paid > 0 %}
+    <div class="alert alert-warning small">
+      <i class="bi bi-exclamation-triangle"></i>
+      ₹{{ student_fee.total_paid|floatformat:0 }} already collected. Changing total fee will affect the pending amount.
+    </div>
+    {% endif %}
+
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{{ request.GET.next }}">
+      <div class="mb-3">
+        <label class="form-label fw-500">Total Fee Amount (₹) <span class="text-danger">*</span></label>
+        <input type="number" name="total_fee" class="form-control form-control-lg"
+          value="{{ student_fee.total_fee }}" min="0" step="1" required
+          placeholder="Enter total fee e.g. 45000">
+        <div class="form-text">Enter the full fee amount for {{ active_year }}.</div>
+      </div>
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-check-circle"></i> Save Fee
+        </button>
+        <a href="{% url 'fee_detail' student.pk %}" class="btn btn-outline-secondary">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

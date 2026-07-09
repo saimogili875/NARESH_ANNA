@@ -1,0 +1,388 @@
+{% extends 'base.html' %}
+{% load dict_filters %}
+{% block title %}Attendance — Srinri College{% endblock %}
+{% block page_title %}Attendance{% endblock %}
+{% block content %}
+
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-body py-2">
+    <form method="get" class="row g-2 align-items-center">
+      <div class="col-md-4">
+        <select name="section" class="form-select form-select-sm" onchange="this.form.submit()">
+          <option value="">-- Select Section --</option>
+          {% for s in sections %}
+          <option value="{{ s.pk }}" {% if s.pk|stringformat:"s" == section_id %}selected{% endif %}>
+            {{ s.group.name }} - Year {{ s.year }} - {{ s.name }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <input type="date" name="date" value="{{ selected_date }}" class="form-control form-control-sm" onchange="this.form.submit()">
+      </div>
+      <div class="col-auto">
+        <a href="{% url 'attendance_report' %}" class="btn btn-outline-primary btn-sm">
+          <i class="bi bi-bar-chart"></i> Monthly Report
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% if selected_section and students %}
+
+  {% if is_locked %}
+  <!-- ========== LOCKED STATE ========== -->
+  <div class="alert alert-warning d-flex align-items-center gap-2 mb-3">
+    <i class="bi bi-lock-fill fs-5"></i>
+    <span>Attendance already saved for <strong>{{ selected_section }}</strong> on <strong>{{ selected_date }}</strong>. Changes are not allowed.</span>
+  </div>
+
+  <div class="card border-0 shadow-sm">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+      <span class="fw-bold">{{ selected_section }} — {{ selected_date }}</span>
+      <span class="text-muted small">{{ students|length }} students</span>
+    </div>
+    <div class="card-body p-0">
+      <table class="table table-hover mb-0">
+        <thead class="bg-light">
+          <tr>
+            <th style="width:40px">#</th>
+            <th>Admission No</th>
+            <th>Student Name</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for student in students %}
+          {% with cur=attendance_map|get_item:student.pk remark=remarks_map|get_item:student.pk %}
+          <tr>
+            <td class="small text-muted">{{ forloop.counter }}</td>
+            <td class="small text-muted">{{ student.admission_number }}</td>
+            <td class="fw-500">{{ student.name }}</td>
+            <td>
+              {% if cur == 'P' %}
+                <span class="badge bg-success">Present</span>
+              {% elif cur == 'A' %}
+                <div>
+                  <span class="badge bg-danger">Absent</span>
+                  {% if remark %}
+                    <span class="badge bg-secondary ms-1">{{ remark }}</span>
+                  {% endif %}
+                </div>
+                <!-- Phone numbers as tap-to-call badges -->
+                <div class="d-flex flex-wrap gap-1 mt-1">
+                  {% if student.mobile %}
+                    <a href="tel:{{ student.mobile }}" class="badge bg-dark text-decoration-none"><i class="bi bi-telephone-fill me-1"></i>{{ student.mobile }}</a>
+                  {% endif %}
+                  {% if student.second_mobile %}
+                    <a href="tel:{{ student.second_mobile }}" class="badge bg-dark text-decoration-none"><i class="bi bi-telephone-fill me-1"></i>{{ student.second_mobile }}</a>
+                  {% endif %}
+                  {% if student.third_mobile %}
+                    <a href="tel:{{ student.third_mobile }}" class="badge bg-dark text-decoration-none"><i class="bi bi-telephone-fill me-1"></i>{{ student.third_mobile }}</a>
+                  {% endif %}
+                  {% if student.fourth_mobile %}
+                    <a href="tel:{{ student.fourth_mobile }}" class="badge bg-dark text-decoration-none"><i class="bi bi-telephone-fill me-1"></i>{{ student.fourth_mobile }}</a>
+                  {% endif %}
+                </div>
+              {% else %}
+                <span class="badge bg-secondary">—</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endwith %}
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Summary -->
+    <div class="card-footer bg-white border-top py-3">
+      <div class="row text-center g-0">
+        <div class="col border-end">
+          <div class="fs-4 fw-bold">{{ students|length }}</div>
+          <div class="small text-muted">Total Strength</div>
+        </div>
+        <div class="col border-end">
+          <div class="fs-4 fw-bold text-success">{{ stats.present }}</div>
+          <div class="small text-muted">Present</div>
+        </div>
+        <div class="col">
+          <div class="fs-4 fw-bold text-danger">{{ stats.absent }}</div>
+          <div class="small text-muted">Absent</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reason selection + WhatsApp -->
+  {% if stats.absent > 0 %}
+  <div class="card border-0 shadow-sm mt-3">
+    <div class="card-header bg-white py-3">
+      <strong><i class="bi bi-whatsapp text-success me-2"></i>Absent Students — Select Reason &amp; Send WhatsApp</strong>
+    </div>
+    <div class="card-body p-0">
+      <form id="reasonForm">
+        {% csrf_token %}
+        <table class="table table-hover mb-0 align-middle">
+          <thead class="bg-light">
+            <tr>
+              <th>Phone Number</th>
+              <th>Student</th>
+              <th>Reason for Absence</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for student in absent_students %}
+            {% with cur_reason=absent_reason_map|get_item:student.pk %}
+            <tr>
+              <td>
+                <div class="d-flex flex-wrap gap-1">
+                  {% if student.mobile %}<a href="tel:{{ student.mobile }}" class="badge bg-dark text-decoration-none"><i class="bi bi-telephone-fill me-1"></i>{{ student.mobile }}</a>{% endif %}
+                  {% if student.second_mobile %}<a href="tel:{{ student.second_mobile }}" class="badge bg-dark text-decoration-none"><i class="bi bi-telephone-fill me-1"></i>{{ student.second_mobile }}</a>{% endif %}
+                  {% if student.third_mobile %}<a href="tel:{{ student.third_mobile }}" class="badge bg-dark text-decoration-none"><i class="bi bi-telephone-fill me-1"></i>{{ student.third_mobile }}</a>{% endif %}
+                  {% if student.fourth_mobile %}<a href="tel:{{ student.fourth_mobile }}" class="badge bg-dark text-decoration-none"><i class="bi bi-telephone-fill me-1"></i>{{ student.fourth_mobile }}</a>{% endif %}
+                </div>
+              </td>
+              <td class="fw-500">{{ student.name }}</td>
+              <td>
+                <div class="btn-group btn-group-sm" role="group">
+                  <input type="radio" class="btn-check" name="reason_{{ student.pk }}" id="lh_{{ student.pk }}" value="health" autocomplete="off" {% if cur_reason == 'health' %}checked{% endif %}>
+                  <label class="btn btn-outline-warning" for="lh_{{ student.pk }}">Health Issue</label>
+
+                  <input type="radio" class="btn-check" name="reason_{{ student.pk }}" id="lw_{{ student.pk }}" value="went_out" autocomplete="off" {% if cur_reason == 'went_out' %}checked{% endif %}>
+                  <label class="btn btn-outline-info" for="lw_{{ student.pk }}">Went Out</label>
+
+                  <input type="radio" class="btn-check" name="reason_{{ student.pk }}" id="ln_{{ student.pk }}" value="no_reason" autocomplete="off" {% if cur_reason != 'health' and cur_reason != 'went_out' and cur_reason != 'other' %}checked{% endif %}>
+                  <label class="btn btn-outline-secondary" for="ln_{{ student.pk }}">No Reason</label>
+
+                  <input type="radio" class="btn-check" name="reason_{{ student.pk }}" id="lo_{{ student.pk }}" value="other" autocomplete="off" {% if cur_reason == 'other' %}checked{% endif %}>
+                  <label class="btn btn-outline-primary" for="lo_{{ student.pk }}">Other</label>
+                </div>
+                <input type="text" name="custom_reason_{{ student.pk }}" id="lcr_{{ student.pk }}"
+                       class="form-control form-control-sm mt-1" placeholder="Write reason…" maxlength="100"
+                       style="display:{% if cur_reason == 'other' %}block{% else %}none{% endif %};max-width:220px"
+                       value="{% if cur_reason == 'other' %}{{ remarks_map|get_item:student.pk }}{% endif %}">
+              </td>
+            </tr>
+            {% endwith %}
+            {% endfor %}
+          </tbody>
+        </table>
+        <div class="p-3 border-top">
+          <button type="button" class="btn btn-success btn-lg" id="waBtn" onclick="saveAndSendWA()">
+            <i class="bi bi-whatsapp"></i> Save Reasons &amp; Send WhatsApp ({{ stats.absent }} student{{ stats.absent|pluralize }})
+          </button>
+          <div id="waResult" class="mt-3"></div>
+        </div>
+      </form>
+    </div>
+  </div>
+  {% else %}
+  <div class="alert alert-success mt-3">
+    <i class="bi bi-check-circle-fill"></i> All students are present — no WhatsApp messages needed.
+  </div>
+  {% endif %}
+
+  {% else %}
+  <!-- ========== EDITABLE FORM ========== -->
+  <div class="card border-0 shadow-sm">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+      <span class="fw-bold">{{ selected_section }} — {{ selected_date }}</span>
+      <span class="text-muted small">{{ students|length }} students</span>
+    </div>
+    <div class="card-body p-0">
+      <form method="post" action="{% url 'attendance_mark' %}" id="attForm">
+        {% csrf_token %}
+        <input type="hidden" name="section_id" value="{{ selected_section.pk }}">
+        <input type="hidden" name="date" value="{{ selected_date }}">
+        <table class="table table-hover mb-0 align-middle">
+          <thead class="bg-light">
+            <tr>
+              <th style="width:40px">#</th>
+              <th>Admission No</th>
+              <th>Student Name</th>
+              <th>
+                P &nbsp; A
+                <button type="button" class="btn btn-outline-success btn-sm ms-3" onclick="markAll('P')">All Present</button>
+                <button type="button" class="btn btn-outline-danger btn-sm ms-1" onclick="markAll('A')">All Absent</button>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for student in students %}
+            <tr>
+              <td class="small text-muted">{{ forloop.counter }}</td>
+              <td class="small text-muted">{{ student.admission_number }}</td>
+              <td class="fw-500">{{ student.name }}</td>
+              <td>
+                <div class="d-flex gap-3 align-items-center flex-wrap">
+                  <div class="form-check form-check-inline mb-0">
+                    <input class="form-check-input att-radio" type="radio" name="status_{{ student.pk }}" id="P_{{ student.pk }}" value="P" checked onchange="updateLiveSummary()">
+                    <label class="form-check-label text-success fw-bold" for="P_{{ student.pk }}">P</label>
+                  </div>
+                  <div class="form-check form-check-inline mb-0">
+                    <input class="form-check-input att-radio" type="radio" name="status_{{ student.pk }}" id="A_{{ student.pk }}" value="A" onchange="updateLiveSummary()">
+                    <label class="form-check-label text-danger fw-bold" for="A_{{ student.pk }}">A</label>
+                  </div>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+
+        <!-- Live summary + save button -->
+        <div class="p-3 border-top d-flex align-items-center gap-3 flex-wrap">
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check-circle"></i> Save Attendance
+          </button>
+          <span class="text-muted small" id="liveSummary"></span>
+        </div>
+      </form>
+    </div>
+  </div>
+  {% endif %}
+
+{% elif selected_section %}
+<div class="alert alert-info">No active students in this section.</div>
+{% else %}
+<div class="text-center py-5 text-muted">
+  <i class="bi bi-calendar-check fs-1 d-block mb-2"></i>
+  Select a section and date above to mark attendance.
+</div>
+{% endif %}
+
+<script>
+(function () {
+  function todayStr() {
+    const n = new Date();
+    return n.getFullYear() + '-' +
+      String(n.getMonth() + 1).padStart(2, '0') + '-' +
+      String(n.getDate()).padStart(2, '0');
+  }
+
+  const today     = todayStr();
+  const urlParams = new URLSearchParams(window.location.search);
+  const dateInUrl = urlParams.get('date');
+  const userPicked = sessionStorage.getItem('att_user_date');
+
+  // If URL has a past date the user didn't explicitly pick → reset to today
+  if (dateInUrl && dateInUrl < today && userPicked !== dateInUrl) {
+    sessionStorage.removeItem('att_user_date');
+    const url = new URL(window.location.href);
+    url.searchParams.delete('date');
+    window.location.href = url.toString();
+    return;
+  }
+
+  // No date in URL → set input to today's local date
+  const dateInput = document.querySelector('input[name="date"]');
+  if (dateInput) {
+    if (!dateInUrl) dateInput.value = today;
+    // Remember explicitly user-chosen dates
+    dateInput.addEventListener('change', function () {
+      sessionStorage.setItem('att_user_date', this.value);
+    });
+  }
+
+  // Auto-reload at midnight → resets to today
+  const midnight = new Date();
+  midnight.setHours(24, 0, 0, 0);
+  setTimeout(function () {
+    sessionStorage.removeItem('att_user_date');
+    const url = new URL(window.location.href);
+    url.searchParams.delete('date');
+    window.location.href = url.toString();
+  }, midnight - new Date());
+})();
+
+function markAll(val) {
+  document.querySelectorAll('.att-radio[value="' + val + '"]').forEach(r => { r.checked = true; });
+  updateLiveSummary();
+}
+
+function updateLiveSummary() {
+  const names = new Set();
+  document.querySelectorAll('.att-radio').forEach(r => names.add(r.name));
+  let p = 0, a = 0;
+  names.forEach(name => {
+    const checked = document.querySelector(`.att-radio[name="${name}"]:checked`);
+    if (checked && checked.value === 'P') p++; else a++;
+  });
+  const el = document.getElementById('liveSummary');
+  if (el) el.textContent = `Present: ${p}  |  Absent: ${a}  |  Total: ${p + a}`;
+}
+document.querySelectorAll('.att-radio').forEach(r => r.addEventListener('change', updateLiveSummary));
+updateLiveSummary();
+
+// Show/hide custom reason input in locked state
+document.querySelectorAll('[id^="lo_"]').forEach(r => {
+  r.addEventListener('change', function() {
+    const pk = this.id.replace('lo_', '');
+    const inp = document.getElementById('lcr_' + pk);
+    if (inp) inp.style.display = 'block';
+  });
+});
+document.querySelectorAll('[id^="lh_"],[id^="lw_"],[id^="ln_"]').forEach(r => {
+  r.addEventListener('change', function() {
+    const pk = this.id.replace(/^l[hwn]_/, '');
+    const inp = document.getElementById('lcr_' + pk);
+    if (inp) { inp.style.display = 'none'; inp.value = ''; }
+  });
+});
+
+function saveAndSendWA() {
+  const btn = document.getElementById('waBtn');
+  const resultDiv = document.getElementById('waResult');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving & Sending…';
+  resultDiv.innerHTML = '';
+
+  const formData = new FormData(document.getElementById('reasonForm'));
+  formData.append('section_id', '{{ selected_section.pk }}');
+  formData.append('date', '{{ selected_date|date:"Y-m-d" }}');
+
+  fetch('{% url "attendance_save_reasons" %}', {
+    method: 'POST',
+    headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+    body: formData,
+  })
+  .then(r => r.json())
+  .then(data => {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-whatsapp"></i> Re-send WhatsApp';
+    if (!data.success) {
+      resultDiv.innerHTML = `<div class="alert alert-danger"><i class="bi bi-x-circle"></i> Error: ${data.error}</div>`;
+      return;
+    }
+    const results = data.results || [];
+    const sent    = results.filter(r => r.status === 'sent');
+    const failed  = results.filter(r => r.status === 'failed');
+    const noPhone = results.filter(r => r.status === 'no_phone');
+    let html = '';
+    if (sent.length) {
+      html += `<div class="alert alert-success"><i class="bi bi-check-circle-fill"></i> Sent to ${sent.length} student(s):<ul class="mb-0 mt-1">`;
+      sent.forEach(r => html += `<li>${r.name} (+91${r.phone})</li>`);
+      html += '</ul></div>';
+    }
+    if (failed.length) {
+      html += `<div class="alert alert-danger"><i class="bi bi-x-circle"></i> Failed for ${failed.length} student(s):<ul class="mb-0 mt-1">`;
+      failed.forEach(r => html += `<li>${r.name} — ${r.error}</li>`);
+      html += '</ul></div>';
+    }
+    if (noPhone.length) {
+      html += `<div class="alert alert-warning"><i class="bi bi-telephone-x"></i> No phone number for:<ul class="mb-0 mt-1">`;
+      noPhone.forEach(r => html += `<li>${r.name}</li>`);
+      html += '</ul></div>';
+    }
+    resultDiv.innerHTML = html || '<div class="alert alert-info">No results.</div>';
+  })
+  .catch(err => {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-whatsapp"></i> Retry';
+    resultDiv.innerHTML = `<div class="alert alert-danger">Network error: ${err}</div>`;
+  });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,10 @@
+Django>=4.2,<5.0
+python-decouple>=3.8
+Pillow>=10.0
+reportlab>=4.0
+openpyxl>=3.1
+twilio>=8.0
+whitenoise>=6.5
+gunicorn>=21.0
+psycopg2-binary>=2.9
+dj-database-url>=2.0

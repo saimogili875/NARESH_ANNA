@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% block title %}Transfer Student{% endblock %}
+{% block page_title %}Transfer Student{% endblock %}
+{% block content %}
+<div class="card border-0 shadow-sm" style="max-width:500px">
+  <div class="card-body p-4">
+    <h5 class="mb-3">Transfer: {{ student.name }}</h5>
+    <form method="post">
+      {% csrf_token %}
+      <div class="mb-3">
+        <label class="form-label">Select New Section</label>
+        <select name="section" class="form-select" required>
+          {% for s in sections %}
+          <option value="{{ s.pk }}" {% if s == student.section %}selected{% endif %}>
+            {{ s.group.name }} — Year {{ s.year }} — {{ s.name }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">Transfer</button>
+        <a href="{% url 'student_profile' student.pk %}" class="btn btn-outline-secondary">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+{% block title %}Students{% endblock %}
+{% block page_title %}Student Management{% endblock %}
+
+{% block content %}
+<!-- Search & Actions Bar -->
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-body py-2">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-4">
+        <input type="text" name="q" value="{{ request.GET.q }}" class="form-control" placeholder="Search name, admission no, mobile, aadhaar...">
+      </div>
+      <div class="col-md-2">
+        <select name="group" class="form-select">
+          <option value="">All Groups</option>
+          {% for g in groups %}<option value="{{ g.pk }}" {% if request.GET.group == g.pk|stringformat:'s' %}selected{% endif %}>{{ g.name }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <select name="year" class="form-select">
+          <option value="">All Years</option>
+          <option value="1" {% if request.GET.year == '1' %}selected{% endif %}>1st Year</option>
+          <option value="2" {% if request.GET.year == '2' %}selected{% endif %}>2nd Year</option>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <select name="section" class="form-select">
+          <option value="">All Sections</option>
+          {% for s in sections %}<option value="{{ s.pk }}" {% if request.GET.section == s.pk|stringformat:'s' %}selected{% endif %}>{{ s }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2 d-flex gap-2">
+        <button type="submit" class="btn btn-primary flex-fill"><i class="bi bi-search"></i></button>
+        <a href="{% url 'student_list' %}" class="btn btn-outline-secondary"><i class="bi bi-x"></i></a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Action Buttons -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <span class="text-muted small">{{ total }} student{{ total|pluralize }} found</span>
+  <div class="d-flex gap-2">
+    <a href="{% url 'student_import' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-upload me-1"></i>Import Excel</a>
+    <a href="{% url 'student_export' %}" class="btn btn-outline-success btn-sm"><i class="bi bi-download me-1"></i>Export Excel</a>
+    <a href="{% url 'student_add' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg me-1"></i>Add Student</a>
+  </div>
+</div>
+
+<!-- Student Table -->
+<div class="card border-0 shadow-sm">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead class="bg-light">
+          <tr>
+            <th>#</th>
+            <th>Adm No</th>
+            <th>Name</th>
+            <th>Father</th>
+            <th>Mobile</th>
+            <th>Group</th>
+            <th>Year</th>
+            <th>Section</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in students %}
+          <tr>
+            <td class="text-muted">{{ forloop.counter }}</td>
+            <td><span class="badge bg-light text-dark">{{ s.admission_number }}</span></td>
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                {% if s.photo %}
+                <img src="{{ s.photo.url }}" width="32" height="32" style="border-radius:50%;object-fit:cover">
+                {% else %}
+                <div style="width:32px;height:32px;border-radius:50%;background:#e2e8f0;display:flex;align-items:center;justify-content:center">
+                  <i class="bi bi-person text-muted"></i>
+                </div>
+                {% endif %}
+                <span class="fw-500">{{ s.name }}</span>
+              </div>
+            </td>
+            <td class="text-muted small">{{ s.father_name }}</td>
+            <td>{{ s.mobile }}</td>
+            <td>{{ s.section.group.name|default:'-' }}</td>
+            <td>{{ s.section.get_year_display|default:'-' }}</td>
+            <td>{{ s.section.name|default:'-' }}</td>
+            <td>
+              <div class="d-flex gap-1">
+                <a href="{% url 'student_profile' s.pk %}" class="btn btn-xs btn-light" title="View"><i class="bi bi-eye"></i></a>
+                <a href="{% url 'student_edit' s.pk %}" class="btn btn-xs btn-light" title="Edit"><i class="bi bi-pencil"></i></a>
+                <a href="{% url 'student_transfer' s.pk %}" class="btn btn-xs btn-light" title="Transfer"><i class="bi bi-arrow-left-right"></i></a>
+                <a href="{% url 'student_delete' s.pk %}" class="btn btn-xs btn-light text-danger"
+                   onclick="return confirm('Remove {{ s.name }}?')" title="Delete"><i class="bi bi-trash"></i></a>
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="9" class="text-center text-muted py-4">No students found.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

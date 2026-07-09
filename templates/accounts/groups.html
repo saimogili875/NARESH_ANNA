@@ -1,0 +1,313 @@
+{% extends 'base.html' %}
+{% block title %}Groups & Sections{% endblock %}
+{% block page_title %}Academic Structure{% endblock %}
+
+{% block content %}
+<style>
+.group-card {
+  border: none;
+  border-radius: 14px;
+  box-shadow: 0 1px 6px rgba(0,0,0,.07);
+  overflow: hidden;
+  margin-bottom: 1.25rem;
+  background: #fff;
+  border-left: 5px solid var(--gc-border);
+}
+.group-icon-box {
+  width: 56px; height: 56px;
+  border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.6rem;
+  flex-shrink: 0;
+}
+.stat-chip { font-size: .8rem; color: #6b7280; display: flex; align-items: center; gap: .35rem; }
+.stat-chip strong { color: #111827; font-size: .92rem; }
+.section-badge {
+  display: inline-block;
+  padding: 3px 11px;
+  border-radius: 20px;
+  font-size: .75rem;
+  font-weight: 500;
+  border: 1.5px solid var(--gc-border);
+  color: var(--gc-color);
+  background: var(--gc-bg);
+  white-space: nowrap;
+}
+.avatar-stack { display: flex; align-items: center; }
+.avatar-stack img, .avatar-stack .avatar-more {
+  width: 32px; height: 32px; border-radius: 50%;
+  border: 2px solid #fff;
+  margin-left: -8px;
+  object-fit: cover;
+}
+.avatar-stack img:first-child, .avatar-stack .avatar-more:first-child { margin-left: 0; }
+.avatar-more {
+  background: #e5e7eb;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .65rem; font-weight: 600; color: #374151;
+}
+/* Circular progress */
+.att-ring { position: relative; width: 70px; height: 70px; flex-shrink: 0; }
+.att-ring svg { transform: rotate(-90deg); }
+.att-ring .ring-track { fill: none; stroke: #e5e7eb; stroke-width: 6; }
+.att-ring .ring-fill  { fill: none; stroke-width: 6; stroke-linecap: round;
+                        transition: stroke-dashoffset .6s ease; }
+.att-ring .ring-label {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  font-size: .78rem; font-weight: 700; line-height: 1.1;
+}
+.att-ring .ring-sub { font-size: .58rem; font-weight: 400; color: #9ca3af; }
+/* Summary cards */
+.summary-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 1.1rem 1.4rem;
+  box-shadow: 0 1px 4px rgba(0,0,0,.06);
+  display: flex; align-items: center; gap: 1rem;
+}
+.summary-icon {
+  width: 46px; height: 46px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.3rem; flex-shrink: 0;
+}
+</style>
+
+<!-- Top bar: date picker + actions -->
+<div class="d-flex gap-2 justify-content-between align-items-center mb-4 flex-wrap">
+  <form method="get" class="d-flex align-items-center gap-2">
+    <i class="bi bi-calendar3 text-primary fs-5"></i>
+    <input type="date" name="date" value="{{ selected_date|date:'Y-m-d' }}"
+           class="form-control form-control-sm" style="width:160px;"
+           onchange="this.form.submit()" id="groupDatePicker">
+    {% if selected_date|date:'Y-m-d' != today|date:'Y-m-d' %}
+    <a href="{% url 'group_list' %}" class="btn btn-outline-secondary btn-sm">Today</a>
+    {% endif %}
+  </form>
+  <div class="d-flex gap-2 align-items-center flex-wrap">
+    <span class="text-muted small">
+      <i class="bi bi-arrow-clockwise me-1"></i>
+      Refreshes in <strong id="refreshCountdown">5:00</strong>
+      &nbsp;|&nbsp; <span id="lastUpdated"></span>
+    </span>
+    <button onclick="location.reload()" class="btn btn-outline-secondary btn-sm px-3">
+      <i class="bi bi-arrow-clockwise me-1"></i>Refresh Now
+    </button>
+    <a href="{% url 'section_add' %}" class="btn btn-outline-primary btn-sm px-3">
+      <i class="bi bi-plus-lg me-1"></i>Add Section
+    </a>
+    <a href="{% url 'group_add' %}" class="btn btn-primary btn-sm px-3">
+      <i class="bi bi-plus-lg me-1"></i>Add Group
+    </a>
+  </div>
+</div>
+
+<!-- Summary stats row -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="summary-card">
+      <div class="summary-icon" style="background:#dbeafe; color:#2563eb;">
+        <i class="bi bi-grid-fill"></i>
+      </div>
+      <div>
+        <div style="font-size:1.6rem; font-weight:700; line-height:1.1;">{{ total_groups }}</div>
+        <div class="text-muted" style="font-size:.78rem;">Total Groups</div>
+        <div style="font-size:.7rem; color:#9ca3af;">All Streams</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="summary-card">
+      <div class="summary-icon" style="background:#dcfce7; color:#16a34a;">
+        <i class="bi bi-diagram-3-fill"></i>
+      </div>
+      <div>
+        <div style="font-size:1.6rem; font-weight:700; line-height:1.1;">{{ total_sections }}</div>
+        <div class="text-muted" style="font-size:.78rem;">Total Sections</div>
+        <div style="font-size:.7rem; color:#9ca3af;">All Streams</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="summary-card">
+      <div class="summary-icon" style="background:#fce7f3; color:#9d174d;">
+        <i class="bi bi-people-fill"></i>
+      </div>
+      <div>
+        <div style="font-size:1.6rem; font-weight:700; line-height:1.1;">{{ total_students }}</div>
+        <div class="text-muted" style="font-size:.78rem;">Total Students</div>
+        <div style="font-size:.7rem; color:#9ca3af;">All Streams</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="summary-card">
+      <div class="summary-icon" style="background:#ede9fe; color:#7c3aed;">
+        <i class="bi bi-person-badge-fill"></i>
+      </div>
+      <div>
+        <div style="font-size:1.6rem; font-weight:700; line-height:1.1;">{{ total_faculty }}</div>
+        <div class="text-muted" style="font-size:.78rem;">Total Faculty</div>
+        <div style="font-size:.7rem; color:#9ca3af;">All Streams</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Group cards -->
+{% for gd in group_data %}
+{% with s=gd.style %}
+<div class="group-card" style="--gc-color:{{ s.color }}; --gc-bg:{{ s.bg }}; --gc-border:{{ s.border }};">
+  <div class="p-4">
+    <div class="row align-items-start g-3">
+
+      <!-- Left: icon + name + subjects + stats -->
+      <div class="col-12 col-md-6">
+        <div class="d-flex align-items-start gap-3 mb-3">
+          <div class="group-icon-box" style="background:{{ s.bg }}; color:{{ s.color }};">
+            <i class="bi {{ s.icon }}"></i>
+          </div>
+          <div>
+            <div style="font-size:1.2rem; font-weight:700; color:{{ s.color }};">{{ gd.group.name }}</div>
+            <div class="text-muted" style="font-size:.82rem;">{{ s.subjects }}</div>
+          </div>
+        </div>
+
+        <!-- Stats row -->
+        <div class="d-flex flex-wrap gap-4 align-items-center">
+          <div class="stat-chip">
+            <i class="bi bi-grid" style="color:{{ s.color }};"></i>
+            <div><strong>{{ gd.section_count }}</strong><br>Sections</div>
+          </div>
+          <div class="stat-chip">
+            <i class="bi bi-people" style="color:{{ s.color }};"></i>
+            <div><strong>{{ gd.student_count }}</strong><br>Students</div>
+          </div>
+
+          <!-- Attendance ring -->
+          <div class="att-ring">
+            <svg width="70" height="70" viewBox="0 0 70 70">
+              <circle class="ring-track" cx="35" cy="35" r="28"/>
+              <circle class="ring-fill" cx="35" cy="35" r="28"
+                stroke="{{ s.color }}"
+                stroke-dasharray="175.93"
+                style="stroke-dashoffset: calc(175.93 - 175.93 * {{ gd.att_pct }} / 100);"/>
+            </svg>
+            <div class="ring-label" style="color:{{ s.color }};">
+              {{ gd.att_pct }}%
+              <span class="ring-sub">Attend.</span>
+            </div>
+          </div>
+
+          <!-- Present / Absent counts for selected date -->
+          {% if gd.total_att > 0 %}
+          <div class="d-flex flex-column gap-1 ms-2">
+            <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>{{ gd.present_att }} Present</span>
+            <span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i>{{ gd.absent_att }} Absent</span>
+          </div>
+          {% else %}
+          <span class="text-muted small ms-2">Not marked</span>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Right: sections + photos + buttons -->
+      <div class="col-12 col-md-6">
+        <!-- Sections -->
+        <div class="mb-2" style="font-size:.75rem; font-weight:600; color:#9ca3af; text-transform:uppercase; letter-spacing:.05em;">Sections</div>
+        <div class="d-flex flex-wrap gap-1 mb-3">
+          {% for sec in gd.sections %}
+          <span class="section-badge">{{ sec }}</span>
+          {% empty %}
+          <span class="text-muted small">No sections yet</span>
+          {% endfor %}
+        </div>
+
+        <!-- Photos + action buttons -->
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+          <div class="avatar-stack">
+            {% for st in gd.sample_students %}
+            <img src="{{ st.photo.url }}" alt="{{ st.name }}" title="{{ st.name }}">
+            {% endfor %}
+            {% if gd.extra_students > 0 %}
+            <div class="avatar-more">+{{ gd.extra_students }}</div>
+            {% endif %}
+          </div>
+
+          <div class="d-flex align-items-center gap-2">
+            <a href="{% url 'student_list' %}?group={{ gd.group.pk }}" class="btn btn-sm btn-outline-secondary px-3" style="border-radius:8px;">View</a>
+            <a href="{% url 'group_edit' gd.group.pk %}" class="btn btn-sm btn-primary px-3" style="background:{{ s.color }}; border-color:{{ s.color }}; border-radius:8px;">Edit</a>
+            <div class="dropdown">
+              <button class="btn btn-sm btn-light" data-bs-toggle="dropdown" style="border-radius:8px; width:32px; padding:0;">
+                <i class="bi bi-three-dots-vertical"></i>
+              </button>
+              <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item" href="{% url 'section_add' %}"><i class="bi bi-plus me-2"></i>Add Section</a></li>
+                <li><a class="dropdown-item" href="{% url 'group_edit' gd.group.pk %}"><i class="bi bi-pencil me-2"></i>Edit Group</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item text-danger" href="{% url 'group_delete' gd.group.pk %}"
+                       onclick="return confirm('Delete {{ gd.group.name }}?')">
+                  <i class="bi bi-trash me-2"></i>Delete Group</a></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endwith %}
+{% empty %}
+<div class="text-center text-muted py-5">
+  <i class="bi bi-grid" style="font-size:2.5rem; opacity:.3;"></i>
+  <p class="mt-2">No groups yet. <a href="{% url 'group_add' %}">Add one</a></p>
+</div>
+{% endfor %}
+
+<script>
+(function () {
+  // Set date picker to today's local date if no date in URL
+  const urlParams = new URLSearchParams(window.location.search);
+  if (!urlParams.has('date')) {
+    const n = new Date();
+    const todayVal = n.getFullYear() + '-' +
+      String(n.getMonth() + 1).padStart(2, '0') + '-' +
+      String(n.getDate()).padStart(2, '0');
+    const dp = document.getElementById('groupDatePicker');
+    if (dp) dp.value = todayVal;
+  }
+
+  const REFRESH_SECS = 300; // 5 minutes
+  let remaining = REFRESH_SECS;
+
+  const now = new Date();
+  const hh = String(now.getHours()).padStart(2, '0');
+  const mm = String(now.getMinutes()).padStart(2, '0');
+  document.getElementById('lastUpdated').textContent = 'Updated at ' + hh + ':' + mm;
+
+  function tick() {
+    remaining--;
+    const m = Math.floor(remaining / 60);
+    const s = String(remaining % 60).padStart(2, '0');
+    document.getElementById('refreshCountdown').textContent = m + ':' + s;
+    if (remaining <= 0) {
+      location.reload();
+    } else {
+      setTimeout(tick, 1000);
+    }
+  }
+  setTimeout(tick, 1000);
+
+  // Force reload at midnight → strips date param so new day loads fresh
+  const midnight = new Date();
+  midnight.setHours(24, 0, 0, 0);
+  setTimeout(function () {
+    const url = new URL(window.location.href);
+    url.searchParams.delete('date');
+    window.location.href = url.toString();
+  }, midnight - new Date());
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,137 @@
+{% extends 'base.html' %}
+{% block title %}Yearly Attendance Report{% endblock %}
+{% block page_title %}Yearly Attendance Report{% endblock %}
+{% block content %}
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-body py-2">
+    <form method="get" class="row g-2 align-items-center">
+      <div class="col-md-3">
+        <select name="section" class="form-select form-select-sm">
+          <option value="">-- Select Section --</option>
+          {% for s in sections %}
+          <option value="{{ s.pk }}" {% if s.pk|stringformat:"s" == section_id %}selected{% endif %}>
+            {{ s.group.name }} - Year {{ s.year }} - {{ s.name }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <select name="year" class="form-select form-select-sm">
+          {% for y in years %}
+          <option value="{{ y }}" {% if y == year_val %}selected{% endif %}>{{ y }}-{{ y|add:"1" }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-auto">
+        <button class="btn btn-primary btn-sm">View</button>
+        <a href="{% url 'attendance_report' %}" class="btn btn-outline-secondary btn-sm">Monthly</a>
+        <a href="{% url 'attendance_list' %}" class="btn btn-outline-secondary btn-sm">Mark</a>
+      </div>
+      {% if report_data %}
+      <div class="col-auto ms-auto">
+        <a class="btn btn-outline-success btn-sm"
+           href="{% url 'attendance_yearly_export_excel' %}?section={{ section_id }}&year={{ year_val }}">
+          <i class="bi bi-file-earmark-excel"></i> Export Excel
+        </a>
+      </div>
+      {% endif %}
+    </form>
+  </div>
+</div>
+
+{% if report_data %}
+<div class="card border-0 shadow-sm">
+  <div class="card-header bg-white fw-bold py-3">
+    {{ selected_section }} — Yearly Report ({{ year_val }}-{{ year_val|add:"1" }})
+  </div>
+  <div class="card-body p-0">
+    {% for row in report_data %}
+    <div class="border-bottom">
+      <div class="p-2 px-3 d-flex justify-content-between align-items-center">
+        <div>
+          <div class="fw-500">{{ row.student.name }}</div>
+          <div class="text-muted" style="font-size:0.7rem">{{ row.student.admission_number }}</div>
+        </div>
+        <div class="text-end">
+          <span class="fw-bold">{{ row.total_present }}/{{ row.total_days }}</span>
+          <span class="badge ms-2 {% if row.overall >= 75 %}bg-success{% else %}bg-danger{% endif %}">{{ row.overall }}%</span>
+        </div>
+      </div>
+      <div class="table-responsive px-3 pb-2">
+        <table class="table table-bordered mb-0" style="font-size:0.8rem">
+          <thead class="bg-light">
+            <tr>
+              {% for m in row.monthly %}<th class="text-center">{{ m.month_name }}</th>{% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              {% for m in row.monthly %}
+              <td class="text-center p-1">
+                {% if m.total > 0 %}
+                <button type="button" class="btn btn-link btn-sm p-0 month-toggle"
+                        data-target="month-{{ row.student.pk }}-{{ m.month_num }}">
+                  <div class="fw-500 {% if m.pct >= 75 %}text-success{% else %}text-danger{% endif %}">{{ m.present }}/{{ m.total }}</div>
+                  <div style="font-size:0.65rem" class="{% if m.pct >= 75 %}text-success{% else %}text-danger{% endif %}">
+                    {{ m.pct }}% <i class="bi bi-caret-down-fill"></i>
+                  </div>
+                </button>
+                {% else %}<span class="text-muted">—</span>{% endif %}
+              </td>
+              {% endfor %}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Expandable day-level detail for each month -->
+      {% for m in row.monthly %}
+      {% if m.total > 0 %}
+      <div id="month-{{ row.student.pk }}-{{ m.month_num }}" class="px-3 pb-3" style="display:none">
+        <div class="border rounded p-2">
+          <div class="fw-500 small mb-2">{{ m.month_name }} — Day-wise Attendance</div>
+          <table class="table table-sm mb-0">
+            <thead class="bg-light"><tr><th>Date</th><th>Status</th><th>Remarks</th></tr></thead>
+            <tbody>
+              {% for d in m.days %}
+              <tr>
+                <td>{{ d.date|date:"d M Y" }}</td>
+                <td>
+                  {% if d.status == 'P' %}<span class="badge bg-success">Present</span>
+                  {% elif d.status == 'A' %}<span class="badge bg-danger">Absent</span>
+                  {% else %}<span class="badge bg-warning text-dark">Late</span>{% endif %}
+                </td>
+                <td class="text-muted small">{{ d.remarks|default:'-' }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% endif %}
+      {% endfor %}
+    </div>
+    {% endfor %}
+  </div>
+</div>
+<div class="mt-2 small text-muted">
+  <span class="text-success fw-bold">Green</span> = ≥75% &nbsp;|&nbsp; <span class="text-danger fw-bold">Red</span> = &lt;75%
+  &nbsp;|&nbsp; Tap a month to view day-wise attendance.
+</div>
+<script>
+document.querySelectorAll('.month-toggle').forEach(function (btn) {
+  btn.addEventListener('click', function () {
+    const target = document.getElementById(btn.getAttribute('data-target'));
+    if (target) {
+      target.style.display = target.style.display === 'none' ? 'block' : 'none';
+    }
+  });
+});
+</script>
+{% else %}
+<div class="text-center py-5 text-muted">
+  <i class="bi bi-calendar3 fs-1 d-block mb-2"></i>
+  Select a section and year to view the yearly report.
+</div>
+{% endif %}
+{% endblock %}

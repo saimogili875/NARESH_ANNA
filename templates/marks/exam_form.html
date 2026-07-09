@@ -1,0 +1,216 @@
+{% extends 'base.html' %}
+{% block title %}Add Exam{% endblock %}
+{% block page_title %}Add Exam{% endblock %}
+{% block content %}
+
+<div class="mb-3">
+  <a href="{% url 'exam_list' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left"></i> Back to Exams
+  </a>
+</div>
+
+<div class="card border-0 shadow-sm" style="max-width:580px">
+  <div class="card-body p-4">
+    <p class="text-muted small mb-3">Academic Year: <strong>{{ active_year|default:"Not set" }}</strong></p>
+
+    <form method="post" id="examForm">
+      {% csrf_token %}
+
+      <!-- STEP 1: Group -->
+      <div class="mb-3">
+        <label class="form-label fw-bold">a. Student Group <span class="text-danger">*</span></label>
+        <select name="group_id" id="groupSelect" class="form-select" required onchange="onGroupChange()">
+          <option value="">-- Select Group --</option>
+          {% for g in groups %}
+          <option value="{{ g.pk }}" data-code="{{ g.code|upper }}">{{ g.name }} ({{ g.code }})</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- STEP 2: Exam Type (Application) — shown based on group -->
+      <div class="mb-3" id="categorySection" style="display:none">
+        <label class="form-label fw-bold">b. Exam Application <span class="text-danger">*</span></label>
+        <div id="categoryButtons" class="d-flex flex-wrap gap-2"></div>
+        <input type="hidden" name="category" id="categoryInput">
+        <div class="form-text" id="subjectPreview" style="margin-top:6px"></div>
+      </div>
+
+      <!-- STEP 3: Exam Name — ends with selected category -->
+      <div class="mb-3" id="examNameSection" style="display:none">
+        <label class="form-label fw-bold">c. Exam Name <span class="text-danger">*</span></label>
+        <select name="exam_type" id="examTypeSelect" class="form-select" required onchange="onExamTypeChange()">
+        </select>
+        <div class="form-text">Exam name will include the selected application name.</div>
+      </div>
+
+      <!-- Custom name field -->
+      <div class="mb-3" id="customNameDiv" style="display:none">
+        <label class="form-label fw-bold">Custom Exam Name <span class="text-danger">*</span></label>
+        <input type="text" name="custom_name" id="customNameInput" class="form-control"
+               placeholder="e.g. Surprise Test">
+      </div>
+
+      <!-- STEP 4: Date -->
+      <div class="mb-3" id="dateSection" style="display:none">
+        <label class="form-label fw-bold">d. Date <span class="text-danger">*</span></label>
+        <input type="date" name="date" class="form-control" required>
+      </div>
+
+      <!-- Max marks (fixed display for JEE/EAMCET/NEET, editable for IPE) -->
+      <div class="mb-3" id="fixedMarksDiv" style="display:none">
+        <label class="form-label fw-bold">Max Marks (Fixed)</label>
+        <div id="fixedMarksTable" class="border rounded p-2 bg-light small"></div>
+        <div class="form-text">Fixed by board — cannot be changed.</div>
+      </div>
+      <div class="mb-3" id="subjectMarksDiv" style="display:none">
+        <label class="form-label fw-bold">Max Marks per Subject <span class="text-danger">*</span></label>
+        <div id="subjectMarksInputs" class="border rounded p-2"></div>
+      </div>
+
+      <div class="d-flex gap-2 mt-2" id="submitSection">
+        <button type="submit" class="btn btn-primary" id="submitBtn" style="display:none">
+          <i class="bi bi-check-circle"></i> Save Exam
+        </button>
+        <a href="{% url 'exam_list' %}" class="btn btn-outline-secondary">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+{{ group_category_options|json_script:"gco-data" }}
+{{ category_labels|json_script:"cl-data" }}
+{{ subject_sets|json_script:"ss-data" }}
+{{ default_max_marks|json_script:"dmm-data" }}
+{{ fixed_subject_max_marks|json_script:"fsmm-data" }}
+{{ fixed_categories|json_script:"fc-data" }}
+{{ exam_types_js|json_script:"et-data" }}
+<script>
+const GCO   = JSON.parse(document.getElementById('gco-data').textContent);
+const CL    = JSON.parse(document.getElementById('cl-data').textContent);
+const SS    = JSON.parse(document.getElementById('ss-data').textContent);
+const DMM   = JSON.parse(document.getElementById('dmm-data').textContent);
+const FSMM  = JSON.parse(document.getElementById('fsmm-data').textContent);
+const FC    = JSON.parse(document.getElementById('fc-data').textContent);
+const EXAM_TYPES = JSON.parse(document.getElementById('et-data').textContent);
+
+let selectedCategory = '';
+
+function onGroupChange() {
+  const sel = document.getElementById('groupSelect');
+  const groupPk = sel.value;  // group primary key, matches gco_data keys
+
+  // Reset all downstream
+  selectedCategory = '';
+  document.getElementById('categoryInput').value = '';
+  document.getElementById('categorySection').style.display = groupPk ? 'block' : 'none';
+  document.getElementById('examNameSection').style.display = 'none';
+  document.getElementById('dateSection').style.display = 'none';
+  document.getElementById('customNameDiv').style.display = 'none';
+  document.getElementById('fixedMarksDiv').style.display = 'none';
+  document.getElementById('subjectMarksDiv').style.display = 'none';
+  document.getElementById('submitSection').style.display = 'none';
+  document.getElementById('submitBtn').style.display = 'none';
+  document.getElementById('subjectPreview').textContent = '';
+
+  if (!groupPk) return;
+
+  const cats = GCO[groupPk] || [];
+  const container = document.getElementById('categoryButtons');
+  container.innerHTML = '';
+
+  cats.forEach(function(cat) {
+    const label = CL[cat] || cat;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn btn-outline-primary btn-sm';
+    btn.textContent = label;
+    btn.onclick = function() {
+      container.querySelectorAll('button').forEach(b => b.classList.remove('btn-primary','active'));
+      container.querySelectorAll('button').forEach(b => b.classList.add('btn-outline-primary'));
+      btn.classList.remove('btn-outline-primary');
+      btn.classList.add('btn-primary','active');
+      onCategorySelect(cat, groupPk);
+    };
+    container.appendChild(btn);
+  });
+
+  // Auto-select if only one option
+  if (cats.length === 1) {
+    container.querySelector('button').click();
+  }
+}
+
+function onCategorySelect(cat, groupCode) {
+  selectedCategory = cat;
+  document.getElementById('categoryInput').value = cat;
+
+  const subjects = SS[cat] || [];
+  document.getElementById('subjectPreview').textContent =
+    subjects.length ? 'Subjects: ' + subjects.join(', ') : '';
+
+  // Populate exam type dropdown — name ends with category label
+  const catLabel = CL[cat] || cat;
+  const sel = document.getElementById('examTypeSelect');
+  sel.innerHTML = '';
+  EXAM_TYPES.forEach(function([val, label]) {
+    const o = document.createElement('option');
+    o.value = val;
+    // Name ends with selected application: "Unit Test 1 — JEE Main"
+    o.textContent = label + ' — ' + catLabel;
+    sel.appendChild(o);
+  });
+
+  document.getElementById('examNameSection').style.display = 'block';
+  document.getElementById('dateSection').style.display = 'block';
+  document.getElementById('submitSection').style.display = 'flex';
+  document.getElementById('submitBtn').style.display = 'inline-block';
+  onExamTypeChange();
+
+  // Max marks
+  if (FC.includes(cat)) {
+    const fixed = FSMM[cat] || {};
+    let html = '<table class="table table-sm mb-0"><tbody>';
+    let total = 0;
+    subjects.forEach(sub => {
+      const v = fixed[sub] !== undefined ? fixed[sub] : '—';
+      if (typeof v === 'number') total += v;
+      html += `<tr><td>${sub}</td><td class="text-end fw-bold">${v}</td></tr>`;
+    });
+    html += `<tr class="table-active"><td class="fw-bold">Total</td><td class="text-end fw-bold">${total}</td></tr>`;
+    html += '</tbody></table>';
+    document.getElementById('fixedMarksTable').innerHTML = html;
+    document.getElementById('fixedMarksDiv').style.display = 'block';
+    document.getElementById('subjectMarksDiv').style.display = 'none';
+    document.getElementById('subjectMarksInputs').innerHTML = '';
+  } else {
+    document.getElementById('fixedMarksDiv').style.display = 'none';
+    const def = DMM[cat] !== undefined ? DMM[cat] : 100;
+    let html = '';
+    subjects.forEach(sub => {
+      html += `<div class="row g-2 align-items-center mb-2">
+        <div class="col-6 small">${sub}</div>
+        <div class="col-6">
+          <input type="number" min="0" class="form-control form-control-sm"
+            name="subject_max_${sub}" value="${def}" required>
+        </div></div>`;
+    });
+    document.getElementById('subjectMarksInputs').innerHTML = html;
+    document.getElementById('subjectMarksDiv').style.display = subjects.length ? 'block' : 'none';
+  }
+}
+
+function onExamTypeChange() {
+  const sel = document.getElementById('examTypeSelect');
+  const selectedText = sel.options[sel.selectedIndex] ? sel.options[sel.selectedIndex].textContent.trim().toLowerCase() : '';
+  const cd  = document.getElementById('customNameDiv');
+  const ci  = document.getElementById('customNameInput');
+  if (selectedText.startsWith('custom')) {
+    cd.style.display = 'block'; ci.required = true;
+  } else {
+    cd.style.display = 'none'; ci.required = false;
+  }
+}
+
+onGroupChange();
+</script>
+{% endblock %}

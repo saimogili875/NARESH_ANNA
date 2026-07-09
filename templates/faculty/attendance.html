@@ -1,0 +1,90 @@
+{% extends 'base.html' %}
+{% load dict_filters %}
+{% block title %}Faculty Attendance{% endblock %}
+{% block page_title %}Faculty Attendance{% endblock %}
+{% block content %}
+
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-body py-2">
+    <form method="get" class="row g-2 align-items-center">
+      <div class="col-md-3">
+        <input type="date" name="date" value="{{ selected_date }}" class="form-control form-control-sm" onchange="this.form.submit()">
+      </div>
+      <div class="col-auto">
+        <a href="{% url 'faculty_list' %}" class="btn btn-outline-secondary btn-sm">Back to Faculty</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% if faculty_qs %}
+<div class="card border-0 shadow-sm">
+  <div class="card-header bg-white fw-bold py-3">
+    Faculty Attendance — {{ selected_date }}
+  </div>
+  <div class="card-body p-0">
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="date" value="{{ selected_date }}">
+      <table class="table table-hover mb-0">
+        <thead class="bg-light">
+          <tr>
+            <th>#</th>
+            <th>Employee ID</th>
+            <th>Name</th>
+            <th>Subject</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for f in faculty_qs %}
+          <tr>
+            <td class="small text-muted">{{ forloop.counter }}</td>
+            <td class="small text-muted">{{ f.employee_id }}</td>
+            <td class="fw-500">{{ f.name }}</td>
+            <td class="small">{{ f.subject }}</td>
+            <td>
+              {% with cur=att_map|get_item:f.pk %}
+              <div class="d-flex gap-3">
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input" type="radio" name="status_{{ f.pk }}" value="P" id="P_{{ f.pk }}"
+                    {% if cur == 'P' or not cur %}checked{% endif %}>
+                  <label class="form-check-label text-success" for="P_{{ f.pk }}">Present</label>
+                </div>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input" type="radio" name="status_{{ f.pk }}" value="A" id="A_{{ f.pk }}"
+                    {% if cur == 'A' %}checked{% endif %}>
+                  <label class="form-check-label text-danger" for="A_{{ f.pk }}">Absent</label>
+                </div>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input" type="radio" name="status_{{ f.pk }}" value="L" id="L_{{ f.pk }}"
+                    {% if cur == 'L' %}checked{% endif %}>
+                  <label class="form-check-label text-warning" for="L_{{ f.pk }}">Leave</label>
+                </div>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input" type="radio" name="status_{{ f.pk }}" value="H" id="H_{{ f.pk }}"
+                    {% if cur == 'H' %}checked{% endif %}>
+                  <label class="form-check-label text-secondary" for="H_{{ f.pk }}">Holiday</label>
+                </div>
+              </div>
+              {% endwith %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <div class="p-3 border-top">
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-check-circle"></i> Save Attendance
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% else %}
+<div class="text-center py-5 text-muted">
+  <i class="bi bi-person-badge fs-1 d-block mb-2"></i>
+  No faculty added yet. <a href="{% url 'faculty_add' %}">Add faculty</a> first.
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+{% load dict_filters %}
+{% block title %}Enter Marks{% endblock %}
+{% block page_title %}Enter Marks — {{ exam.display_name }}{% endblock %}
+{% block content %}
+
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-body py-2">
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+      {% if exam.group %}
+      <span class="badge bg-light text-dark border">{{ exam.group.code }}</span>
+      {% endif %}
+      <span class="badge bg-info-subtle text-info-emphasis border">{{ exam.get_category_display }}</span>
+      <span class="text-muted small">Subjects: {{ subjects|join:", " }}</span>
+    </div>
+    <form method="get" class="row g-2 align-items-center">
+      <div class="col-md-4">
+        <select name="section" class="form-select form-select-sm" onchange="this.form.submit()">
+          <option value="">-- Select Section --</option>
+          {% for s in sections %}
+          <option value="{{ s.pk }}" {% if s.pk|stringformat:"s" == section_id %}selected{% endif %}>
+            {{ s.group.name }} - Year {{ s.year }} - {{ s.name }}
+          </option>
+          {% endfor %}
+        </select>
+        {% if not sections %}
+        <div class="form-text text-warning">No sections found for this exam's group ({{ exam.group.code|default:"—" }}).</div>
+        {% endif %}
+      </div>
+      <div class="col-auto">
+        <a href="{% url 'exam_list' %}" class="btn btn-outline-secondary btn-sm">Back to Exams</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% if selected_section and rows %}
+<div class="card border-0 shadow-sm">
+  <div class="card-header bg-white fw-bold py-3">
+    {{ exam.display_name }} — {{ selected_section }} — Max Marks: {{ exam.max_marks }}
+  </div>
+  <div class="card-body p-0">
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="section_id" value="{{ selected_section.pk }}">
+      <div class="table-responsive">
+        <table class="table table-bordered mb-0" style="font-size:0.85rem">
+          <thead class="bg-light">
+            <tr>
+              <th style="min-width:150px">Student</th>
+              {% for subject, max_val in subjects_with_max %}
+              <th class="text-center" style="min-width:85px">{{ subject }}<div class="text-muted" style="font-size:0.65rem">/ {{ max_val }}</div></th>
+              {% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in rows %}
+            <tr>
+              <td>
+                <div class="fw-500">{{ row.student.name }}</div>
+                <div class="text-muted" style="font-size:0.7rem">{{ row.student.admission_number }}</div>
+              </td>
+              {# FIX: row.marks is now a list of (subject, value) tuples — use subject name correctly in input name #}
+              {% for subject, mark_val in row.marks %}
+              <td class="text-center p-1">
+                <input type="number"
+                  name="mark_{{ row.student.pk }}_{{ subject }}"
+                  class="form-control form-control-sm text-center"
+                  style="width:70px;margin:auto"
+                  min="0" max="{{ subject_max_marks|get_item:subject }}" step="0.5"
+                  value="{{ mark_val }}"
+                  placeholder="—">
+              </td>
+              {% endfor %}
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="p-3 border-top">
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-check-circle"></i> Save Marks
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% elif selected_section %}
+<div class="alert alert-info">No active students in this section.</div>
+{% else %}
+<div class="text-center py-5 text-muted">
+  <i class="bi bi-journal-text fs-1 d-block mb-2"></i>
+  Select a section to enter marks.
+</div>
+{% endif %}
+{% endblock %}

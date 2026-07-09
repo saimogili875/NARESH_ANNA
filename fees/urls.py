@@ -1,0 +1,19 @@
+from django.urls import path
+from . import views
+
+urlpatterns = [
+    path('', views.fee_list, name='fee_list'),
+    path('bulk-tuition/', views.fee_set_bulk, name='fee_set_bulk'),
+    path('types/', views.fee_type_manage, name='fee_type_manage'),
+    path('types/<int:pk>/assign/', views.fee_type_assign, name='fee_type_assign'),
+    path('types/<int:pk>/delete/', views.fee_type_delete, name='fee_type_delete'),
+    path('student/<int:pk>/', views.fee_detail, name='fee_detail'),
+    path('student/<int:pk>/set/', views.fee_set, name='fee_set'),
+    path('student/<int:pk>/collect/', views.fee_collect, name='fee_collect'),
+    path('student/<int:pk>/receipt/<int:payment_id>/', views.receipt_download, name='receipt_download'),
+    path('student/<int:pk>/receipt/<int:payment_id>/send-whatsapp/', views.receipt_send_whatsapp, name='receipt_send_whatsapp'),
+]
+
+urlpatterns += [
+    path('export/', views.fee_export, name='fee_export'),
+]

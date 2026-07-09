@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+{% block title %}Assign Fee Type{% endblock %}
+{% block page_title %}Assign Fee Type: {{ fee_type.name }}{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="{% url 'fee_type_manage' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left"></i> Back to Manage Fee Types
+    </a>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-primary text-white border-0 py-3">
+                <h6 class="mb-0"><i class="bi bi-tag-fill me-2"></i>Assign "{{ fee_type.name }}" to Sections</h6>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST">
+                    {% csrf_token %}
+                    
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">1. Enter Fee Amount (₹) <span class="text-danger">*</span></label>
+                        <input type="number" step="0.01" min="0" name="amount" class="form-control form-control-lg" placeholder="e.g. 1500" required>
+                        <div class="form-text">This will overwrite the assigned amount for all students in the selected sections. You can run this multiple times with different amounts for different sections.</div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">2. Select Sections <span class="text-danger">*</span></label>
+                        
+                        <div class="border rounded p-3 bg-light" style="max-height: 400px; overflow-y: auto;">
+                            {% regroup sections by group as group_list %}
+                            {% for group in group_list %}
+                            <div class="mb-3">
+                                <div class="form-check fw-bold mb-2 pb-1 border-bottom">
+                                    <input class="form-check-input group-checkbox" type="checkbox" id="group_{{ group.grouper.id }}">
+                                    <label class="form-check-label text-primary" for="group_{{ group.grouper.id }}">
+                                        {{ group.grouper.name }} Group
+                                    </label>
+                                </div>
+                                <div class="row g-2 ms-3">
+                                    {% for section in group.list %}
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input section-checkbox group-{{ group.grouper.id }}" 
+                                                   type="checkbox" name="sections" value="{{ section.id }}" 
+                                                   id="section_{{ section.id }}">
+                                            <label class="form-check-label" for="section_{{ section.id }}">
+                                                Yr{{ section.year }} - {{ section.name }}
+                                            </label>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% empty %}
+                                <div class="text-muted">No sections available.</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 mt-4">
+                        <a href="{% url 'fee_type_manage' %}" class="btn btn-light">Cancel</a>
+                        <button type="submit" class="btn btn-primary px-4">Assign Fee</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Logic to handle group checkbox ticking all its sections
+document.addEventListener('DOMContentLoaded', function() {
+    const groupCheckboxes = document.querySelectorAll('.group-checkbox');
+    
+    groupCheckboxes.forEach(groupCb => {
+        groupCb.addEventListener('change', function() {
+            const groupId = this.id.split('_')[1];
+            const sectionCheckboxes = document.querySelectorAll('.group-' + groupId);
+            
+            sectionCheckboxes.forEach(sectionCb => {
+                sectionCb.checked = this.checked;
+            });
+        });
+    });
+
+    // Optional: If a section is unchecked, uncheck the parent group
+    const sectionCheckboxes = document.querySelectorAll('.section-checkbox');
+    sectionCheckboxes.forEach(sectionCb => {
+        sectionCb.addEventListener('change', function() {
+            if (!this.checked) {
+                // Find parent group class
+                const groupClass = Array.from(this.classList).find(c => c.startsWith('group-'));
+                if (groupClass) {
+                    const groupId = groupClass.split('-')[1];
+                    document.getElementById('group_' + groupId).checked = false;
+                }
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

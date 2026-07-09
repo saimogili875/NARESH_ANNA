@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% block title %}Live PDF Preview{% endblock %}
+{% block page_title %}Live PDF Preview{% endblock %}
+{% block content %}
+
+<div class="container-fluid py-4">
+  <div class="card border-0 shadow-sm">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+      <div>
+        <h5 class="mb-0">Live PDF Preview</h5>
+        <small class="text-muted">Report for {{ report.student.name }} ({{ report.student.admission_number }})</small>
+      </div>
+      <div class="d-flex gap-2">
+        <a href="{% url 'sai:generate_pdf' report.id %}" class="btn btn-danger btn-sm" target="_blank">
+          <i class="bi bi-file-earmark-pdf"></i> Open Raw PDF
+        </a>
+        <a href="{% url 'sai:lab_reports_list' %}" class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-arrow-left"></i> Back to Reports
+        </a>
+      </div>
+    </div>
+    <div class="card-body">
+      <p class="text-muted mb-4">This page uses JavaScript and an inline PDF viewer to show the report without downloading. Save your code, refresh the page, and Safari will render the live PDF.</p>
+      <div class="mb-3">
+        <label class="form-label">PDF URL</label>
+        <input class="form-control" type="text" id="pdfUrl" value="{% url 'sai:generate_pdf' report.id %}" readonly>
+      </div>
+      <div class="ratio ratio-16x9" style="min-height:700px;">
+        <iframe id="pdfFrame" src="{% url 'sai:generate_pdf' report.id %}" title="Live PDF Preview"></iframe>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,173 @@
+{% extends 'base.html' %}
+{% block title %}Report Detail{% endblock %}
+{% block page_title %}Lab Performance Report{% endblock %}
+{% block content %}
+
+<div class="container-fluid py-4">
+  <div class="card border-0 shadow-sm">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+      <h5 class="mb-0">Report - {{ report.student.name }}</h5>
+      <div class="d-flex gap-2">
+        <a href="{% url 'sai:generate_pdf' report.id %}" class="btn btn-danger btn-sm" target="_blank">
+          <i class="bi bi-file-earmark-pdf"></i> Preview PDF
+        </a>
+        <button onclick="window.print()" class="btn btn-primary btn-sm">
+          <i class="bi bi-printer"></i> Print
+        </button>
+        <a href="{% url 'sai:lab_reports_list' %}" class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-arrow-left"></i> Back
+        </a>
+      </div>
+    </div>
+    
+    <div class="card-body">
+      <!-- Student Details -->
+      <h6 class="text-uppercase text-muted fw-bold mb-3">Student Information</h6>
+      <div class="row mb-4">
+        <div class="col-md-3">
+          <small class="text-muted d-block">Student Name</small>
+          <strong>{{ report.student.name }}</strong>
+        </div>
+        <div class="col-md-3">
+          <small class="text-muted d-block">Admission Number</small>
+          <strong>{{ report.student.admission_number }}</strong>
+        </div>
+        <div class="col-md-3">
+          <small class="text-muted d-block">Hall Ticket</small>
+          <strong>{{ report.student.hall_ticket|default:"—" }}</strong>
+        </div>
+        <div class="col-md-3">
+          <small class="text-muted d-block">Academic Year</small>
+          <strong>{{ report.academic_year.name }}</strong>
+        </div>
+      </div>
+
+      <hr>
+
+      <!-- JEE Main -->
+      {% if report.jee_best_score or report.jee_avg_score %}
+      <h6 class="text-uppercase text-muted fw-bold mb-3">JEE Main Mock Tests</h6>
+      <div class="row mb-4">
+        <div class="col-md-4">
+          <div class="card bg-light border-0">
+            <div class="card-body text-center">
+              <small class="text-muted d-block">Best Score</small>
+              <h4 class="mb-0">{{ report.jee_best_score }}<small>/300</small></h4>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card bg-light border-0">
+            <div class="card-body text-center">
+              <small class="text-muted d-block">Average Score</small>
+              <h4 class="mb-0">{{ report.jee_avg_score }}</h4>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card bg-light border-0">
+            <div class="card-body text-center">
+              <small class="text-muted d-block">Mocks Attended</small>
+              <h4 class="mb-0">{{ report.jee_mocks_attended }}</h4>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <hr>
+      {% endif %}
+
+      <!-- EAMCET -->
+      {% if report.eamcet_best_score or report.eamcet_avg_score %}
+      <h6 class="text-uppercase text-muted fw-bold mb-3">EAMCET Mock Tests</h6>
+      <div class="row mb-4">
+        <div class="col-md-4">
+          <div class="card bg-light border-0">
+            <div class="card-body text-center">
+              <small class="text-muted d-block">Best Score</small>
+              <h4 class="mb-0">{{ report.eamcet_best_score }}<small>/160</small></h4>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card bg-light border-0">
+            <div class="card-body text-center">
+              <small class="text-muted d-block">Average Score</small>
+              <h4 class="mb-0">{{ report.eamcet_avg_score }}</h4>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card bg-light border-0">
+            <div class="card-body text-center">
+              <small class="text-muted d-block">Mocks Attended</small>
+              <h4 class="mb-0">{{ report.eamcet_mocks_attended }}</h4>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <hr>
+      {% endif %}
+
+      <!-- IPE -->
+      {% if report.ipe_score or report.ipe_percentage %}
+      <h6 class="text-uppercase text-muted fw-bold mb-3">IPE - Mid Term</h6>
+      <div class="row mb-4">
+        <div class="col-md-6">
+          <div class="card bg-light border-0">
+            <div class="card-body text-center">
+              <small class="text-muted d-block">Score</small>
+              <h4 class="mb-0">{{ report.ipe_score }}<small>/440</small></h4>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="card bg-light border-0">
+            <div class="card-body text-center">
+              <small class="text-muted d-block">Percentage</small>
+              <h4 class="mb-0">{{ report.ipe_percentage }}<small>%</small></h4>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <hr>
+      {% endif %}
+
+      <!-- Weekly Tests -->
+      {% if report.weekly_avg_score %}
+      <h6 class="text-uppercase text-muted fw-bold mb-3">Weekly Tests</h6>
+      <div class="row mb-4">
+        <div class="col-md-6">
+          <div class="card bg-light border-0">
+            <div class="card-body text-center">
+              <small class="text-muted d-block">Average Score</small>
+              <h4 class="mb-0">{{ report.weekly_avg_score }}<small>/100</small></h4>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <hr>
+      {% endif %}
+
+      <!-- Remarks -->
+      {% if report.remarks %}
+      <h6 class="text-uppercase text-muted fw-bold mb-3">Remarks</h6>
+      <div class="alert alert-info border-0">
+        {{ report.remarks }}
+      </div>
+      {% endif %}
+
+      <!-- Report Meta -->
+      <div class="mt-4 pt-3 border-top">
+        <small class="text-muted">
+          Report Generated: {{ report.date_of_report|date:"d-m-Y H:i:s" }}
+        </small>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

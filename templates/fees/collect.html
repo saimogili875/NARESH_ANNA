@@ -1,0 +1,112 @@
+{% extends 'base.html' %}
+{% block title %}Collect Fee — {{ student.name }}{% endblock %}
+{% block page_title %}Collect Fee Payment{% endblock %}
+{% block content %}
+<div class="card border-0 shadow-sm" style="max-width:520px">
+  <div class="card-body p-4">
+    <div class="d-flex align-items-center gap-3 mb-3">
+      {% if student.photo %}
+      <img src="{{ student.photo.url }}" width="50" height="50" style="border-radius:50%;object-fit:cover">
+      {% else %}
+      <div style="width:50px;height:50px;border-radius:50%;background:#e2e8f0;display:flex;align-items:center;justify-content:center">
+        <i class="bi bi-person text-muted fs-4"></i>
+      </div>
+      {% endif %}
+      <div>
+        <div class="fw-bold">{{ student.name }}</div>
+        <div class="small text-muted">{{ student.admission_number }} | {{ active_year }}</div>
+      </div>
+    </div>
+
+    <div class="card bg-light border-0 p-3 mb-4">
+      <div class="row text-center g-0">
+        <div class="col-4">
+          <div class="fw-bold">₹{{ student_fee.total_fee|floatformat:0 }}</div>
+          <div class="text-muted" style="font-size:0.75rem">Total Fee</div>
+        </div>
+        <div class="col-4 border-start border-end">
+          <div class="fw-bold text-success">₹{{ student_fee.total_paid|floatformat:0 }}</div>
+          <div class="text-muted" style="font-size:0.75rem">Paid</div>
+        </div>
+        <div class="col-4">
+          <div class="fw-bold text-danger">₹{{ student_fee.total_pending|floatformat:0 }}</div>
+          <div class="text-muted" style="font-size:0.75rem">Pending</div>
+        </div>
+      </div>
+      <div class="progress mt-2" style="height:5px">
+        <div class="progress-bar bg-success" style="width:{{ student_fee.payment_percentage }}%"></div>
+      </div>
+    </div>
+
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{{ request.GET.next }}">
+      
+      <div class="mb-3">
+        <label class="form-label fw-500">Fee Head <span class="text-danger">*</span></label>
+        <select name="fee_head" id="feeHeadSelect" class="form-select form-select-lg" required onchange="updateMaxAmount()">
+          <option value="tuition" data-pending="{{ student_fee.total_pending|stringformat:'f' }}">
+            Tuition Fee (Pending: ₹{{ student_fee.total_pending|floatformat:0 }})
+          </option>
+          {% for charge in other_charges %}
+          <option value="{{ charge.pk }}" data-pending="{{ charge.total_pending|stringformat:'f' }}">
+            {{ charge.fee_type.name }} (Pending: ₹{{ charge.total_pending|floatformat:0 }})
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="mb-3">
+        <label class="form-label fw-500">Amount (₹) <span class="text-danger">*</span></label>
+        <input type="number" name="amount" id="amountInput" class="form-control form-control-lg"
+          min="1" step="1" required
+          value="{{ student_fee.total_pending|floatformat:0 }}"
+          placeholder="Enter amount">
+      </div>
+      <div class="row g-3 mb-3">
+        <div class="col-md-6">
+          <label class="form-label fw-500">Payment Date <span class="text-danger">*</span></label>
+          <input type="date" name="payment_date" class="form-control" value="{{ today }}" required>
+          <div class="form-text">Admin/Accounts can backdate if needed.</div>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-500">Receipt Number</label>
+          <input type="text" name="receipt_number" class="form-control" placeholder="Auto-generated if empty">
+          <div class="form-text">Leave blank to auto-generate.</div>
+        </div>
+      </div>
+      <div class="mb-3">
+        <label class="form-label fw-500">Payment Mode</label>
+        <div class="d-flex gap-3 flex-wrap">
+          {% for val, label in payment_modes %}
+          <div class="form-check form-check-inline">
+            <input class="form-check-input" type="radio" name="payment_mode" value="{{ val }}" id="mode_{{ val }}"
+              {% if val == 'cash' %}checked{% endif %}>
+            <label class="form-check-label" for="mode_{{ val }}">{{ label }}</label>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="mb-4">
+        <label class="form-label fw-500">Remarks (optional)</label>
+        <input type="text" name="remarks" class="form-control" placeholder="e.g. Cheque no. 12345">
+      </div>
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary btn-lg flex-grow-1">
+          <i class="bi bi-check-circle"></i> Collect & Generate Receipt
+        </button>
+        <a href="{% url 'fee_detail' student.pk %}" class="btn btn-light btn-lg">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function updateMaxAmount() {
+  const select = document.getElementById('feeHeadSelect');
+  const option = select.options[select.selectedIndex];
+  const pending = option.getAttribute('data-pending');
+  const input = document.getElementById('amountInput');
+  input.value = Math.round(parseFloat(pending));
+}
+</script>
+{% endblock %}

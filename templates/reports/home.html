@@ -1,0 +1,173 @@
+{% extends 'base.html' %}
+{% block title %}Reports — Srinri College{% endblock %}
+{% block page_title %}Reports & Analytics{% endblock %}
+{% block content %}
+
+<!-- ── Top stat cards ── -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="stat-card" style="background:linear-gradient(135deg,#1a56db,#3b82f6)">
+      <i class="bi bi-people-fill"></i>
+      <div class="value">{{ total_students }}</div>
+      <div class="label">Total Students</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card" style="background:linear-gradient(135deg,#059669,#6ee7b7)">
+      <i class="bi bi-cash-coin"></i>
+      <div class="value">₹{{ total_paid|floatformat:0 }}</div>
+      <div class="label">Fees Collected</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card" style="background:linear-gradient(135deg,#be123c,#fda4af)">
+      <i class="bi bi-exclamation-circle-fill"></i>
+      <div class="value">₹{{ total_pending|floatformat:0 }}</div>
+      <div class="label">Fees Pending</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card" style="background:linear-gradient(135deg,#d97706,#fde68a)">
+      <i class="bi bi-cash-stack"></i>
+      <div class="value">₹{{ month_payments|floatformat:0 }}</div>
+      <div class="label">This Month</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Attendance breakdown ── -->
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-header bg-white py-3">
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+      <span class="fw-bold fs-6">
+        <i class="bi bi-calendar-check me-2 text-primary"></i>Attendance — Section-wise
+      </span>
+      <form method="get" class="d-flex align-items-center gap-2">
+        <input type="date" name="date" value="{{ selected_date }}"
+               class="form-control form-control-sm" style="width:160px"
+               onchange="this.form.submit()">
+        {% if selected_date != today %}
+        <a href="?" class="btn btn-outline-secondary btn-sm">Today</a>
+        {% endif %}
+      </form>
+    </div>
+  </div>
+
+  <!-- Overall totals bar -->
+  <div class="px-3 pt-3 pb-2">
+    <div class="row g-2 text-center">
+      <div class="col-4">
+        <div class="rounded-3 py-2" style="background:#dcfce7">
+          <div class="fs-4 fw-bold text-success">{{ total_present }}</div>
+          <div class="small text-muted">Present</div>
+        </div>
+      </div>
+      <div class="col-4">
+        <div class="rounded-3 py-2" style="background:#fee2e2">
+          <div class="fs-4 fw-bold text-danger">{{ total_absent }}</div>
+          <div class="small text-muted">Absent</div>
+        </div>
+      </div>
+      <div class="col-4">
+        <div class="rounded-3 py-2" style="background:#f3f4f6">
+          <div class="fs-4 fw-bold text-secondary">{{ total_not_marked }}</div>
+          <div class="small text-muted">Not Marked</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Group-level summary pills -->
+  {% if group_summary %}
+  <div class="px-3 pb-2 d-flex flex-wrap gap-2">
+    {% for grp_name, gs in group_summary.items %}
+    <span class="badge rounded-pill fw-normal px-3 py-2"
+          style="background:#e0e7ff;color:#3730a3;font-size:0.78rem">
+      <strong>{{ grp_name }}</strong>
+      &nbsp;✅ {{ gs.present }} &nbsp;❌ {{ gs.absent }}
+      &nbsp;<span class="opacity-75">/ {{ gs.total }}</span>
+    </span>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Section-by-section table -->
+  <div class="table-responsive">
+    <table class="table table-hover mb-0" style="font-size:0.85rem">
+      <thead class="bg-light">
+        <tr>
+          <th>Section</th>
+          <th class="text-center">Total</th>
+          <th class="text-center text-success">Present</th>
+          <th class="text-center text-danger">Absent</th>
+          <th class="text-center text-secondary">Not Marked</th>
+          <th class="text-center">Attendance %</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in section_attendance %}
+        <tr>
+          <td>
+            <div class="fw-semibold">{{ row.section.group.code }}-Yr{{ row.section.year }}-{{ row.section.name }}</div>
+            <div class="text-muted" style="font-size:0.75rem">{{ row.section.group.name }}</div>
+          </td>
+          <td class="text-center">
+            <span class="badge bg-primary">{{ row.total }}</span>
+          </td>
+          <td class="text-center">
+            <span class="badge bg-success">{{ row.present }}</span>
+          </td>
+          <td class="text-center">
+            <span class="badge bg-danger">{{ row.absent }}</span>
+          </td>
+          <td class="text-center">
+            {% if row.not_marked %}
+            <span class="badge bg-secondary">{{ row.not_marked }}</span>
+            {% else %}
+            <span class="text-muted small">—</span>
+            {% endif %}
+          </td>
+          <td class="text-center">
+            {% if row.pct is not None %}
+              {% if row.pct >= 75 %}
+                <span class="badge bg-success">{{ row.pct }}%</span>
+              {% elif row.pct >= 50 %}
+                <span class="badge bg-warning text-dark">{{ row.pct }}%</span>
+              {% else %}
+                <span class="badge bg-danger">{{ row.pct }}%</span>
+              {% endif %}
+            {% else %}
+              <span class="text-muted small">—</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="text-center text-muted py-4">No sections found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ── Quick links ── -->
+<div class="card border-0 shadow-sm">
+  <div class="card-header bg-white fw-bold py-3">Quick Links</div>
+  <div class="card-body">
+    <div class="d-flex flex-wrap gap-2">
+      <a href="{% url 'attendance_report' %}" class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-calendar-check me-1"></i> Attendance Report
+      </a>
+      <a href="{% url 'marks_report' %}" class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-journal-text me-1"></i> Marks Report
+      </a>
+      <a href="{% url 'fee_list' %}" class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-cash-stack me-1"></i> Fee Report
+      </a>
+      <a href="{% url 'student_list' %}" class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-people me-1"></i> Student List
+      </a>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

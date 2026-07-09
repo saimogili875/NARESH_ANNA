@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+{% block title %}Manage Fee Types{% endblock %}
+{% block page_title %}Manage Fee Types{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="{% url 'fee_list' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left"></i> Back to Fee Dashboard
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-md-5">
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-primary text-white border-0 py-3">
+                <h6 class="mb-0"><i class="bi bi-plus-circle me-2"></i>Create New Fee Type</h6>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Fee Name <span class="text-danger">*</span></label>
+                        <input type="text" name="name" class="form-control" placeholder="e.g. Books Fee" required>
+                        <div class="form-text">Will be created for academic year: <strong>{{ active_year }}</strong></div>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Create Fee Type</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-7">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-list-ul me-2"></i>Active Fee Types</h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light text-secondary" style="font-size: 0.85rem">
+                            <tr>
+                                <th>FEE NAME</th>
+                                <th>ASSIGNED</th>
+                                <th>COLLECTED</th>
+                                <th>PENDING</th>
+                                <th>ACTIONS</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for ft in fee_types %}
+                            <tr>
+                                <td class="fw-bold">{{ ft.name }}</td>
+                                <td>₹{{ ft.total_assigned|floatformat:0 }}</td>
+                                <td class="text-success">₹{{ ft.total_paid|floatformat:0 }}</td>
+                                <td class="text-danger">₹{{ ft.total_pending|floatformat:0 }}</td>
+                                <td class="text-nowrap">
+                                    <a href="{% url 'fee_type_assign' ft.pk %}" class="btn btn-sm btn-outline-primary me-1" title="Assign to Sections">
+                                        <i class="bi bi-people-fill"></i> Assign
+                                    </a>
+                                    <a href="{% url 'fee_type_delete' ft.pk %}" class="btn btn-sm btn-outline-danger" title="Delete Fee Type">
+                                        <i class="bi bi-trash"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center py-4 text-muted">No temporary fee types created yet.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
