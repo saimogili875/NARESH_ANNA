@@ -9,8 +9,14 @@
       <div class="card-body p-4">
         <h6 class="mb-3">Upload Excel File</h6>
         <div class="alert alert-info small">
-          <strong>Excel Format (columns in order):</strong><br>
-          Admission No | Hall Ticket | Name | Father | Mother | Mobile | Aadhaar | Group Code | Year (1/2) | Section | Address
+          <strong>Excel Format:</strong> first row must be column headers (any order, not case-sensitive):<br>
+          <code>Admission No</code>, <code>Name</code> (required) &middot;
+          <code>Hall Ticket</code>, <code>Father Name</code>, <code>Mother Name</code>,
+          <code>Mobile 1</code>, <code>Mobile 2</code>, <code>Mobile 3</code>, <code>Mobile 4</code>,
+          <code>Aadhaar</code>, <code>Address</code> (optional) &middot;
+          <code>Group</code>, <code>Year</code> (1 or 2), <code>Section</code> (optional, but fill in all
+          three together to place the student in a group/section &mdash; it will be created automatically
+          if it doesn't exist yet).
         </div>
         <form method="post" enctype="multipart/form-data">
           {% csrf_token %}
