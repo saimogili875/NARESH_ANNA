@@ -247,7 +247,7 @@
                 <li><a class="dropdown-item" href="{% url 'group_edit' gd.group.pk %}"><i class="bi bi-pencil me-2"></i>Edit Group</a></li>
                 <li><hr class="dropdown-divider"></li>
                 <li><a class="dropdown-item text-danger" href="{% url 'group_delete' gd.group.pk %}"
-                       onclick="return confirm('Delete {{ gd.group.name }}?')">
+                       onclick="return confirm('Delete {{ gd.group.name }}? This will PERMANENTLY delete all {{ gd.student_count }} student(s), and all their attendance/marks/fee records, in every section under this group. This cannot be undone.')">
                   <i class="bi bi-trash me-2"></i>Delete Group</a></li>
               </ul>
             </div>
