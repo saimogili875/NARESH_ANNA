@@ -1,7 +1,8 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.db.models import Q
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
+from django.views.decorators.http import require_POST
 import openpyxl
 from openpyxl.utils import get_column_letter
 from .models import Student
@@ -68,6 +69,160 @@ def student_delete(request, pk):
     obj.delete()
     messages.success(request, 'Student removed.')
     return redirect('student_list')
+
+
+@admin_required
+@require_POST
+def student_bulk_delete(request):
+    ids = request.POST.getlist('student_ids')
+    count, _ = Student.objects.filter(pk__in=ids).delete()
+    messages.success(request, f'{len(ids)} student(s) removed.')
+    return redirect('student_list')
+
+
+@admin_required
+@require_POST
+def student_bulk_transfer(request):
+    ids = request.POST.getlist('student_ids')
+    section_id = request.POST.get('section')
+    if not section_id:
+        messages.error(request, 'Please choose a Group/Year/Section to move students into.')
+        return redirect('student_list')
+    section = get_object_or_404(Section, pk=section_id)
+    updated = Student.objects.filter(pk__in=ids).update(section=section)
+    messages.success(request, f'{updated} student(s) moved to {section}.')
+    return redirect('student_list')
+
+
+# Fields safe to edit directly from the Students table (tap a cell to edit,
+# and the "Change Details" bulk-edit screen). Only admins can touch these
+# (every view below is @admin_required).
+INLINE_EDITABLE_FIELDS = {
+    'admission_number', 'name', 'father_name', 'mother_name', 'hall_ticket_number',
+    'mobile', 'second_mobile', 'third_mobile', 'fourth_mobile',
+    'aadhaar', 'address',
+}
+
+BULK_EDIT_OPTIONAL_FIELDS = (
+    'father_name', 'mother_name', 'hall_ticket_number',
+    'mobile', 'second_mobile', 'third_mobile', 'fourth_mobile',
+    'aadhaar', 'address',
+)
+
+
+@admin_required
+def student_bulk_edit(request):
+    """Open every selected student's details in editable boxes on one screen
+    ('Change Details' bulk action), then save them all at once."""
+    if request.method == 'POST':
+        ids = request.POST.getlist('student_ids')
+        students = Student.objects.filter(pk__in=ids)
+        updated = 0
+        skipped = []
+        for student in students:
+            pk = student.pk
+            name_val = request.POST.get(f'name_{pk}', '').strip()
+            adm_val = request.POST.get(f'admission_number_{pk}', '').strip()
+            if not name_val:
+                skipped.append(f'{student.admission_number} (name cannot be empty)')
+                continue
+            if not adm_val:
+                skipped.append(f'{student.admission_number} (admission number cannot be empty)')
+                continue
+            if Student.objects.exclude(pk=pk).filter(admission_number=adm_val).exists():
+                skipped.append(f'{student.admission_number} (admission number "{adm_val}" already used by another student)')
+                continue
+            student.name = name_val
+            student.admission_number = adm_val
+            for field in BULK_EDIT_OPTIONAL_FIELDS:
+                key = f'{field}_{pk}'
+                if key in request.POST:
+                    setattr(student, field, request.POST.get(key, '').strip())
+            student.save()
+            updated += 1
+        messages.success(request, f'{updated} student(s) updated.')
+        if skipped:
+            messages.warning(request, f"Skipped: {'; '.join(skipped)}")
+        return redirect('student_list')
+
+    ids_param = request.GET.get('ids', '')
+    id_list = [i for i in ids_param.split(',') if i]
+    students = Student.objects.filter(pk__in=id_list).select_related('section__group')
+    if not students:
+        messages.error(request, 'No students selected to edit.')
+        return redirect('student_list')
+    return render(request, 'students/bulk_edit.html', {'students': students})
+
+
+def _validate_inline_field(student, field, value):
+    """Shared validation for a single inline-edit field. Returns an error
+    string, or None if the value is OK to save."""
+    if field == 'name' and not value:
+        return 'Name cannot be empty.'
+    if field == 'admission_number':
+        if not value:
+            return 'Admission number cannot be empty.'
+        if Student.objects.exclude(pk=student.pk).filter(admission_number=value).exists():
+            return f'Admission number "{value}" is already used by another student.'
+    return None
+
+
+@admin_required
+@require_POST
+def student_inline_update(request, pk):
+    field = request.POST.get('field')
+    value = request.POST.get('value', '').strip()
+    if field not in INLINE_EDITABLE_FIELDS:
+        return JsonResponse({'ok': False, 'error': 'That field cannot be edited inline.'}, status=400)
+    student = get_object_or_404(Student, pk=pk)
+    error = _validate_inline_field(student, field, value)
+    if error:
+        return JsonResponse({'ok': False, 'error': error}, status=400)
+    setattr(student, field, value)
+    try:
+        student.save(update_fields=[field])
+    except Exception as e:
+        return JsonResponse({'ok': False, 'error': str(e)}, status=400)
+    return JsonResponse({'ok': True, 'value': value})
+
+
+@admin_required
+@require_POST
+def student_inline_bulk_save(request):
+    """Save a batch of staged table-cell edits at once (the 'Save Changes'
+    button that appears once you've tapped one or more cells)."""
+    import json
+    try:
+        edits = json.loads(request.body.decode('utf-8'))
+    except Exception:
+        return JsonResponse({'ok': False, 'error': 'Invalid request.'}, status=400)
+
+    results = []
+    for edit in edits:
+        pk = edit.get('pk')
+        field = edit.get('field')
+        value = str(edit.get('value', '')).strip()
+        key = f'{pk}_{field}'
+
+        if field not in INLINE_EDITABLE_FIELDS:
+            results.append({'key': key, 'ok': False, 'error': 'That field cannot be edited inline.'})
+            continue
+        student = Student.objects.filter(pk=pk).first()
+        if not student:
+            results.append({'key': key, 'ok': False, 'error': 'Student not found.'})
+            continue
+        error = _validate_inline_field(student, field, value)
+        if error:
+            results.append({'key': key, 'ok': False, 'error': error})
+            continue
+        setattr(student, field, value)
+        try:
+            student.save(update_fields=[field])
+            results.append({'key': key, 'ok': True, 'value': value})
+        except Exception as e:
+            results.append({'key': key, 'ok': False, 'error': str(e)})
+
+    return JsonResponse({'results': results})
 
 
 @all_roles_required

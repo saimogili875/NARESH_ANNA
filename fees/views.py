@@ -85,6 +85,68 @@ def fee_type_assign(request, pk):
     })
 
 @admin_accounts_required
+def fee_type_assign_individual(request, pk):
+    """Assign a fee type to students with a DIFFERENT hand-typed amount per
+    student, instead of one bulk amount for a whole section. Used e.g. for
+    '2nd Year — Previous Year Balance', where each student owes a different
+    leftover amount from last year."""
+    active_year = AcademicYear.objects.filter(is_active=True).first()
+    fee_type = get_object_or_404(FeeType, pk=pk, academic_year=active_year)
+
+    from accounts.models import Section
+
+    if request.method == 'POST':
+        year_filter = request.POST.get('year_filter', '')
+        section_filter = request.POST.get('section_filter', '')
+        ids = request.POST.getlist('student_ids')
+        updated = 0
+        for sid in ids:
+            key = f'amount_{sid}'
+            if key not in request.POST:
+                continue
+            raw = request.POST.get(key, '').strip()
+            if raw == '':
+                continue  # left blank — leave that student's charge untouched
+            try:
+                amount = float(raw)
+            except ValueError:
+                continue
+            student = Student.objects.filter(pk=sid).first()
+            if not student:
+                continue
+            charge, _ = StudentFeeCharge.objects.get_or_create(
+                student=student, fee_type=fee_type, defaults={'amount_assigned': amount}
+            )
+            charge.amount_assigned = amount
+            charge.save()
+            updated += 1
+        messages.success(request, f"'{fee_type.name}' amount saved for {updated} student(s).")
+        return redirect(f"/fees/types/{pk}/assign-individual/?year={year_filter}&section={section_filter}")
+
+    year_filter = request.GET.get('year', '')
+    section_filter = request.GET.get('section', '')
+
+    students = Student.objects.filter(is_active=True, academic_year=active_year).select_related('section__group')
+    if year_filter:
+        students = students.filter(section__year=year_filter)
+    if section_filter:
+        students = students.filter(section_id=section_filter)
+    students = students.order_by('section__group__name', 'section__year', 'section__name', 'name')
+
+    existing = {c.student_id: c.amount_assigned for c in StudentFeeCharge.objects.filter(fee_type=fee_type)}
+    student_rows = [{'student': s, 'amount': existing.get(s.pk)} for s in students]
+
+    sections = Section.objects.select_related('group').all().order_by('group__name', 'year', 'name')
+    return render(request, 'fees/assign_type_individual.html', {
+        'fee_type': fee_type,
+        'student_rows': student_rows,
+        'sections': sections,
+        'year_filter': year_filter,
+        'section_filter': section_filter,
+    })
+
+
+@admin_accounts_required
 def fee_type_delete(request, pk):
     active_year = AcademicYear.objects.filter(is_active=True).first()
     fee_type = get_object_or_404(FeeType, pk=pk, academic_year=active_year)

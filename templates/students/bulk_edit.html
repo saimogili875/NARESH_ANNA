@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% block title %}Change Student Details{% endblock %}
+{% block page_title %}Change Student Details{% endblock %}
+
+{% block content %}
+<form method="post">
+  {% csrf_token %}
+  {% for s in students %}<input type="hidden" name="student_ids" value="{{ s.pk }}">{% endfor %}
+
+  <div class="card border-0 shadow-sm mb-3">
+    <div class="card-body">
+      <p class="text-muted small mb-3">
+        Editing {{ students|length }} student{{ students|length|pluralize }} &mdash;
+        change any box below, then click <strong>Save Changes</strong> at the bottom.
+        Name and Admission No cannot be left empty, and Admission No must stay unique.
+      </p>
+      <div class="table-responsive">
+        <table class="table table-bordered align-middle mb-0">
+          <thead class="bg-light">
+            <tr>
+              <th style="min-width:110px">Adm No</th>
+              <th style="min-width:160px">Name</th>
+              <th style="min-width:150px">Father Name</th>
+              <th style="min-width:150px">Mother Name</th>
+              <th style="min-width:120px">Hall Ticket</th>
+              <th style="min-width:120px">Mobile 1</th>
+              <th style="min-width:120px">Mobile 2</th>
+              <th style="min-width:120px">Mobile 3</th>
+              <th style="min-width:120px">Mobile 4</th>
+              <th style="min-width:110px">Aadhaar</th>
+              <th style="min-width:200px">Address</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for s in students %}
+            <tr>
+              <td><input type="text" class="form-control form-control-sm" name="admission_number_{{ s.pk }}" value="{{ s.admission_number }}" required></td>
+              <td><input type="text" class="form-control form-control-sm" name="name_{{ s.pk }}" value="{{ s.name }}" required></td>
+              <td><input type="text" class="form-control form-control-sm" name="father_name_{{ s.pk }}" value="{{ s.father_name }}"></td>
+              <td><input type="text" class="form-control form-control-sm" name="mother_name_{{ s.pk }}" value="{{ s.mother_name }}"></td>
+              <td><input type="text" class="form-control form-control-sm" name="hall_ticket_number_{{ s.pk }}" value="{{ s.hall_ticket_number }}"></td>
+              <td><input type="text" class="form-control form-control-sm" name="mobile_{{ s.pk }}" value="{{ s.mobile }}"></td>
+              <td><input type="text" class="form-control form-control-sm" name="second_mobile_{{ s.pk }}" value="{{ s.second_mobile }}"></td>
+              <td><input type="text" class="form-control form-control-sm" name="third_mobile_{{ s.pk }}" value="{{ s.third_mobile }}"></td>
+              <td><input type="text" class="form-control form-control-sm" name="fourth_mobile_{{ s.pk }}" value="{{ s.fourth_mobile }}"></td>
+              <td><input type="text" class="form-control form-control-sm" name="aadhaar_{{ s.pk }}" value="{{ s.aadhaar }}"></td>
+              <td><input type="text" class="form-control form-control-sm" name="address_{{ s.pk }}" value="{{ s.address }}"></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="d-flex gap-2">
+    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Save Changes</button>
+    <a href="{% url 'student_list' %}" class="btn btn-outline-secondary">Cancel</a>
+  </div>
+</form>
+{% endblock %}

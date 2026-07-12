@@ -53,8 +53,11 @@
                                 <td class="text-success">₹{{ ft.total_paid|floatformat:0 }}</td>
                                 <td class="text-danger">₹{{ ft.total_pending|floatformat:0 }}</td>
                                 <td class="text-nowrap">
-                                    <a href="{% url 'fee_type_assign' ft.pk %}" class="btn btn-sm btn-outline-primary me-1" title="Assign to Sections">
-                                        <i class="bi bi-people-fill"></i> Assign
+                                    <a href="{% url 'fee_type_assign' ft.pk %}" class="btn btn-sm btn-outline-primary me-1" title="Same amount for whole section(s)">
+                                        <i class="bi bi-people-fill"></i> Assign (Same Amount)
+                                    </a>
+                                    <a href="{% url 'fee_type_assign_individual' ft.pk %}" class="btn btn-sm btn-outline-primary me-1" title="Different amount typed by hand for each student">
+                                        <i class="bi bi-pencil-square"></i> Enter Individually
                                     </a>
                                     <a href="{% url 'fee_type_delete' ft.pk %}" class="btn btn-sm btn-outline-danger" title="Delete Fee Type">
                                         <i class="bi bi-trash"></i>
