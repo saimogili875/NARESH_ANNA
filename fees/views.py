@@ -170,6 +170,8 @@ def fee_list(request):
         students = students.filter(
             Q(name__icontains=q) | Q(admission_number__icontains=q)
         )
+    student_list = list(students)
+    student_ids = [s.pk for s in student_list]
 
     fee_types = list(FeeType.objects.filter(academic_year=active_year).order_by('created_at'))
     fee_data = []
@@ -178,26 +180,58 @@ def fee_list(request):
     total_pending_tuition = 0
     total_fees_tuition = 0
 
-    for student in students:
-        sf, _ = StudentFee.objects.get_or_create(
-            student=student, academic_year=active_year,
-            defaults={'total_fee': 0}
-        ) if active_year else (None, False)
-        
-        if sf:
+    if active_year and student_ids:
+        # FIX: this used to run get_or_create() and a StudentFeeCharge query
+        # INSIDE a per-student loop — 2+ separate DB round trips per student.
+        # With a few hundred students that was 600+ sequential queries and
+        # started timing out the whole page. Fetch everything in bulk instead,
+        # and prefetch 'payments' so the total_paid/total_pending/status
+        # properties (which each do self.payments.all()) hit the prefetch
+        # cache instead of firing yet another query per student.
+        existing_fees = {
+            sf.student_id: sf
+            for sf in StudentFee.objects.filter(
+                student_id__in=student_ids, academic_year=active_year
+            ).prefetch_related('payments')
+        }
+
+        missing_ids = [pk for pk in student_ids if pk not in existing_fees]
+        if missing_ids:
+            StudentFee.objects.bulk_create(
+                [StudentFee(student_id=pk, academic_year=active_year, total_fee=0) for pk in missing_ids],
+                ignore_conflicts=True,
+            )
+            for sf in StudentFee.objects.filter(
+                student_id__in=missing_ids, academic_year=active_year
+            ).prefetch_related('payments'):
+                existing_fees[sf.student_id] = sf
+
+        charges_by_student = {}
+        if fee_types:
+            for c in StudentFeeCharge.objects.filter(
+                student_id__in=student_ids, fee_type__academic_year=active_year
+            ).select_related('fee_type').prefetch_related('payments'):
+                charges_by_student.setdefault(c.student_id, {})[c.fee_type_id] = c
+
+        for student in student_list:
+            sf = existing_fees.get(student.pk)
+            if not sf:
+                continue
+            # Reuse the Student object we already fetched (with section__group
+            # select_related) instead of letting sf.student lazy-load a fresh
+            # one per row — that was the other big source of extra queries.
+            sf.student = student
             if status_filter and sf.status.lower() != status_filter:
                 continue
 
-            charges_dict = {c.fee_type_id: c for c in StudentFeeCharge.objects.filter(student=student)}
-            ordered_charges = []
-            for ft in fee_types:
-                ordered_charges.append(charges_dict.get(ft.id, None))
+            charges_dict = charges_by_student.get(student.pk, {})
+            ordered_charges = [charges_dict.get(ft.id) for ft in fee_types]
 
             fee_data.append({
                 'student_fee': sf,
                 'charges': ordered_charges
             })
-            
+
             total_collected_tuition += sf.total_paid
             total_pending_tuition += sf.total_pending
             total_fees_tuition += sf.total_fee
@@ -222,7 +256,11 @@ def fee_set(request, pk):
         student=student, academic_year=active_year, defaults={'total_fee': 0}
     )
     if request.method == 'POST':
-        student_fee.total_fee = request.POST.get('total_fee', 0)
+        raw_fee = request.POST.get('total_fee', '0').strip()
+        try:
+            student_fee.total_fee = float(raw_fee) if raw_fee else 0
+        except ValueError:
+            student_fee.total_fee = 0
         student_fee.save()
         messages.success(request, f'Total fee set to ₹{student_fee.total_fee} for {student.name}.')
         # FIX: clean redirect logic — check next first, else go to fee_detail
@@ -317,7 +355,11 @@ def fee_collect(request, pk):
 
     if request.method == 'POST':
         fee_head_id = request.POST.get('fee_head', 'tuition')
-        amount = float(request.POST.get('amount', 0))
+        raw_amount = request.POST.get('amount', '0').strip()
+        try:
+            amount = float(raw_amount) if raw_amount else 0
+        except ValueError:
+            amount = 0
         payment_mode = request.POST.get('payment_mode', 'cash')
         remarks = request.POST.get('remarks', '')
         payment_date_str = request.POST.get('payment_date', str(today))
