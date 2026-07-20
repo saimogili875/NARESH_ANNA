@@ -29,6 +29,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'core.middleware.IPWhitelistMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -107,3 +108,11 @@ TWILIO_WHATSAPP_FROM = config('TWILIO_WHATSAPP_FROM', default='whatsapp:+1415523
 
 # Public base URL for this server (use ngrok URL for local dev so Twilio can fetch media files)
 SITE_BASE_URL = config('SITE_BASE_URL', default='http://127.0.0.1:8000')
+
+# --- IP Whitelisting ---
+_raw_ips = os.environ.get('ALLOWED_CLIENT_IPS', '')
+ALLOWED_CLIENT_IPS = [ip.strip() for ip in _raw_ips.split(',') if ip.strip()]
+IP_WHITELIST_EXEMPT_PATHS = ['/healthz']
+
+# Render terminates TLS at its proxy
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
