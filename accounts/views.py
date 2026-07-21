@@ -11,6 +11,9 @@ from students.models import Student
 from fees.models import FeePayment, StudentFee
 from attendance.models import Attendance
 from datetime import date as Date
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def axes_admin_whitelist(request, credentials=None):
@@ -69,6 +72,11 @@ def login_view(request):
             return render(request, 'accounts/login.html', {'form': LoginForm()})
 
         if not form.is_valid():
+            if 'captcha' in form.errors:
+                logger.error(f"reCAPTCHA validation failed for username '{username}'")
+                for error in form.errors.as_data().get('captcha', []):
+                    logger.error(f"reCAPTCHA Error - Code: {error.code}, Message: {error.message}, Params: {error.params}")
+
             # Captcha or field validation failed — count toward lockout (exempt admins)
             from django.contrib.auth.signals import user_login_failed
             if not is_admin_attempt:
