@@ -1,5 +1,5 @@
 from django.db import models
-from accounts.models import User
+from accounts.models import User, Section
 
 
 class Faculty(models.Model):
@@ -13,6 +13,12 @@ class Faculty(models.Model):
     photo = models.ImageField(upload_to='faculty/photos/', blank=True, null=True)
     date_of_joining = models.DateField()
     is_active = models.BooleanField(default=True)
+    assigned_sections = models.ManyToManyField(
+        Section,
+        related_name='faculty_members',
+        blank=True,
+        help_text='Sections this faculty can access for attendance',
+    )
 
     def __str__(self):
         return f"{self.employee_id} - {self.name}"

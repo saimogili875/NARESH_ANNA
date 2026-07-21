@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Login — Srinri College</title>
+<title>Login — Sri NRI Junior College</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
 <style>
@@ -40,13 +40,19 @@
     padding: 3px 10px; border-radius: 20px;
     font-size: .7rem; margin: 2px;
   }
+  #autofill-warning {
+    display: none;
+    background: #fef2f2; border: 1px solid #fca5a5; color: #991b1b;
+    border-radius: 8px; padding: .5rem .75rem; font-size: .82rem;
+    margin-bottom: .75rem;
+  }
 </style>
 </head>
 <body>
 <div class="login-card">
   <div class="text-center mb-4">
     <div class="logo"><i class="bi bi-mortarboard-fill"></i></div>
-    <div class="college-name">Srinri College</div>
+    <div class="college-name">Sri NRI Junior College</div>
     <div class="college-sub">Management Portal</div>
   </div>
 
@@ -56,8 +62,14 @@
     {% endfor %}
   {% endif %}
 
-  <form method="post">
+  <div id="autofill-warning">
+    <i class="bi bi-exclamation-triangle-fill me-1"></i>
+    Please type your credentials manually. Autofill is not allowed.
+  </div>
+
+  <form method="post" id="loginForm" autocomplete="off">
     {% csrf_token %}
+    <input type="hidden" name="human_typed" id="humanTyped" value="">
     <div class="mb-3">
       <label class="form-label small fw-500">Role</label>
       <select name="role" class="form-select" required>
@@ -69,11 +81,24 @@
     </div>
     <div class="mb-3">
       <label class="form-label small fw-500">Username</label>
-      <input type="text" name="username" class="form-control" placeholder="Enter username" required autofocus>
+      <input type="text" name="username" id="id_username" class="form-control"
+             placeholder="Enter username" required autofocus
+             autocomplete="off" data-typed="false">
+    </div>
+    <div class="mb-3">
+      <label class="form-label small fw-500">Password</label>
+      <input type="password" name="password" id="id_password" class="form-control"
+             placeholder="Enter password" required
+             autocomplete="new-password" data-typed="false">
     </div>
     <div class="mb-4">
-      <label class="form-label small fw-500">Password</label>
-      <input type="password" name="password" class="form-control" placeholder="Enter password" required>
+      <label class="form-label small fw-500">Captcha</label>
+      <div class="d-flex align-items-center gap-2">
+        {{ form.captcha }}
+      </div>
+      {% if form.captcha.errors %}
+        <div class="text-danger small mt-1">{{ form.captcha.errors.0 }}</div>
+      {% endif %}
     </div>
     <button type="submit" class="btn-login">
       <i class="bi bi-box-arrow-in-right me-1"></i> Sign In
@@ -88,5 +113,57 @@
   </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+(function() {
+  const uField = document.getElementById('id_username');
+  const pField = document.getElementById('id_password');
+  const hidden = document.getElementById('humanTyped');
+  const warning = document.getElementById('autofill-warning');
+  const form = document.getElementById('loginForm');
+
+  // Track real keystrokes (keydown fires before autofill)
+  function markTyped(e) {
+    if (['Tab','Shift','Control','Alt','Meta','CapsLock'].includes(e.key)) return;
+    e.target.dataset.typed = 'true';
+    updateHidden();
+  }
+
+  uField.addEventListener('keydown', markTyped);
+  pField.addEventListener('keydown', markTyped);
+
+  function updateHidden() {
+    if (uField.dataset.typed === 'true' && pField.dataset.typed === 'true') {
+      hidden.value = 'true';
+    }
+  }
+
+  // Detect :-webkit-autofill (Chrome/Safari)
+  function isAutofilled(el) {
+    try { return el.matches(':-webkit-autofill'); } catch(e) { return false; }
+  }
+
+  form.addEventListener('submit', function(e) {
+    const uTyped = uField.dataset.typed === 'true';
+    const pTyped = pField.dataset.typed === 'true';
+    const autofilled = isAutofilled(uField) || isAutofilled(pField);
+
+    if (!uTyped || !pTyped || autofilled) {
+      e.preventDefault();
+      warning.style.display = 'block';
+      if (!uTyped) { uField.value = ''; uField.focus(); }
+      else if (!pTyped) { pField.value = ''; pField.focus(); }
+      return false;
+    }
+  });
+
+  // Clear autofill on page load (some browsers fill after DOMContentLoaded)
+  setTimeout(function() {
+    if (isAutofilled(uField) || isAutofilled(pField)) {
+      uField.value = '';
+      pField.value = '';
+    }
+  }, 100);
+})();
+</script>
 </body>
 </html>

@@ -13,6 +13,30 @@ from accounts.models import Section
 from accounts.decorators import all_roles_required, admin_faculty_required
 
 
+def _get_faculty_sections(user):
+    """Return the queryset of sections this user is allowed to access.
+
+    - Admin / superuser → all sections (unrestricted).
+    - Faculty → only their assigned_sections.
+    - Everyone else → empty queryset.
+    """
+    if user.is_superuser or user.role == 'admin':
+        return Section.objects.select_related('group').all()
+    if user.role == 'faculty':
+        try:
+            return user.faculty_profile.assigned_sections.select_related('group').all()
+        except Exception:
+            return Section.objects.none()
+    return Section.objects.none()
+
+
+def _section_allowed(user, section_id):
+    """Check if a specific section_id is in the user's allowed set."""
+    if user.is_superuser or user.role == 'admin':
+        return True
+    return _get_faculty_sections(user).filter(pk=section_id).exists()
+
+
 @all_roles_required
 def attendance_list(request):
     today = timezone.localdate()
@@ -24,7 +48,7 @@ def attendance_list(request):
     except ValueError:
         selected_date = today
 
-    sections = Section.objects.select_related('group').all()
+    sections = _get_faculty_sections(request.user)
     students = []
     attendance_map = {}
     remarks_map = {}
@@ -37,6 +61,9 @@ def attendance_list(request):
     _label_to_key = {'Health Issue': 'health', 'Went Out': 'went_out'}
 
     if section_id and str(section_id).isdigit():
+        if not _section_allowed(request.user, section_id):
+            messages.error(request, 'You do not have access to that section.')
+            return redirect('attendance_list')
         selected_section = get_object_or_404(Section, pk=section_id)
         students = list(Student.objects.filter(section=selected_section, is_active=True))
         existing = Attendance.objects.filter(student__in=students, date=selected_date)
@@ -71,11 +98,30 @@ def attendance_list(request):
 @all_roles_required
 def attendance_mark(request):
     if request.method == 'POST':
+        # Time lock: faculty can't mark attendance after cutoff
+        if request.user.role == 'faculty':
+            from django.conf import settings as conf
+            now = timezone.localtime()
+            cutoff_h = getattr(conf, 'ATTENDANCE_CUTOFF_HOUR', 10)
+            cutoff_m = getattr(conf, 'ATTENDANCE_CUTOFF_MINUTE', 30)
+            cutoff = now.replace(hour=cutoff_h, minute=cutoff_m, second=0, microsecond=0)
+            if now > cutoff:
+                messages.error(
+                    request,
+                    f'Attendance marking is locked after {cutoff_h}:{cutoff_m:02d} AM. Please contact admin.'
+                )
+                return redirect('attendance_list')
+
         section_id = request.POST.get('section_id')
         date_str = request.POST.get('date')
 
         if not section_id or not str(section_id).isdigit():
             messages.error(request, "Invalid section.")
+            return redirect('attendance_list')
+
+        # --- Section restriction ---
+        if not _section_allowed(request.user, section_id):
+            messages.error(request, 'You do not have access to that section.')
             return redirect('attendance_list')
 
         section = get_object_or_404(Section, pk=section_id)
@@ -140,6 +186,10 @@ def attendance_send_whatsapp(request):
     if not section_id or not date_str:
         return JsonResponse({'success': False, 'error': 'section_id and date are required'}, status=400)
 
+    # --- Section restriction ---
+    if not _section_allowed(request.user, section_id):
+        return JsonResponse({'success': False, 'error': 'You do not have access to that section.'}, status=403)
+
     section = get_object_or_404(Section, pk=section_id)
     try:
         att_date = datetime.strptime(date_str.strip(), '%Y-%m-%d').date()
@@ -197,6 +247,11 @@ def attendance_save_reasons(request):
 
     section_id = request.POST.get('section_id')
     date_str = request.POST.get('date')
+
+    # --- Section restriction ---
+    if not _section_allowed(request.user, section_id):
+        return JsonResponse({'success': False, 'error': 'You do not have access to that section.'}, status=403)
+
     section = get_object_or_404(Section, pk=section_id)
     try:
         att_date = date.fromisoformat(date_str)
@@ -265,11 +320,15 @@ def attendance_report(request):
         month = today.month
         year_val = today.year
 
-    sections = Section.objects.select_related('group').all()
+    sections = _get_faculty_sections(request.user)
     report_data = []
     selected_section = None
 
     if section_id and str(section_id).isdigit():
+        # --- Section restriction ---
+        if not _section_allowed(request.user, section_id):
+            messages.error(request, 'You do not have access to that section.')
+            return redirect('attendance_report')
         selected_section = get_object_or_404(Section, pk=section_id)
         # Use correct related_name: attendance_records
         students = Student.objects.filter(section=selected_section, is_active=True).annotate(
@@ -305,13 +364,17 @@ def attendance_report(request):
 def attendance_yearly(request):
     section_id = request.GET.get('section', '')
     year_val = request.GET.get('year', str(timezone.localdate().year))
-    sections = Section.objects.select_related('group').all()
+    sections = _get_faculty_sections(request.user)
     report_data = []
     selected_section = None
     month_names = ['Jun','Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar','Apr','May']
     month_nums =  [6,    7,    8,    9,    10,   11,   12,   1,    2,    3,    4,    5]
 
     if section_id and str(section_id).isdigit():
+        # --- Section restriction ---
+        if not _section_allowed(request.user, section_id):
+            messages.error(request, 'You do not have access to that section.')
+            return redirect('attendance_yearly')
         selected_section = get_object_or_404(Section, pk=section_id)
         yr = int(year_val)
         students = Student.objects.filter(section=selected_section, is_active=True)
@@ -372,6 +435,11 @@ def attendance_yearly_export_excel(request):
 
     if not section_id or not str(section_id).isdigit():
         messages.error(request, 'Please select a section before exporting.')
+        return redirect('attendance_yearly')
+
+    # --- Section restriction ---
+    if not _section_allowed(request.user, section_id):
+        messages.error(request, 'You do not have access to that section.')
         return redirect('attendance_yearly')
 
     selected_section = get_object_or_404(Section, pk=section_id)
@@ -437,6 +505,11 @@ def attendance_report_export(request):
 
     if not section_id:
         messages.error(request, 'Please select a section.')
+        return redirect('attendance_report')
+
+    # --- Section restriction ---
+    if not _section_allowed(request.user, section_id):
+        messages.error(request, 'You do not have access to that section.')
         return redirect('attendance_report')
 
     selected_section = get_object_or_404(Section, pk=section_id)

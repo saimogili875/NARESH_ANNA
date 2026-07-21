@@ -3,23 +3,24 @@ from django.contrib import messages
 from django.utils import timezone
 from datetime import date as Date
 from .models import Faculty, FacultyAttendance
-from accounts.models import User
+from accounts.models import User, Section
 from accounts.decorators import admin_required, all_roles_required
 
 
 @all_roles_required
 def faculty_list(request):
-    faculty = Faculty.objects.select_related('user').filter(is_active=True)
+    faculty = Faculty.objects.select_related('user').prefetch_related('assigned_sections__group').filter(is_active=True)
     return render(request, 'faculty/list.html', {'faculty': faculty})
 
 
 @admin_required
 def faculty_add(request):
     users = User.objects.filter(role='faculty').exclude(faculty_profile__isnull=False)
+    sections = Section.objects.select_related('group').all()
     if request.method == 'POST':
         user_id = request.POST.get('user')
         user = get_object_or_404(User, pk=user_id)
-        Faculty.objects.create(
+        faculty = Faculty.objects.create(
             user=user,
             employee_id=request.POST.get('employee_id'),
             name=request.POST.get('name'),
@@ -29,14 +30,20 @@ def faculty_add(request):
             address=request.POST.get('address', ''),
             date_of_joining=request.POST.get('date_of_joining'),
         )
+        section_ids = request.POST.getlist('assigned_sections')
+        faculty.assigned_sections.set(section_ids)
         messages.success(request, 'Faculty added successfully.')
         return redirect('faculty_list')
-    return render(request, 'faculty/form.html', {'users': users, 'title': 'Add Faculty'})
+    return render(request, 'faculty/form.html', {
+        'users': users, 'sections': sections, 'title': 'Add Faculty',
+    })
 
 
 @admin_required
 def faculty_edit(request, pk):
     obj = get_object_or_404(Faculty, pk=pk)
+    sections = Section.objects.select_related('group').all()
+    assigned_ids = set(obj.assigned_sections.values_list('pk', flat=True))
     if request.method == 'POST':
         obj.name = request.POST.get('name')
         obj.subject = request.POST.get('subject')
@@ -44,9 +51,14 @@ def faculty_edit(request, pk):
         obj.email = request.POST.get('email')
         obj.address = request.POST.get('address', '')
         obj.save()
+        section_ids = request.POST.getlist('assigned_sections')
+        obj.assigned_sections.set(section_ids)
         messages.success(request, 'Faculty updated successfully.')
         return redirect('faculty_list')
-    return render(request, 'faculty/form.html', {'obj': obj, 'title': 'Edit Faculty'})
+    return render(request, 'faculty/form.html', {
+        'obj': obj, 'sections': sections, 'assigned_ids': assigned_ids,
+        'title': 'Edit Faculty',
+    })
 
 
 @admin_required

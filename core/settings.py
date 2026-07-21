@@ -26,6 +26,8 @@ INSTALLED_APPS = [
     'whatsapp',
     'sai',
     'misc',
+    'captcha',
+    'axes',
 ]
 
 MIDDLEWARE = [
@@ -36,9 +38,12 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'accounts.middleware.SessionExpiryMiddleware',
+    'axes.middleware.AxesMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'accounts.middleware.FacultyAccessMiddleware',
+    'accounts.middleware.ActivityLogMiddleware',
 ]
 
 ROOT_URLCONF = 'core.urls'
@@ -116,3 +121,37 @@ IP_WHITELIST_EXEMPT_PATHS = ['/healthz']
 
 # Render terminates TLS at its proxy
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# --- Authentication Backends (axes + default) ---
+AUTHENTICATION_BACKENDS = [
+    'axes.backends.AxesStandaloneBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
+
+# --- django-axes: Login Lockout ---
+AXES_FAILURE_LIMIT = 3
+AXES_COOLOFF_TIME = 24  # hours
+AXES_LOCKOUT_PARAMETERS = [["ip_address", "username"]]
+AXES_RESET_ON_SUCCESS = True
+AXES_LOCKOUT_TEMPLATE = None  # We handle lockout in the login view
+
+# --- Email (for lockout alerts) ---
+EMAIL_BACKEND = os.environ.get(
+    'EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend'
+)
+EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', '587'))
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER or 'noreply@srinri.edu')
+LOCKOUT_NOTIFY_EMAIL = 'mogilisaikumar875@gmail.com'
+
+# --- Attendance Time Lock ---
+ATTENDANCE_CUTOFF_HOUR = 10
+ATTENDANCE_CUTOFF_MINUTE = 30
+
+# --- Fixed-Duration Session Expiry ---
+# Not idle-based: session expires X minutes after login_time, regardless of activity.
+SESSION_EXPIRY_FACULTY_MINUTES = 30   # Faculty accounts
+SESSION_EXPIRY_OTHER_MINUTES = 60     # Admin / accounts / superuser
