@@ -1,7 +1,6 @@
 from django import forms
 from django.contrib.auth.hashers import make_password
-from django_recaptcha.fields import ReCaptchaField
-from django_recaptcha.widgets import ReCaptchaV2Checkbox
+from captcha.fields import CaptchaField
 from .models import User, Group, Section, AcademicYear
 
 
@@ -15,7 +14,7 @@ class LoginForm(forms.Form):
     role = forms.ChoiceField(choices=ROLE_CHOICES, widget=forms.Select(attrs={'class': 'form-select'}))
     username = forms.CharField(widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Username'}))
     password = forms.CharField(widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Password'}))
-    captcha = ReCaptchaField(widget=ReCaptchaV2Checkbox)
+    captcha = CaptchaField()
 
 
 class UserForm(forms.ModelForm):

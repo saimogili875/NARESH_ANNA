@@ -31,7 +31,7 @@ INSTALLED_APPS = [
     'whatsapp',
     'sai',
     'misc',
-    'django_recaptcha',
+    'captcha',
     'axes',
 ]
 
@@ -161,7 +161,3 @@ ATTENDANCE_CUTOFF_MINUTE = 30
 # Not idle-based: session expires X minutes after login_time, regardless of activity.
 SESSION_EXPIRY_FACULTY_MINUTES = 30   # Faculty accounts
 SESSION_EXPIRY_OTHER_MINUTES = 60     # Admin / accounts / superuser
-
-# --- Google reCAPTCHA v2 ---
-RECAPTCHA_PUBLIC_KEY = os.environ.get("RECAPTCHA_PUBLIC_KEY", "")
-RECAPTCHA_PRIVATE_KEY = os.environ.get("RECAPTCHA_PRIVATE_KEY", "")
