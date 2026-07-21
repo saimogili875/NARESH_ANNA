@@ -1,7 +1,12 @@
 from pathlib import Path
 from decouple import config
+import os
+from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Load environment variables from .env file into os.environ
+load_dotenv(BASE_DIR / '.env')
 
 SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-this')
 DEBUG = config('DEBUG', default=True, cast=bool)
@@ -26,7 +31,7 @@ INSTALLED_APPS = [
     'whatsapp',
     'sai',
     'misc',
-    'captcha',
+    'django_recaptcha',
     'axes',
 ]
 
@@ -134,6 +139,7 @@ AXES_COOLOFF_TIME = 24  # hours
 AXES_LOCKOUT_PARAMETERS = [["ip_address", "username"]]
 AXES_RESET_ON_SUCCESS = True
 AXES_LOCKOUT_TEMPLATE = None  # We handle lockout in the login view
+AXES_WHITELIST_CALLABLE = 'accounts.views.axes_admin_whitelist'
 
 # --- Email (for lockout alerts) ---
 EMAIL_BACKEND = os.environ.get(
@@ -155,3 +161,7 @@ ATTENDANCE_CUTOFF_MINUTE = 30
 # Not idle-based: session expires X minutes after login_time, regardless of activity.
 SESSION_EXPIRY_FACULTY_MINUTES = 30   # Faculty accounts
 SESSION_EXPIRY_OTHER_MINUTES = 60     # Admin / accounts / superuser
+
+# --- Google reCAPTCHA v2 ---
+RECAPTCHA_PUBLIC_KEY = os.environ.get("RECAPTCHA_PUBLIC_KEY", "")
+RECAPTCHA_PRIVATE_KEY = os.environ.get("RECAPTCHA_PRIVATE_KEY", "")

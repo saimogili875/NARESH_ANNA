@@ -15,5 +15,4 @@ urlpatterns = [
     path('lab/', include('sai.urls')),
     path('misc/', include('misc.urls')),
     path('whatsapp/', include('whatsapp.urls')),
-    path('captcha/', include('captcha.urls')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

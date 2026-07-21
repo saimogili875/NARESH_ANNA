@@ -13,6 +13,26 @@ from attendance.models import Attendance
 from datetime import date as Date
 
 
+def axes_admin_whitelist(request, credentials=None):
+    """
+    Callable for AXES_WHITELIST_CALLABLE.
+    Returns True if the attempted login is for an admin user,
+    exempting them from django-axes lockout rules.
+    """
+    username = None
+    if credentials and 'username' in credentials:
+        username = credentials['username']
+    elif request and request.method == 'POST':
+        username = request.POST.get('username')
+    
+    if username:
+        try:
+            user = User.objects.get(username=username)
+            return user.role == 'admin'
+        except User.DoesNotExist:
+            pass
+    return False
+
 def login_view(request):
     if request.user.is_authenticated:
         return redirect('dashboard')
@@ -28,8 +48,10 @@ def login_view(request):
             return render(request, 'accounts/login.html', {'form': LoginForm()})
 
         # --- Admin manual block check (independent of axes) ---
+        is_admin_attempt = False
         try:
             target_user = User.objects.get(username=username)
+            is_admin_attempt = target_user.role == 'admin'
             if target_user.is_blocked_by_admin:
                 msg = 'Your account has been blocked by admin. Contact admin for more details.'
                 if target_user.blocked_reason:
@@ -39,23 +61,24 @@ def login_view(request):
         except User.DoesNotExist:
             pass  # Let axes/authenticate handle unknown usernames
 
-        # Check if already locked out by axes
+        # Check if already locked out by axes (exempt admins)
         from axes.helpers import get_client_ip_address
         from axes.handlers.proxy import AxesProxyHandler
-        if AxesProxyHandler.is_locked(request, credentials={'username': username}):
+        if not is_admin_attempt and AxesProxyHandler.is_locked(request, credentials={'username': username}):
             messages.error(request, 'Too many failed attempts. Your access is locked for 24 hours.')
             return render(request, 'accounts/login.html', {'form': LoginForm()})
 
         if not form.is_valid():
-            # Captcha or field validation failed — count toward lockout
+            # Captcha or field validation failed — count toward lockout (exempt admins)
             from django.contrib.auth.signals import user_login_failed
-            user_login_failed.send(
-                sender=__name__,
-                credentials={'username': username},
-                request=request,
-            )
+            if not is_admin_attempt:
+                user_login_failed.send(
+                    sender=__name__,
+                    credentials={'username': username},
+                    request=request,
+                )
             # Re-check lockout after this failure
-            if AxesProxyHandler.is_locked(request, credentials={'username': username}):
+            if not is_admin_attempt and AxesProxyHandler.is_locked(request, credentials={'username': username}):
                 messages.error(request, 'Too many failed attempts. Your access is locked for 24 hours.')
                 return render(request, 'accounts/login.html', {'form': LoginForm()})
         else:
@@ -82,7 +105,7 @@ def login_view(request):
                 messages.error(request, 'Selected role does not match your account.')
             else:
                 # authenticate() failed — axes already recorded the failure via signal
-                if AxesProxyHandler.is_locked(request, credentials={'username': form.cleaned_data['username']}):
+                if not is_admin_attempt and AxesProxyHandler.is_locked(request, credentials={'username': form.cleaned_data['username']}):
                     messages.error(request, 'Too many failed attempts. Your access is locked for 24 hours.')
                     return render(request, 'accounts/login.html', {'form': LoginForm()})
                 messages.error(request, 'Invalid username or password.')
