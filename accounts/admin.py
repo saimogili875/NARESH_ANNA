@@ -1,5 +1,7 @@
 from django.contrib import admin
 from django.utils import timezone
+from django.contrib.admin.sites import NotRegistered
+from axes.models import AccessAttempt
 from .models import User, AcademicYear, Group, Section, LoginSession, ActivityLog
 
 admin.site.register(AcademicYear)
@@ -138,3 +140,26 @@ class ActivityLogAdmin(admin.ModelAdmin):
 
     def has_add_permission(self, request):
         return False
+
+
+# ---------------------------------------------------------------------------
+# Django-Axes Lockout Management
+# ---------------------------------------------------------------------------
+
+try:
+    admin.site.unregister(AccessAttempt)
+except NotRegistered:
+    pass
+
+@admin.register(AccessAttempt)
+class CustomAccessAttemptAdmin(admin.ModelAdmin):
+    list_display = ('username', 'ip_address', 'failures_since_start', 'attempt_time')
+    list_filter = ('ip_address', 'username', 'attempt_time')
+    search_fields = ('ip_address', 'username')
+    actions = ['unlock_attempts']
+
+    @admin.action(description='🔓 Unlock selected attempts (Clears lockout)')
+    def unlock_attempts(self, request, queryset):
+        # Deleting the AccessAttempt record is how axes removes the lockout
+        deleted, _ = queryset.delete()
+        self.message_user(request, f'Unlocked {deleted} lockout attempt(s).')
