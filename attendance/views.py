@@ -102,8 +102,8 @@ def attendance_mark(request):
         if request.user.role == 'faculty':
             from django.conf import settings as conf
             now = timezone.localtime()
-            cutoff_h = getattr(conf, 'ATTENDANCE_CUTOFF_HOUR', 10)
-            cutoff_m = getattr(conf, 'ATTENDANCE_CUTOFF_MINUTE', 30)
+            cutoff_h = getattr(conf, 'ATTENDANCE_CUTOFF_HOUR', 11)
+            cutoff_m = getattr(conf, 'ATTENDANCE_CUTOFF_MINUTE', 0)
             cutoff = now.replace(hour=cutoff_h, minute=cutoff_m, second=0, microsecond=0)
             if now > cutoff:
                 messages.error(
