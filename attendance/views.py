@@ -16,11 +16,11 @@ from accounts.decorators import all_roles_required, admin_faculty_required
 def _get_faculty_sections(user):
     """Return the queryset of sections this user is allowed to access.
 
-    - Admin / superuser → all sections (unrestricted).
+    - Admin / superuser / accounts → all sections (unrestricted).
     - Faculty → only their assigned_sections.
     - Everyone else → empty queryset.
     """
-    if user.is_superuser or user.role == 'admin':
+    if user.is_superuser or user.role in ['admin', 'accounts']:
         return Section.objects.select_related('group').all()
     if user.role == 'faculty':
         try:
@@ -32,9 +32,10 @@ def _get_faculty_sections(user):
 
 def _section_allowed(user, section_id):
     """Check if a specific section_id is in the user's allowed set."""
-    if user.is_superuser or user.role == 'admin':
+    if user.is_superuser or user.role in ['admin', 'accounts']:
         return True
     return _get_faculty_sections(user).filter(pk=section_id).exists()
+
 
 
 @all_roles_required
