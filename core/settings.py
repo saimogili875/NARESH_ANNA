@@ -154,8 +154,8 @@ DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER or 'no
 LOCKOUT_NOTIFY_EMAIL = 'mogilisaikumar875@gmail.com'
 
 # --- Attendance Time Lock ---
-ATTENDANCE_CUTOFF_HOUR = 11
-ATTENDANCE_CUTOFF_MINUTE = 0
+ATTENDANCE_CUTOFF_HOUR = 10
+ATTENDANCE_CUTOFF_MINUTE = 30
 
 # --- Fixed-Duration Session Expiry ---
 # Not idle-based: session expires X minutes after login_time, regardless of activity.
