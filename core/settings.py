@@ -21,6 +21,7 @@ INSTALLED_APPS = [
     'whitenoise.runserver_nostatic',
     'django.contrib.staticfiles',
     'core',
+    'axes',
     'accounts',
     'students',
     'attendance',
@@ -32,7 +33,6 @@ INSTALLED_APPS = [
     'sai',
     'misc',
     'captcha',
-    'axes',
 ]
 
 MIDDLEWARE = [
