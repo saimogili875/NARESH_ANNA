@@ -37,6 +37,20 @@ class UserAdmin(admin.ModelAdmin):
     )
     actions = ['block_selected_users', 'unblock_selected_users']
 
+    def get_actions(self, request):
+        actions = super().get_actions(request)
+        if not request.user.is_superuser:
+            if 'unblock_selected_users' in actions:
+                del actions['unblock_selected_users']
+        return actions
+
+    def get_readonly_fields(self, request, obj=None):
+        readonly = tuple(self.readonly_fields)
+        if not request.user.is_superuser:
+            if obj and obj.is_blocked_by_admin:
+                return readonly + ('is_blocked_by_admin',)
+        return readonly
+
     @admin.action(description='🚫 Block selected users')
     def block_selected_users(self, request, queryset):
         now = timezone.now()
@@ -57,6 +71,9 @@ class UserAdmin(admin.ModelAdmin):
 
     @admin.action(description='✅ Unblock selected users')
     def unblock_selected_users(self, request, queryset):
+        if not request.user.is_superuser:
+            self.message_user(request, "Only admins (superusers) can unblock users.", level='ERROR')
+            return
         updated = 0
         for user in queryset.filter(is_blocked_by_admin=True):
             user.is_blocked_by_admin = False

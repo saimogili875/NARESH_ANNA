@@ -13,6 +13,34 @@ from accounts.models import Section
 from accounts.decorators import all_roles_required, admin_faculty_required
 
 
+def parse_date_input(date_str, default=None):
+    if not date_str:
+        return default
+    if isinstance(date_str, date):
+        return date_str
+    date_str = str(date_str).strip()
+    try:
+        return date.fromisoformat(date_str)
+    except (ValueError, TypeError):
+        pass
+
+    formats = [
+        "%B %d, %Y",   # August 4, 2026
+        "%b. %d, %Y",  # Aug. 4, 2026
+        "%b %d, %Y",   # Aug 4, 2026
+        "%d/%m/%Y",    # 04/08/2026
+        "%m/%d/%Y",    # 08/04/2026
+        "%Y/%m/%d",    # 2026/08/04
+        "%d-%m-%Y",    # 04-08-2026
+    ]
+    for fmt in formats:
+        try:
+            return datetime.strptime(date_str, fmt).date()
+        except (ValueError, TypeError):
+            pass
+    return default
+
+
 def _get_faculty_sections(user):
     """Return the queryset of sections this user is allowed to access.
 
@@ -44,10 +72,7 @@ def attendance_list(request):
     date_str = request.GET.get('date', '')
     section_id = request.GET.get('section', '')
 
-    try:
-        selected_date = date.fromisoformat(date_str) if date_str else today
-    except ValueError:
-        selected_date = today
+    selected_date = parse_date_input(date_str, default=today)
 
     sections = _get_faculty_sections(request.user)
     students = []
@@ -127,14 +152,10 @@ def attendance_mark(request):
 
         section = get_object_or_404(Section, pk=section_id)
 
-        try:
-            selected_date = date.fromisoformat(date_str)
-        except (ValueError, TypeError):
-            try:
-                selected_date = datetime.strptime(date_str, "%B %d, %Y").date()
-            except (ValueError, TypeError):
-                messages.error(request, "Invalid date format.")
-                return redirect('attendance_list')
+        selected_date = parse_date_input(date_str)
+        if not selected_date:
+            messages.error(request, "Invalid date format.")
+            return redirect('attendance_list')
 
         students = Student.objects.filter(section=section, is_active=True)
 
@@ -192,9 +213,8 @@ def attendance_send_whatsapp(request):
         return JsonResponse({'success': False, 'error': 'You do not have access to that section.'}, status=403)
 
     section = get_object_or_404(Section, pk=section_id)
-    try:
-        att_date = datetime.strptime(date_str.strip(), '%Y-%m-%d').date()
-    except (ValueError, TypeError):
+    att_date = parse_date_input(date_str)
+    if not att_date:
         return JsonResponse({'success': False, 'error': f'Invalid date: {date_str!r}'}, status=400)
 
     absent_records = Attendance.objects.filter(
@@ -254,9 +274,8 @@ def attendance_save_reasons(request):
         return JsonResponse({'success': False, 'error': 'You do not have access to that section.'}, status=403)
 
     section = get_object_or_404(Section, pk=section_id)
-    try:
-        att_date = date.fromisoformat(date_str)
-    except (ValueError, TypeError):
+    att_date = parse_date_input(date_str)
+    if not att_date:
         return JsonResponse({'success': False, 'error': 'Invalid date'}, status=400)
 
     _reason_labels = {'health': 'Health Issue', 'went_out': 'Went Out', 'no_reason': ''}

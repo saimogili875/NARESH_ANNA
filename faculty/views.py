@@ -70,25 +70,22 @@ def faculty_delete(request, pk):
     return redirect('faculty_list')
 
 
+from attendance.views import parse_date_input
+
+
 @all_roles_required
 def faculty_attendance(request):
     today = timezone.localdate()
-    date_str = request.GET.get('date', str(today))
-    try:
-        selected_date = Date.fromisoformat(date_str)
-    except Exception:
-        selected_date = today
+    date_str = request.GET.get('date', '')
+    selected_date = parse_date_input(date_str, default=today)
 
     faculty_qs = Faculty.objects.filter(is_active=True)
     existing = FacultyAttendance.objects.filter(date=selected_date)
     att_map = {a.faculty_id: a.status for a in existing}
 
     if request.method == 'POST':
-        post_date = request.POST.get('date', str(today))
-        try:
-            selected_date = Date.fromisoformat(post_date)
-        except Exception:
-            selected_date = today
+        post_date = request.POST.get('date', '')
+        selected_date = parse_date_input(post_date, default=today)
         for f in faculty_qs:
             status = request.POST.get(f'status_{f.pk}', 'P')
             FacultyAttendance.objects.update_or_create(

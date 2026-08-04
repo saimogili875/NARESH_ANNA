@@ -43,7 +43,7 @@
         <i class="bi bi-calendar-check me-2 text-primary"></i>Attendance — Section-wise
       </span>
       <form method="get" class="d-flex align-items-center gap-2">
-        <input type="date" name="date" value="{{ selected_date }}"
+        <input type="date" name="date" value="{{ selected_date|date:'Y-m-d' }}"
                class="form-control form-control-sm" style="width:160px"
                onchange="this.form.submit()">
         {% if selected_date != today %}

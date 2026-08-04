@@ -18,7 +18,7 @@
         </select>
       </div>
       <div class="col-md-3">
-        <input type="date" name="date" value="{{ selected_date }}" class="form-control form-control-sm" onchange="this.form.submit()">
+        <input type="date" name="date" value="{{ selected_date|date:'Y-m-d' }}" class="form-control form-control-sm" onchange="this.form.submit()">
       </div>
       <div class="col-auto">
         <a href="{% url 'attendance_report' %}" class="btn btn-outline-primary btn-sm">
@@ -195,7 +195,7 @@
       <form method="post" action="{% url 'attendance_mark' %}" id="attForm">
         {% csrf_token %}
         <input type="hidden" name="section_id" value="{{ selected_section.pk }}">
-        <input type="hidden" name="date" value="{{ selected_date }}">
+        <input type="hidden" name="date" value="{{ selected_date|date:'Y-m-d' }}">
         <table class="table table-hover mb-0 align-middle">
           <thead class="bg-light">
             <tr>
