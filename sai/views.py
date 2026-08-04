@@ -9,15 +9,23 @@ from .models import LabPerformanceReport
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 from datetime import datetime
+from accounts.decorators import all_roles_required
 import io
 
 
 
 
 
+
+@all_roles_required
 @require_http_methods(["GET", "POST"])
 def lab_form(request):
-    """Display lab performance form and handle submission."""
+    """Display lab performance form and handle submission.
+
+    Requires login (all_roles_required). If this form ever needs to be
+    accessible via a public/shared link without auth, remove the decorator
+    and leave an intentional comment here explaining why.
+    """
     if request.method == 'POST':
         
         form = LabPerformanceReportForm(request.POST)
@@ -31,6 +39,7 @@ def lab_form(request):
     return render(request, 'sai/lab_form.html', {'form': form})
 
 
+@all_roles_required
 @require_http_methods(["GET"])
 def lab_form_success(request, report_id):
     """Show success page with options to print or preview the PDF."""
@@ -38,6 +47,7 @@ def lab_form_success(request, report_id):
     return render(request, 'sai/lab_form_success.html', {'report': report})
 
 
+@all_roles_required
 @require_http_methods(["GET"])
 def lab_preview(request, report_id):
     """Show a JavaScript-powered live preview page for the PDF."""
@@ -45,6 +55,7 @@ def lab_preview(request, report_id):
     return render(request, 'sai/lab_preview.html', {'report': report})
 
 
+@all_roles_required
 @require_http_methods(["GET"])
 def generate_pdf(request, report_id):
     """Generate and download PDF report."""
@@ -56,7 +67,7 @@ def generate_pdf(request, report_id):
     pdf = canvas.Canvas(response, pagesize=A4)
 
     pdf.setFont('Helvetica-Bold', 18)
-    pdf.drawString(100, 770, 'SRI CHAITANYA JUNIOR COLLEGE')
+    pdf.drawString(100, 770, 'SRI NRI JUNIOR COLLEGE')
     pdf.setFont('Helvetica', 12)
     pdf.drawString(100, 750, 'Student Performance Report')
 
@@ -132,6 +143,7 @@ def generate_pdf(request, report_id):
     return response
 
 
+@all_roles_required
 @require_http_methods(["GET"])
 def lab_reports_list(request):
     """Show list of all lab reports."""
@@ -151,6 +163,7 @@ def lab_reports_list(request):
     })
 
 
+@all_roles_required
 @require_http_methods(["GET"])
 def lab_report_detail(request, report_id):
     """Show detailed report view."""

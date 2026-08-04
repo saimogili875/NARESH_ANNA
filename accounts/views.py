@@ -16,6 +16,70 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+def get_axes_cooloff_time(request=None, credentials=None):
+    """
+    Callable for AXES_COOLOFF_TIME.
+    Escalating cooloff time based on failure count:
+    - 3 failures: 10 minutes
+    - 4 failures: 30 minutes
+    - 5 failures: 2 hours
+    - 6 failures: 6 hours
+    - 7+ failures: 24 hours
+    """
+    from datetime import timedelta
+    from axes.models import AccessAttempt
+
+    username = None
+    if credentials and 'username' in credentials:
+        username = credentials['username']
+    elif request and hasattr(request, 'POST'):
+        username = request.POST.get('username')
+
+    ip_address = None
+    if request and hasattr(request, 'META'):
+        try:
+            from axes.helpers import get_client_ip_address
+            ip_address = get_client_ip_address(request)
+        except Exception:
+            pass
+
+    failures = 3
+    attempt = None
+    if username and ip_address:
+        attempt = AccessAttempt.objects.filter(username=username, ip_address=ip_address).first()
+    elif username:
+        attempt = AccessAttempt.objects.filter(username=username).first()
+    elif ip_address:
+        attempt = AccessAttempt.objects.filter(ip_address=ip_address).first()
+
+    if attempt and attempt.failures_since_start:
+        failures = attempt.failures_since_start
+
+    if failures <= 3:
+        return timedelta(minutes=10)
+    elif failures == 4:
+        return timedelta(minutes=30)
+    elif failures == 5:
+        return timedelta(hours=2)
+    elif failures == 6:
+        return timedelta(hours=6)
+    else:
+        return timedelta(hours=24)
+
+
+def get_cooloff_message(request, username=None):
+    """Generate dynamic lockout message based on cooloff duration."""
+    cooloff = get_axes_cooloff_time(request, credentials={'username': username} if username else None)
+    total_seconds = int(cooloff.total_seconds())
+    if total_seconds >= 3600:
+        hours = total_seconds // 3600
+        duration_str = f"{hours} hour" if hours == 1 else f"{hours} hours"
+    else:
+        minutes = total_seconds // 60
+        duration_str = f"{minutes} minutes"
+    return f"Too many failed attempts. Your access is locked for {duration_str}."
+
+
 def axes_admin_whitelist(request, credentials=None):
     """
     Callable for AXES_WHITELIST_CALLABLE.
@@ -68,7 +132,7 @@ def login_view(request):
         from axes.helpers import get_client_ip_address
         from axes.handlers.proxy import AxesProxyHandler
         if not is_admin_attempt and AxesProxyHandler.is_locked(request, credentials={'username': username}):
-            messages.error(request, 'Too many failed attempts. Your access is locked for 24 hours.')
+            messages.error(request, get_cooloff_message(request, username))
             return render(request, 'accounts/login.html', {'form': LoginForm()})
 
         if not form.is_valid():
@@ -87,7 +151,7 @@ def login_view(request):
                 )
             # Re-check lockout after this failure
             if not is_admin_attempt and AxesProxyHandler.is_locked(request, credentials={'username': username}):
-                messages.error(request, 'Too many failed attempts. Your access is locked for 24 hours.')
+                messages.error(request, get_cooloff_message(request, username))
                 return render(request, 'accounts/login.html', {'form': LoginForm()})
         else:
             user = authenticate(request,
@@ -114,7 +178,7 @@ def login_view(request):
             else:
                 # authenticate() failed — axes already recorded the failure via signal
                 if not is_admin_attempt and AxesProxyHandler.is_locked(request, credentials={'username': form.cleaned_data['username']}):
-                    messages.error(request, 'Too many failed attempts. Your access is locked for 24 hours.')
+                    messages.error(request, get_cooloff_message(request, form.cleaned_data['username']))
                     return render(request, 'accounts/login.html', {'form': LoginForm()})
                 messages.error(request, 'Invalid username or password.')
     return render(request, 'accounts/login.html', {'form': form})

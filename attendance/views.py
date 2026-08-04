@@ -24,14 +24,16 @@ def parse_date_input(date_str, default=None):
     except (ValueError, TypeError):
         pass
 
+    # NOTE: All templates emit ISO format (Y-m-d) via |date:'Y-m-d' filter.
+    # Only non-ISO formats kept here are ones Django can produce on localized
+    # rendering (abbreviated/full month strings). %m/%d/%Y removed — it is
+    # ambiguous with %d/%m/%Y and no template produces it.
     formats = [
-        "%B %d, %Y",   # August 4, 2026
-        "%b. %d, %Y",  # Aug. 4, 2026
-        "%b %d, %Y",   # Aug 4, 2026
-        "%d/%m/%Y",    # 04/08/2026
-        "%m/%d/%Y",    # 08/04/2026
-        "%Y/%m/%d",    # 2026/08/04
-        "%d-%m-%Y",    # 04-08-2026
+        "%B %d, %Y",   # August 4, 2026 — Django full-month locale format
+        "%b. %d, %Y",  # Aug. 4, 2026   — Django abbreviated with dot
+        "%b %d, %Y",   # Aug 4, 2026    — Django abbreviated without dot
+        "%d/%m/%Y",    # 04/08/2026     — day-first slash (kept for safety)
+        "%d-%m-%Y",    # 04-08-2026     — day-first dash
     ]
     for fmt in formats:
         try:
@@ -159,13 +161,6 @@ def attendance_mark(request):
 
         students = Student.objects.filter(section=section, is_active=True)
 
-        # Lock check — block edits if attendance already saved
-        if Attendance.objects.filter(student__in=students, date=selected_date).exists():
-            messages.error(request, f'Attendance already saved for {section} on {selected_date}. Changes are not allowed.')
-            base_url = reverse('attendance_list')
-            query_string = urlencode({'date': selected_date.isoformat(), 'section': section_id})
-            return redirect(f"{base_url}?{query_string}")
-
         _reason_labels = {
             'health': 'Health Issue',
             'went_out': 'Went Out',
@@ -181,9 +176,15 @@ def attendance_mark(request):
                         remarks = request.POST.get(f'custom_reason_{student.pk}', '').strip()[:100]
                     else:
                         remarks = _reason_labels.get(reason, '')
-                Attendance.objects.create(
-                    student=student, date=selected_date,
-                    status=status, section=section, remarks=remarks,
+                # update_or_create prevents IntegrityError if submitted twice
+                Attendance.objects.update_or_create(
+                    student=student,
+                    date=selected_date,
+                    defaults={
+                        'status': status,
+                        'section': section,
+                        'remarks': remarks,
+                    },
                 )
         messages.success(request, f'Attendance saved for {section} on {selected_date}.')
         base_url = reverse('attendance_list')

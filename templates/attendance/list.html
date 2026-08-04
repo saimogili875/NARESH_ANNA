@@ -207,24 +207,46 @@
                 <button type="button" class="btn btn-outline-success btn-sm ms-3" onclick="markAll('P')">All Present</button>
                 <button type="button" class="btn btn-outline-danger btn-sm ms-1" onclick="markAll('A')">All Absent</button>
               </th>
+              <th>Reason (if Absent)</th>
             </tr>
           </thead>
           <tbody>
             {% for student in students %}
-            <tr>
+            <tr id="row_{{ student.pk }}">
               <td class="small text-muted">{{ forloop.counter }}</td>
               <td class="small text-muted">{{ student.admission_number }}</td>
               <td class="fw-500">{{ student.name }}</td>
               <td>
                 <div class="d-flex gap-3 align-items-center flex-wrap">
                   <div class="form-check form-check-inline mb-0">
-                    <input class="form-check-input att-radio" type="radio" name="status_{{ student.pk }}" id="P_{{ student.pk }}" value="P" checked onchange="updateLiveSummary()">
+                    <input class="form-check-input att-radio" type="radio" name="status_{{ student.pk }}" id="P_{{ student.pk }}" value="P" checked onchange="updateLiveSummary(); toggleReason({{ student.pk }}, 'P')">
                     <label class="form-check-label text-success fw-bold" for="P_{{ student.pk }}">P</label>
                   </div>
                   <div class="form-check form-check-inline mb-0">
-                    <input class="form-check-input att-radio" type="radio" name="status_{{ student.pk }}" id="A_{{ student.pk }}" value="A" onchange="updateLiveSummary()">
+                    <input class="form-check-input att-radio" type="radio" name="status_{{ student.pk }}" id="A_{{ student.pk }}" value="A" onchange="updateLiveSummary(); toggleReason({{ student.pk }}, 'A')">
                     <label class="form-check-label text-danger fw-bold" for="A_{{ student.pk }}">A</label>
                   </div>
+                </div>
+              </td>
+              <td>
+                <!-- Inline reason picker — only visible when Absent is selected -->
+                <div id="reason_{{ student.pk }}" style="display:none">
+                  <div class="btn-group btn-group-sm" role="group">
+                    <input type="radio" class="btn-check" name="reason_{{ student.pk }}" id="rh_{{ student.pk }}" value="health" autocomplete="off">
+                    <label class="btn btn-outline-warning" for="rh_{{ student.pk }}">Health</label>
+
+                    <input type="radio" class="btn-check" name="reason_{{ student.pk }}" id="rw_{{ student.pk }}" value="went_out" autocomplete="off">
+                    <label class="btn btn-outline-info" for="rw_{{ student.pk }}">Went Out</label>
+
+                    <input type="radio" class="btn-check" name="reason_{{ student.pk }}" id="rn_{{ student.pk }}" value="no_reason" autocomplete="off" checked>
+                    <label class="btn btn-outline-secondary" for="rn_{{ student.pk }}">No Reason</label>
+
+                    <input type="radio" class="btn-check" name="reason_{{ student.pk }}" id="ro_{{ student.pk }}" value="other" autocomplete="off">
+                    <label class="btn btn-outline-primary" for="ro_{{ student.pk }}">Other</label>
+                  </div>
+                  <input type="text" name="custom_reason_{{ student.pk }}" id="cr_{{ student.pk }}"
+                         class="form-control form-control-sm mt-1" placeholder="Write reason…" maxlength="100"
+                         style="display:none; max-width:220px">
                 </div>
               </td>
             </tr>
@@ -298,7 +320,11 @@
 })();
 
 function markAll(val) {
-  document.querySelectorAll('.att-radio[value="' + val + '"]').forEach(r => { r.checked = true; });
+  document.querySelectorAll('.att-radio[value="' + val + '"]').forEach(r => {
+    r.checked = true;
+    const pk = r.name.replace('status_', '');
+    toggleReason(pk, val);
+  });
   updateLiveSummary();
 }
 
@@ -313,10 +339,43 @@ function updateLiveSummary() {
   const el = document.getElementById('liveSummary');
   if (el) el.textContent = `Present: ${p}  |  Absent: ${a}  |  Total: ${p + a}`;
 }
+
+// Show/hide inline reason picker for new attendance form
+function toggleReason(pk, status) {
+  const panel = document.getElementById('reason_' + pk);
+  if (!panel) return;
+  if (status === 'A') {
+    panel.style.display = 'block';
+  } else {
+    panel.style.display = 'none';
+    // Clear reason selection when switching back to Present
+    const noneRadio = document.getElementById('rn_' + pk);
+    if (noneRadio) noneRadio.checked = true;
+    const customInp = document.getElementById('cr_' + pk);
+    if (customInp) { customInp.style.display = 'none'; customInp.value = ''; }
+  }
+}
+
+// Show/hide custom text box for inline reason picker (new form)
+document.querySelectorAll('[id^="ro_"]').forEach(r => {
+  r.addEventListener('change', function() {
+    const pk = this.id.replace('ro_', '');
+    const inp = document.getElementById('cr_' + pk);
+    if (inp) inp.style.display = 'block';
+  });
+});
+document.querySelectorAll('[id^="rh_"],[id^="rw_"],[id^="rn_"]').forEach(r => {
+  r.addEventListener('change', function() {
+    const pk = this.id.replace(/^r[hwn]_/, '');
+    const inp = document.getElementById('cr_' + pk);
+    if (inp) { inp.style.display = 'none'; inp.value = ''; }
+  });
+});
+
 document.querySelectorAll('.att-radio').forEach(r => r.addEventListener('change', updateLiveSummary));
 updateLiveSummary();
 
-// Show/hide custom reason input in locked state
+// Show/hide custom reason input in locked state (existing locked-state form)
 document.querySelectorAll('[id^="lo_"]').forEach(r => {
   r.addEventListener('change', function() {
     const pk = this.id.replace('lo_', '');
