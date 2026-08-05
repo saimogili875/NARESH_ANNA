@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 {% load dict_filters %}
-{% block title %}Attendance — Srinri College{% endblock %}
+{% block title %}Attendance — Sri NRI Junior College{% endblock %}
 {% block page_title %}Attendance{% endblock %}
 {% block content %}
 
@@ -64,27 +64,10 @@
               {% if cur == 'P' %}
                 <span class="badge bg-success">Present</span>
               {% elif cur == 'A' %}
-                <div>
-                  <span class="badge bg-danger">Absent</span>
-                  {% if remark %}
-                    <span class="badge bg-secondary ms-1">{{ remark }}</span>
-                  {% endif %}
-                </div>
-                <!-- Phone numbers as tap-to-call badges -->
-                <div class="d-flex flex-wrap gap-1 mt-1">
-                  {% if student.mobile %}
-                    <a href="tel:{{ student.mobile }}" class="badge bg-dark text-decoration-none"><i class="bi bi-telephone-fill me-1"></i>{{ student.mobile }}</a>
-                  {% endif %}
-                  {% if student.second_mobile %}
-                    <a href="tel:{{ student.second_mobile }}" class="badge bg-dark text-decoration-none"><i class="bi bi-telephone-fill me-1"></i>{{ student.second_mobile }}</a>
-                  {% endif %}
-                  {% if student.third_mobile %}
-                    <a href="tel:{{ student.third_mobile }}" class="badge bg-dark text-decoration-none"><i class="bi bi-telephone-fill me-1"></i>{{ student.third_mobile }}</a>
-                  {% endif %}
-                  {% if student.fourth_mobile %}
-                    <a href="tel:{{ student.fourth_mobile }}" class="badge bg-dark text-decoration-none"><i class="bi bi-telephone-fill me-1"></i>{{ student.fourth_mobile }}</a>
-                  {% endif %}
-                </div>
+                <span class="badge bg-danger">Absent</span>
+                {% if remark %}
+                  <span class="badge bg-secondary ms-1"><i class="bi bi-info-circle me-1"></i>Reason: {{ remark }}</span>
+                {% endif %}
               {% else %}
                 <span class="badge bg-secondary">—</span>
               {% endif %}
@@ -127,8 +110,8 @@
         <table class="table table-hover mb-0 align-middle">
           <thead class="bg-light">
             <tr>
-              <th>Phone Number</th>
               <th>Student</th>
+              <th>Phone Number</th>
               <th>Reason for Absence</th>
             </tr>
           </thead>
@@ -136,6 +119,7 @@
             {% for student in absent_students %}
             {% with cur_reason=absent_reason_map|get_item:student.pk %}
             <tr>
+              <td class="fw-500">{{ student.name }}</td>
               <td>
                 <div class="d-flex flex-wrap gap-1">
                   {% if student.mobile %}<a href="tel:{{ student.mobile }}" class="badge bg-dark text-decoration-none"><i class="bi bi-telephone-fill me-1"></i>{{ student.mobile }}</a>{% endif %}
@@ -144,7 +128,6 @@
                   {% if student.fourth_mobile %}<a href="tel:{{ student.fourth_mobile }}" class="badge bg-dark text-decoration-none"><i class="bi bi-telephone-fill me-1"></i>{{ student.fourth_mobile }}</a>{% endif %}
                 </div>
               </td>
-              <td class="fw-500">{{ student.name }}</td>
               <td>
                 <div class="btn-group btn-group-sm" role="group">
                   <input type="radio" class="btn-check" name="reason_{{ student.pk }}" id="lh_{{ student.pk }}" value="health" autocomplete="off" {% if cur_reason == 'health' %}checked{% endif %}>
@@ -207,7 +190,6 @@
                 <button type="button" class="btn btn-outline-success btn-sm ms-3" onclick="markAll('P')">All Present</button>
                 <button type="button" class="btn btn-outline-danger btn-sm ms-1" onclick="markAll('A')">All Absent</button>
               </th>
-              <th>Reason (if Absent)</th>
             </tr>
           </thead>
           <tbody>
@@ -219,34 +201,13 @@
               <td>
                 <div class="d-flex gap-3 align-items-center flex-wrap">
                   <div class="form-check form-check-inline mb-0">
-                    <input class="form-check-input att-radio" type="radio" name="status_{{ student.pk }}" id="P_{{ student.pk }}" value="P" checked onchange="updateLiveSummary(); toggleReason({{ student.pk }}, 'P')">
+                    <input class="form-check-input att-radio" type="radio" name="status_{{ student.pk }}" id="P_{{ student.pk }}" value="P" checked onchange="updateLiveSummary()">
                     <label class="form-check-label text-success fw-bold" for="P_{{ student.pk }}">P</label>
                   </div>
                   <div class="form-check form-check-inline mb-0">
-                    <input class="form-check-input att-radio" type="radio" name="status_{{ student.pk }}" id="A_{{ student.pk }}" value="A" onchange="updateLiveSummary(); toggleReason({{ student.pk }}, 'A')">
+                    <input class="form-check-input att-radio" type="radio" name="status_{{ student.pk }}" id="A_{{ student.pk }}" value="A" onchange="updateLiveSummary()">
                     <label class="form-check-label text-danger fw-bold" for="A_{{ student.pk }}">A</label>
                   </div>
-                </div>
-              </td>
-              <td>
-                <!-- Inline reason picker — only visible when Absent is selected -->
-                <div id="reason_{{ student.pk }}" style="display:none">
-                  <div class="btn-group btn-group-sm" role="group">
-                    <input type="radio" class="btn-check" name="reason_{{ student.pk }}" id="rh_{{ student.pk }}" value="health" autocomplete="off">
-                    <label class="btn btn-outline-warning" for="rh_{{ student.pk }}">Health</label>
-
-                    <input type="radio" class="btn-check" name="reason_{{ student.pk }}" id="rw_{{ student.pk }}" value="went_out" autocomplete="off">
-                    <label class="btn btn-outline-info" for="rw_{{ student.pk }}">Went Out</label>
-
-                    <input type="radio" class="btn-check" name="reason_{{ student.pk }}" id="rn_{{ student.pk }}" value="no_reason" autocomplete="off" checked>
-                    <label class="btn btn-outline-secondary" for="rn_{{ student.pk }}">No Reason</label>
-
-                    <input type="radio" class="btn-check" name="reason_{{ student.pk }}" id="ro_{{ student.pk }}" value="other" autocomplete="off">
-                    <label class="btn btn-outline-primary" for="ro_{{ student.pk }}">Other</label>
-                  </div>
-                  <input type="text" name="custom_reason_{{ student.pk }}" id="cr_{{ student.pk }}"
-                         class="form-control form-control-sm mt-1" placeholder="Write reason…" maxlength="100"
-                         style="display:none; max-width:220px">
                 </div>
               </td>
             </tr>
