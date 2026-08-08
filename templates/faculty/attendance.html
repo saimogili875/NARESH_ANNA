@@ -33,7 +33,9 @@
             <th>Employee ID</th>
             <th>Name</th>
             <th>Subject</th>
+            <th>Personal Phone</th>
             <th>Status</th>
+            <th>WhatsApp Status</th>
           </tr>
         </thead>
         <tbody>
@@ -43,6 +45,8 @@
             <td class="small text-muted">{{ f.employee_id }}</td>
             <td class="fw-500">{{ f.name }}</td>
             <td class="small">{{ f.subject }}</td>
+            <td class="small text-nowrap"><i class="bi bi-telephone me-1 text-secondary"></i>{{ f.phone|default:f.user.phone|default:"—" }}</td>
+
             <td>
               {% with cur=att_map|get_item:f.pk %}
               <div class="d-flex gap-3">
@@ -69,15 +73,45 @@
               </div>
               {% endwith %}
             </td>
+            <td>
+              {% with msg=whatsapp_map|get_item:f.pk %}
+                {% if msg %}
+                  {% if msg.status == 'sent' %}
+                    <span class="badge bg-success-subtle text-success rounded-pill px-2.5 py-1" title="Sent at {{ msg.updated_at|date:'H:i' }}">
+                      <i class="bi bi-check-all me-1"></i>Sent
+                    </span>
+                  {% elif msg.status == 'pending' %}
+                    <span class="badge bg-warning-subtle text-dark border border-warning rounded-pill px-2.5 py-1">
+                      <i class="bi bi-clock me-1"></i>Pending
+                    </span>
+                  {% elif msg.status == 'failed' %}
+                    <span class="badge bg-danger-subtle text-danger rounded-pill px-2.5 py-1" title="{{ msg.error_message }}">
+                      <i class="bi bi-exclamation-triangle me-1"></i>Failed
+                    </span>
+                  {% endif %}
+                {% else %}
+                  <span class="text-muted small">—</span>
+                {% endif %}
+              {% endwith %}
+            </td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
-      <div class="p-3 border-top">
-        <button type="submit" class="btn btn-primary">
-          <i class="bi bi-check-circle"></i> Save Attendance
+      <div class="p-3 border-top d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <button type="submit" name="send_whatsapp" value="" class="btn btn-primary rounded-3 px-3">
+          <i class="bi bi-check-circle me-1"></i>Save Attendance
         </button>
+        <div class="d-flex gap-2">
+          <button type="submit" name="send_whatsapp" value="absent" class="btn btn-danger rounded-3 px-3">
+            <i class="bi bi-whatsapp me-1"></i>Save & Send Absent WhatsApp Alerts
+          </button>
+          <button type="submit" name="send_whatsapp" value="all" class="btn btn-outline-danger rounded-3 px-3">
+            <i class="bi bi-whatsapp me-1"></i>Save & Send All WhatsApp Alerts
+          </button>
+        </div>
       </div>
+
     </form>
   </div>
 </div>

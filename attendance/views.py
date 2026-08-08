@@ -1,16 +1,20 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
 from datetime import date, datetime
 from django.db import transaction
 from django.db.models import Count, Q
 from django.urls import reverse
+from django.contrib.auth import authenticate, login
 from urllib.parse import urlencode
-from .models import Attendance
+import json
+from .models import Attendance, AttendanceWindow
 from students.models import Student
 from accounts.models import Section
 from accounts.decorators import all_roles_required, admin_faculty_required
+from whatsapp.models import PendingMessage
+
 
 
 def parse_date_input(date_str, default=None):
@@ -660,3 +664,442 @@ def _att_export_pdf(rows, title):
     response = HttpResponse(buf, content_type='application/pdf')
     response['Content-Disposition'] = 'attachment; filename=attendance_report.pdf'
     return response
+
+
+# ---------------------------------------------------------------------------
+# Quick Attendance & WhatsApp Prototype Views
+# ---------------------------------------------------------------------------
+
+def quick_login_view(request):
+    """
+    Time-window-gated quick login page for attendance marking.
+    """
+    if request.user.is_authenticated:
+        is_open, msg = AttendanceWindow.is_currently_open(request.user)
+        if is_open:
+            return redirect('attendance_tap_sections')
+        else:
+            return redirect('attendance_window_closed')
+
+    if request.method == 'POST':
+        username = request.POST.get('username', '').strip()
+        password = request.POST.get('password', '')
+
+        user = authenticate(request, username=username, password=password)
+        if user is not None:
+            if not user.is_active:
+                messages.error(request, "Your account is disabled.")
+            elif getattr(user, 'is_blocked_by_admin', False):
+                messages.error(request, f"Account blocked: {user.blocked_reason or 'Contact Administrator.'}")
+            else:
+                login(request, user)
+                is_open, msg = AttendanceWindow.is_currently_open(user)
+                if is_open:
+                    return redirect('attendance_tap_sections')
+                else:
+                    return redirect('attendance_window_closed')
+        else:
+            messages.error(request, "Invalid username or password.")
+
+    is_open, window_msg = AttendanceWindow.is_currently_open()
+    config = AttendanceWindow.objects.filter(is_active=True).first()
+    start_fmt = config.start_time.strftime("%I:%M %p") if config and config.start_time else "08:00 AM"
+    end_fmt = config.end_time.strftime("%I:%M %p") if config and config.end_time else "09:00 AM"
+
+    return render(request, 'attendance/quick_login.html', {
+        'is_open': is_open,
+        'window_msg': window_msg,
+        'start_time': start_fmt,
+        'end_time': end_fmt,
+        'server_time': timezone.localtime(),
+    })
+
+
+def window_closed_view(request):
+    """
+    Screen shown when attendance window is closed for faculty.
+    """
+    config = AttendanceWindow.objects.filter(is_active=True).first()
+    start_fmt = config.start_time.strftime("%I:%M %p") if config and config.start_time else "08:00 AM"
+    end_fmt = config.end_time.strftime("%I:%M %p") if config and config.end_time else "09:00 AM"
+    return render(request, 'attendance/window_closed.html', {
+        'start_time': start_fmt,
+        'end_time': end_fmt,
+        'server_time': timezone.localtime(),
+        'user': request.user,
+    })
+
+
+@all_roles_required
+def tap_attendance_sections(request):
+    """
+    Section selection screen for quick tap attendance.
+    """
+    is_open, msg = AttendanceWindow.is_currently_open(request.user)
+    if not is_open:
+        return redirect('attendance_window_closed')
+
+    date_str = request.GET.get('date', '')
+    today = timezone.localdate()
+    selected_date = parse_date_input(date_str, default=today)
+
+    sections = _get_faculty_sections(request.user)
+
+    pending_sections = []
+    completed_sections = []
+
+    for s in sections:
+        total_students = Student.objects.filter(section=s, is_active=True).count()
+        marked_count = Attendance.objects.filter(section=s, date=selected_date).count()
+        item = {
+            'section': s,
+            'total_students': total_students,
+            'marked_count': marked_count,
+            'is_completed': marked_count >= total_students and total_students > 0,
+        }
+        if item['is_completed']:
+            completed_sections.append(item)
+        else:
+            pending_sections.append(item)
+
+    return render(request, 'attendance/tap_sections.html', {
+        'sections': pending_sections + completed_sections,
+        'pending_sections': pending_sections,
+        'completed_sections': completed_sections,
+        'selected_date': selected_date,
+        'today': today,
+        'server_time': timezone.localtime(),
+    })
+
+
+
+@all_roles_required
+def tap_attendance_view(request, section_id):
+    """
+    Tap attendance marking view showing large student cards.
+    """
+    is_open, msg = AttendanceWindow.is_currently_open(request.user)
+    if not is_open:
+        return redirect('attendance_window_closed')
+
+    if not _section_allowed(request.user, section_id):
+        messages.error(request, "You do not have access to this section.")
+        return redirect('attendance_tap_sections')
+
+    date_str = request.GET.get('date', '')
+    today = timezone.localdate()
+    selected_date = parse_date_input(date_str, default=today)
+
+    section = get_object_or_404(Section, pk=section_id)
+
+    students = Student.objects.filter(section=section, is_active=True).order_by('admission_number', 'name')
+    existing_attendance = Attendance.objects.filter(section=section, date=selected_date)
+    attendance_map = {a.student_id: a.status for a in existing_attendance}
+
+    students_list = []
+    for s in students:
+        phone = (s.mobile or s.second_mobile or '').strip()
+        students_list.append({
+            'id': s.id,
+            'name': s.name,
+            'roll_number': getattr(s, 'hall_ticket_number', '') or s.admission_number,
+            'admission_number': s.admission_number,
+            'photo': s.photo.url if getattr(s, 'photo', None) and s.photo else None,
+            'phone': phone,
+            'status': attendance_map.get(s.id, None),
+        })
+
+    is_admin_user = (request.user.is_superuser or getattr(request.user, 'role', '') in ['admin', 'accounts'])
+    has_existing = existing_attendance.exists()
+    is_locked = has_existing and not is_admin_user
+
+    return render(request, 'attendance/tap_section.html', {
+        'section': section,
+        'selected_date': selected_date,
+        'today': today,
+        'is_admin_user': is_admin_user,
+        'is_locked': is_locked,
+        'has_existing': has_existing,
+        'students_json': json.dumps(students_list),
+        'students': students_list,
+        'total_count': len(students_list),
+        'marked_count': len(attendance_map),
+        'present_count': sum(1 for status in attendance_map.values() if status == 'P'),
+        'absent_count': sum(1 for status in attendance_map.values() if status == 'A'),
+    })
+
+
+
+@all_roles_required
+def tap_mark_api(request):
+    """
+    AJAX API endpoint for instant student attendance tap marking.
+    Creates Attendance record and enqueues a PendingMessage synchronously for Present status.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'POST required'}, status=405)
+
+    is_open, msg = AttendanceWindow.is_currently_open(request.user)
+    if not is_open:
+        return JsonResponse({'success': False, 'error': msg}, status=403)
+
+    try:
+        if request.content_type == 'application/json':
+            data = json.loads(request.body)
+        else:
+            data = request.POST
+
+        student_id = data.get('student_id')
+        section_id = data.get('section_id')
+        status = data.get('status', 'P')  # 'P' for Present, 'A' for Absent
+        date_str = data.get('date', '')
+
+        if not student_id or not section_id:
+            return JsonResponse({'success': False, 'error': 'student_id and section_id required'}, status=400)
+
+        if not _section_allowed(request.user, section_id):
+            return JsonResponse({'success': False, 'error': 'Access denied to section'}, status=403)
+
+        student = get_object_or_404(Student, pk=student_id)
+        section = get_object_or_404(Section, pk=section_id)
+        today = timezone.localdate()
+        selected_date = parse_date_input(date_str, default=today)
+
+        # Time/Lock enforcement: Faculty cannot overwrite submitted attendance
+        if request.user.role == 'faculty' and Attendance.objects.filter(section=section, date=selected_date).exists():
+            return JsonResponse({
+                'success': False,
+                'error': f'Attendance for {section} on {selected_date.strftime("%d-%m-%Y")} is submitted and locked.'
+            }, status=403)
+
+        # 1. Update/Create Attendance record (Faculty/Admin marking)
+        att_record, created = Attendance.objects.update_or_create(
+            student=student,
+            date=selected_date,
+            defaults={
+                'status': status,
+                'section': section,
+            }
+        )
+
+        return JsonResponse({
+            'success': True,
+            'student_id': student.id,
+            'status': status,
+            'date': selected_date.isoformat(),
+        })
+
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@all_roles_required
+def attendance_review(request):
+    """
+    Admin review page showing today's attendance and WhatsApp message status per section.
+    Accessible anytime by admin/accounts (and faculty).
+    """
+    date_str = request.GET.get('date', '')
+    section_id = request.GET.get('section', '')
+
+    today = timezone.localdate()
+    selected_date = parse_date_input(date_str, default=today)
+
+    sections = _get_faculty_sections(request.user)
+    selected_section = None
+    records_data = []
+    stats = {'total': 0, 'present': 0, 'absent': 0, 'unmarked': 0, 'msg_pending': 0, 'msg_sent': 0, 'msg_failed': 0}
+
+    if section_id and str(section_id).isdigit():
+        if not _section_allowed(request.user, section_id):
+            messages.error(request, 'You do not have access to that section.')
+            return redirect('attendance_review')
+        selected_section = get_object_or_404(Section, pk=section_id)
+        students = Student.objects.filter(section=selected_section, is_active=True).order_by('admission_number', 'name')
+
+        att_map = {a.student_id: a for a in Attendance.objects.filter(section=selected_section, date=selected_date)}
+
+        msgs = PendingMessage.objects.filter(
+            student__in=students,
+            created_at__date=selected_date
+        ).order_by('-created_at')
+
+        msg_map = {}
+        for m in msgs:
+            if m.student_id not in msg_map:
+                msg_map[m.student_id] = m
+
+        for s in students:
+            att = att_map.get(s.id)
+            status = att.status if att else 'N'
+            msg_obj = msg_map.get(s.id)
+
+            records_data.append({
+                'student': s,
+                'attendance': att,
+                'status': status,
+                'message': msg_obj,
+            })
+
+            stats['total'] += 1
+            if status == 'P':
+                stats['present'] += 1
+            elif status == 'A':
+                stats['absent'] += 1
+            else:
+                stats['unmarked'] += 1
+
+            if msg_obj:
+                if msg_obj.status == 'pending':
+                    stats['msg_pending'] += 1
+                elif msg_obj.status == 'sent':
+                    stats['msg_sent'] += 1
+                elif msg_obj.status == 'failed':
+                    stats['msg_failed'] += 1
+
+    # Count failed WhatsApp messages today across all sections/faculty for alerting banner
+    failed_today_count = PendingMessage.objects.filter(
+        status=PendingMessage.STATUS_FAILED,
+        updated_at__date=selected_date
+    ).count()
+
+    return render(request, 'attendance/review.html', {
+        'sections': sections,
+        'selected_section': selected_section,
+        'section_id': str(section_id),
+        'selected_date': selected_date,
+        'today': today,
+        'records': records_data,
+        'stats': stats,
+        'failed_today_count': failed_today_count,
+        'dynamic_list': records_data,
+    })
+
+
+import threading
+from django.core.management import call_command
+
+
+def trigger_whatsapp_sender_in_background(headless=True, batch_size=None):
+    """
+    Note: Playwright sender has been decoupled from the Django web process to prevent RAM exhaustion.
+    Messages are stored in DB (PendingMessage) and processed by the scheduled Render Cron Job.
+    """
+    pass
+
+
+@all_roles_required
+def trigger_whatsapp_sender_view(request):
+    """
+    Admin UI view ("Dispatch WhatsApp Messages Now" / "Retry Dispatch" button).
+    Signals background Cron Job to process messages by resetting failed messages to 'pending'.
+    Does NOT launch Chromium inside the web process to preserve RAM.
+    """
+    if request.method == 'POST':
+        today = timezone.localdate()
+        reset_count = PendingMessage.objects.filter(
+            status=PendingMessage.STATUS_FAILED,
+            updated_at__date=today
+        ).update(status=PendingMessage.STATUS_PENDING, error_message='')
+
+        pending_count = PendingMessage.objects.filter(status=PendingMessage.STATUS_PENDING).count()
+
+        if reset_count > 0:
+            messages.success(request, f"Re-queued {reset_count} failed message(s) for the next Render Cron Job run ({pending_count} total pending).")
+        elif pending_count > 0:
+            messages.info(request, f"{pending_count} message(s) are queued in DB and will be dispatched on the next Render Cron Job run.")
+        else:
+            messages.info(request, "No pending or failed messages to dispatch.")
+
+        referer = request.META.get('HTTP_REFERER')
+        if referer:
+            return redirect(referer)
+        return redirect('attendance_review')
+    return JsonResponse({'success': False, 'error': 'POST required'}, status=405)
+
+
+@all_roles_required
+def enqueue_section_absent_whatsapp(request):
+    """
+    Enqueues PendingMessage rows for all students marked ABSENT ('A') in a section today (or selected date).
+    Can be called via AJAX or standard POST form submit.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'POST required'}, status=405)
+
+    section_id = request.POST.get('section_id') or request.GET.get('section_id')
+    if not section_id and request.content_type == 'application/json':
+        try:
+            data = json.loads(request.body)
+            section_id = data.get('section_id')
+        except Exception:
+            pass
+
+    if not section_id or not str(section_id).isdigit():
+        messages.error(request, "Invalid section ID.")
+        return redirect('attendance_tap_sections')
+
+    if not _section_allowed(request.user, section_id):
+        messages.error(request, "You do not have access to this section.")
+        return redirect('attendance_tap_sections')
+
+    section = get_object_or_404(Section, pk=section_id)
+    date_str = request.POST.get('date', '') or request.GET.get('date', '')
+    today = timezone.localdate()
+    selected_date = parse_date_input(date_str, default=today)
+
+    absent_records = Attendance.objects.filter(
+        section=section,
+        date=selected_date,
+        status='A'
+    ).select_related('student')
+
+    total_absent = absent_records.count()
+    already_queued_count = 0
+    enqueued_count = 0
+
+    for record in absent_records:
+        student = record.student
+        already_exists = PendingMessage.objects.filter(
+            student=student,
+            created_at__date=selected_date,
+        ).exclude(status=PendingMessage.STATUS_FAILED).exists()
+
+        if already_exists:
+            already_queued_count += 1
+        else:
+            phone = (student.mobile or student.second_mobile or '').strip()
+            msg_text = (
+                f"Dear {student.name}, You were marked ABSENT on "
+                f"{selected_date.strftime('%d-%m-%Y')} for {section}. "
+                f"Please contact college. - Sri NRI Junior College"
+            )
+            PendingMessage.objects.create(
+                student=student,
+                phone=phone,
+                message=msg_text,
+                status=PendingMessage.STATUS_PENDING
+            )
+            enqueued_count += 1
+
+    if total_absent == 0:
+        msg_text = f"No absent students found in {section} on {selected_date.strftime('%d-%m-%Y')} (all marked Present or unmarked)."
+    elif enqueued_count > 0:
+        msg_text = f"Enqueued {enqueued_count} absent WhatsApp alert(s) for {section} on {selected_date.strftime('%d-%m-%Y')}."
+    else:
+        msg_text = f"All {already_queued_count} absent student(s) in {section} already have WhatsApp alerts queued or sent for {selected_date.strftime('%d-%m-%Y')}."
+
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.content_type == 'application/json':
+        return JsonResponse({'success': True, 'enqueued_count': enqueued_count, 'message': msg_text})
+
+    messages.success(request, msg_text)
+    referer = request.META.get('HTTP_REFERER')
+    if referer:
+        return redirect(referer)
+    return redirect('attendance_review')
+
+
+
+
+

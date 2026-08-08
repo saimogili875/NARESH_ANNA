@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Tap Attendance — Section {{ section }} — Sri NRI Junior College</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --accent-green: #10b981;
+            --accent-red: #ef4444;
+        }
+        body {
+            background-color: var(--bg-color);
+            color: #f8fafc;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            margin: 0;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .header-bar {
+            background: rgba(30, 41, 59, 0.9);
+            backdrop-filter: blur(10px);
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #334155;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .tap-card-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 16px;
+            max-width: 500px;
+            margin: 0 auto;
+            width: 100%;
+        }
+        .student-card {
+            background: var(--card-bg);
+            border: 2px solid #334155;
+            border-radius: 24px;
+            width: 100%;
+            padding: 24px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            position: relative;
+            transition: transform 0.15s ease, border-color 0.15s ease;
+        }
+        .avatar-box {
+            width: 110px;
+            height: 110px;
+            border-radius: 50%;
+            background: #334155;
+            color: #94a3b8;
+            font-size: 3rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 16px;
+            border: 4px solid #475569;
+            overflow: hidden;
+        }
+        .avatar-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .student-name {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 4px;
+            color: #ffffff;
+        }
+        .student-sub {
+            font-size: 0.9rem;
+            color: #94a3b8;
+            margin-bottom: 24px;
+        }
+        .btn-action-lg {
+            height: 72px;
+            border-radius: 18px;
+            font-size: 1.2rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: transform 0.1s active;
+            border: none;
+        }
+        .btn-action-lg:active {
+            transform: scale(0.96);
+        }
+        .btn-present {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            box-shadow: 0 10px 20px -5px rgba(16, 185, 129, 0.4);
+        }
+        .btn-absent {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+            box-shadow: 0 10px 20px -5px rgba(239, 68, 68, 0.4);
+        }
+        .badge-status {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            font-size: 0.8rem;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+        .grid-card {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 14px;
+            padding: 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .grid-card.status-P {
+            border-color: #10b981;
+            background: rgba(16, 185, 129, 0.15);
+        }
+        .grid-card.status-A {
+            border-color: #ef4444;
+            background: rgba(239, 68, 68, 0.15);
+        }
+        .toast-notify {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #334155;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-size: 0.85rem;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            z-index: 1000;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <!-- Top Bar -->
+    <div class="header-bar">
+        <a href="{% url 'attendance_tap_sections' %}?date={{ selected_date|date:'Y-m-d' }}" class="btn btn-outline-light btn-sm rounded-circle p-2" title="Back to Sections">
+            <i class="bi bi-chevron-left fs-5"></i>
+        </a>
+        <div class="text-center">
+            <h6 class="mb-0 fw-bold">Section {{ section }}</h6>
+            <small class="text-info fw-semibold me-1"><i class="bi bi-calendar-event me-1"></i>{{ selected_date|date:"d M Y" }}</small>
+            <small class="text-secondary" id="progress-text">Student 1 of {{ total_count }}</small>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <form method="POST" action="{% url 'attendance_send_section_absent' %}" class="d-inline">
+                {% csrf_token %}
+                <input type="hidden" name="section_id" value="{{ section.id }}">
+                <input type="hidden" name="date" value="{{ selected_date|date:'Y-m-d' }}">
+                <button type="submit" class="btn btn-danger btn-sm rounded-pill px-3 py-1.5 fw-semibold" title="Enqueue WhatsApp alerts for all absent students in this section for {{ selected_date|date:'d M Y' }}">
+                    <i class="bi bi-whatsapp me-1"></i>Send Absent Alerts
+                </button>
+            </form>
+            <button class="btn btn-outline-secondary btn-sm text-light rounded-pill px-3" id="toggle-view-btn" onclick="toggleView()">
+                <i class="bi bi-grid-fill me-1"></i>Grid
+            </button>
+        </div>
+    </div>
+
+
+
+    <!-- Stats Bar -->
+    <div class="bg-dark bg-opacity-50 px-3 py-2 border-bottom border-secondary border-opacity-25 d-flex justify-content-around text-center small">
+        <div>
+            <span class="text-secondary d-block">Present</span>
+            <strong class="text-success fs-6" id="stat-present">{{ present_count }}</strong>
+        </div>
+        <div>
+            <span class="text-secondary d-block">Absent</span>
+            <strong class="text-danger fs-6" id="stat-absent">{{ absent_count }}</strong>
+        </div>
+        <div>
+            <span class="text-secondary d-block">Remaining</span>
+            <strong class="text-warning fs-6" id="stat-remaining">{{ total_count|add:"-"|add:marked_count }}</strong>
+        </div>
+    </div>
+
+    {% if is_admin_user %}
+        <div class="alert alert-info text-center fw-bold py-2 mb-0 border-0 rounded-0 fs-7 bg-primary bg-opacity-25 text-info">
+            <i class="bi bi-shield-lock-fill me-1"></i>Admin Access — Full date-wise marking & editing allowed for {{ selected_date|date:"d M Y" }}.
+        </div>
+    {% elif is_locked %}
+        <div class="alert alert-warning text-center fw-bold py-2 mb-0 border-0 rounded-0 fs-7" style="background: rgba(245, 158, 11, 0.2); color: #fbbf24;">
+            <i class="bi bi-lock-fill me-1"></i>Attendance for Section {{ section }} on {{ selected_date|date:"d M Y" }} is Submitted & Locked for Faculty.
+        </div>
+    {% endif %}
+
+
+    <!-- Single Card Tap View -->
+    <div id="single-card-view" class="tap-card-container">
+        <div class="student-card mb-4" id="current-student-card">
+            <span id="current-status-badge" class="badge-status bg-secondary">Not Marked</span>
+            <div class="avatar-box" id="avatar-container">
+                <i class="bi bi-person-fill"></i>
+            </div>
+            <div class="student-name" id="student-name">Loading...</div>
+            <div class="student-sub">
+                Roll No: <span id="student-roll" class="text-light fw-bold">—</span> |
+                Phone: <span id="student-phone" class="text-light">—</span>
+            </div>
+
+            <!-- Instant Tap Buttons -->
+            <div class="row g-3">
+                <div class="col-6">
+                    <button class="btn btn-action-lg btn-present w-100" onclick="markStudent('P')" {% if is_locked %}disabled opacity="0.6"{% endif %}>
+                        <i class="bi bi-check-circle-fill fs-3"></i> PRESENT
+                    </button>
+                </div>
+                <div class="col-6">
+                    <button class="btn btn-action-lg btn-absent w-100" onclick="markStudent('A')" {% if is_locked %}disabled opacity="0.6"{% endif %}>
+                        <i class="bi bi-x-circle-fill fs-3"></i> ABSENT
+                    </button>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- Navigation Controls -->
+        <div class="d-flex justify-content-between align-items-center w-100 px-2">
+            <button class="btn btn-outline-secondary rounded-pill px-4" onclick="navigateStudent(-1)" id="prev-btn">
+                <i class="bi bi-arrow-left me-1"></i> Prev
+            </button>
+            <span class="small text-secondary">Tap card to auto-advance</span>
+            <button class="btn btn-outline-secondary rounded-pill px-4" onclick="navigateStudent(1)" id="next-btn">
+                Next <i class="bi bi-arrow-right ms-1"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Grid View Mode -->
+    <div id="grid-view" class="container-fluid p-3 d-none">
+        <div class="row g-2" id="grid-container">
+            <!-- Grid cards inserted by JS -->
+        </div>
+    </div>
+
+    <div id="toast-notify" class="toast-notify"></div>
+
+    <script>
+        const students = {{ students_json|safe }};
+        const sectionId = {{ section.id }};
+        const selectedDate = "{{ selected_date|date:'Y-m-d' }}";
+        let currentIndex = 0;
+        let isGridView = false;
+
+
+        function updateCard() {
+            if (students.length === 0) return;
+            const s = students[currentIndex];
+            document.getElementById('student-name').innerText = s.name;
+            document.getElementById('student-roll').innerText = s.roll_number || 'N/A';
+            document.getElementById('student-phone').innerText = s.phone || 'No phone';
+            document.getElementById('progress-text').innerText = `Student ${currentIndex + 1} of ${students.length}`;
+
+            const badge = document.getElementById('current-status-badge');
+            if (s.status === 'P') {
+                badge.className = 'badge-status bg-success';
+                badge.innerText = 'PRESENT';
+            } else if (s.status === 'A') {
+                badge.className = 'badge-status bg-danger';
+                badge.innerText = 'ABSENT';
+            } else {
+                badge.className = 'badge-status bg-secondary';
+                badge.innerText = 'NOT MARKED';
+            }
+
+            const avatar = document.getElementById('avatar-container');
+            if (s.photo) {
+                avatar.innerHTML = `<img src="${s.photo}" alt="${s.name}">`;
+            } else {
+                avatar.innerHTML = `<i class="bi bi-person-fill"></i>`;
+            }
+
+            document.getElementById('prev-btn').disabled = (currentIndex === 0);
+            document.getElementById('next-btn').disabled = (currentIndex === students.length - 1);
+        }
+
+        const isLocked = {% if is_locked %}true{% else %}false{% endif %};
+
+        function markStudent(status, targetIndex = currentIndex) {
+            if (isLocked) {
+                showToast("Attendance is submitted and locked for this section.");
+                return;
+            }
+            const s = students[targetIndex];
+            s.status = status;
+
+
+            // Instant UI update
+            updateStats();
+            if (!isGridView) {
+                updateCard();
+                // Immediately advance to next student!
+                if (currentIndex < students.length - 1) {
+                    setTimeout(() => {
+                        currentIndex++;
+                        updateCard();
+                    }, 120);
+                }
+            } else {
+                renderGrid();
+            }
+
+            showToast(`${s.name}: ${status === 'P' ? 'PRESENT' : 'ABSENT (WhatsApp queued)'}`);
+
+
+            // Asynchronous background POST to server
+            fetch("{% url 'attendance_tap_mark_api' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({
+                    student_id: s.id,
+                    section_id: sectionId,
+                    status: status,
+                    date: selectedDate
+                })
+
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (!data.success) {
+                    console.error("Tap save error:", data.error);
+                }
+            })
+            .catch(err => console.error("Tap fetch error:", err));
+        }
+
+        function navigateStudent(dir) {
+            const newIdx = currentIndex + dir;
+            if (newIdx >= 0 && newIdx < students.length) {
+                currentIndex = newIdx;
+                updateCard();
+            }
+        }
+
+        function updateStats() {
+            let p = 0, a = 0, rem = 0;
+            students.forEach(s => {
+                if (s.status === 'P') p++;
+                else if (s.status === 'A') a++;
+                else rem++;
+            });
+            document.getElementById('stat-present').innerText = p;
+            document.getElementById('stat-absent').innerText = a;
+            document.getElementById('stat-remaining').innerText = rem;
+        }
+
+        function toggleView() {
+            isGridView = !isGridView;
+            const singleView = document.getElementById('single-card-view');
+            const gridView = document.getElementById('grid-view');
+            const btn = document.getElementById('toggle-view-btn');
+
+            if (isGridView) {
+                singleView.classList.add('d-none');
+                gridView.classList.remove('d-none');
+                btn.innerHTML = `<i class="bi bi-card-heading me-1"></i>Single`;
+                renderGrid();
+            } else {
+                gridView.classList.add('d-none');
+                singleView.classList.remove('d-none');
+                btn.innerHTML = `<i class="bi bi-grid-fill me-1"></i>Grid`;
+                updateCard();
+            }
+        }
+
+        function renderGrid() {
+            const container = document.getElementById('grid-container');
+            container.innerHTML = students.map((s, idx) => `
+                <div class="col-6 col-sm-4 col-md-3">
+                    <div class="grid-card status-${s.status || ''}" onclick="toggleGridStatus(${idx})">
+                        <div class="fw-bold text-truncate">${s.name}</div>
+                        <small class="text-secondary">Roll: ${s.roll_number || 'N/A'}</small>
+                        <div class="mt-2">
+                            <span class="badge ${s.status === 'P' ? 'bg-success' : s.status === 'A' ? 'bg-danger' : 'bg-secondary'} px-2 py-1">
+                                ${s.status === 'P' ? 'PRESENT' : s.status === 'A' ? 'ABSENT' : 'NOT MARKED'}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function toggleGridStatus(idx) {
+            const current = students[idx].status;
+            const nextStatus = (current === 'P') ? 'A' : 'P';
+            markStudent(nextStatus, idx);
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast-notify');
+            toast.innerText = msg;
+            toast.style.display = 'block';
+            setTimeout(() => { toast.style.display = 'none'; }, 1500);
+        }
+
+        // Keyboard Shortcuts (Arrow Keys & P/A keys)
+        document.addEventListener('keydown', function(e) {
+            if (isGridView) return;
+            if (e.key === 'ArrowLeft') {
+                navigateStudent(-1);
+            } else if (e.key === 'ArrowRight') {
+                navigateStudent(1);
+            } else if (e.key === 'p' || e.key === 'P') {
+                markStudent('P');
+            } else if (e.key === 'a' || e.key === 'A') {
+                markStudent('A');
+            }
+        });
+
+        // Touch Swipe Support
+        let touchStartX = 0;
+        let touchEndX = 0;
+        const cardArea = document.getElementById('single-card-view');
+        cardArea.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; }, {passive: true});
+        cardArea.addEventListener('touchend', e => {
+            touchEndX = e.changedTouches[0].screenX;
+            if (touchStartX - touchEndX > 50) {
+                navigateStudent(1); // Swipe Left = Next
+            } else if (touchEndX - touchStartX > 50) {
+                navigateStudent(-1); // Swipe Right = Prev
+            }
+        }, {passive: true});
+
+        // Init
+        updateCard();
+        updateStats();
+    </script>
+</body>
+</html>
+

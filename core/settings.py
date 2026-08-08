@@ -71,12 +71,32 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'core.wsgi.application'
 
-import dj_database_url, os
-
-DATABASE_URL = os.environ.get('DATABASE_URL', '')
+# --- Database Configuration (PostgreSQL / Supabase with SQLite fallback for local dev) ---
+DB_ENGINE = config('DB_ENGINE', default='')
+DB_HOST = config('DB_HOST', default='')
+DB_NAME = config('DB_NAME', default='')
+DB_USER = config('DB_USER', default='')
+DB_PASSWORD = config('DB_PASSWORD', default='')
+DB_PORT = config('DB_PORT', default='5432')
+DATABASE_URL = config('DATABASE_URL', default='')
 
 if DATABASE_URL:
-    DATABASES = {'default': dj_database_url.parse(DATABASE_URL, conn_max_age=600)}
+    import dj_database_url
+    DATABASES = {
+        'default': dj_database_url.parse(DATABASE_URL, conn_max_age=600)
+    }
+elif DB_HOST and DB_NAME:
+    DATABASES = {
+        'default': {
+            'ENGINE': DB_ENGINE or 'django.db.backends.postgresql',
+            'NAME': DB_NAME,
+            'USER': DB_USER,
+            'PASSWORD': DB_PASSWORD,
+            'HOST': DB_HOST,
+            'PORT': DB_PORT,
+            'CONN_MAX_AGE': 600,
+        }
+    }
 else:
     DATABASES = {
         'default': {
@@ -84,6 +104,7 @@ else:
             'NAME': BASE_DIR / 'db.sqlite3',
         }
     }
+
 
 AUTH_USER_MODEL = 'accounts.User'
 LOGIN_URL = '/login/'
@@ -110,13 +131,34 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# --- Logging: print full tracebacks to stderr (visible in Render logs) ---
+# --- Centralized WhatsApp Config ---
+WHATSAPP_BATCH_SIZE = config('WHATSAPP_BATCH_SIZE', default=50, cast=int)
+
+# --- Logging Configuration (Persistent File Log & Console) ---
+LOGS_DIR = BASE_DIR / 'logs'
+os.makedirs(LOGS_DIR, exist_ok=True)
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '[%(asctime)s] [%(levelname)s] [%(name)s]: %(message)s',
+            'datefmt': '%Y-%m-%d %H:%M:%S',
+        },
+    },
     'handlers': {
         'console': {
             'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+        'whatsapp_file': {
+            'level': 'INFO',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': LOGS_DIR / 'whatsapp_sender.log',
+            'maxBytes': 5 * 1024 * 1024,  # 5 MB max
+            'backupCount': 3,  # Keep 3 backups
+            'formatter': 'verbose',
         },
     },
     'root': {
@@ -129,8 +171,14 @@ LOGGING = {
             'level': 'ERROR',
             'propagate': False,
         },
+        'whatsapp_sender': {
+            'handlers': ['console', 'whatsapp_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
     },
 }
+
 
 # --- Twilio WhatsApp Config ---
 TWILIO_ACCOUNT_SID = config('TWILIO_ACCOUNT_SID', default='')
@@ -184,3 +232,9 @@ ATTENDANCE_CUTOFF_MINUTE = 30
 # Not idle-based: session expires X minutes after login_time, regardless of activity.
 SESSION_EXPIRY_FACULTY_MINUTES = 30   # Faculty accounts
 SESSION_EXPIRY_OTHER_MINUTES = 60     # Admin / accounts / superuser
+
+# --- Playwright WhatsApp Automation (Local Prototype) ---
+HEADLESS_MODE = config('HEADLESS_MODE', default=True, cast=bool)
+WHATSAPP_PLAYWRIGHT_HEADLESS = config('WHATSAPP_PLAYWRIGHT_HEADLESS', default=HEADLESS_MODE, cast=bool)
+WHATSAPP_SESSION_DIR = BASE_DIR / 'whatsapp_session'
+

@@ -70,7 +70,9 @@ def faculty_delete(request, pk):
     return redirect('faculty_list')
 
 
-from attendance.views import parse_date_input
+from attendance.views import parse_date_input, trigger_whatsapp_sender_in_background
+from whatsapp.models import PendingMessage
+
 
 
 @all_roles_required
@@ -79,25 +81,86 @@ def faculty_attendance(request):
     date_str = request.GET.get('date', '')
     selected_date = parse_date_input(date_str, default=today)
 
-    faculty_qs = Faculty.objects.filter(is_active=True)
+    faculty_qs = Faculty.objects.filter(is_active=True).select_related('user')
     existing = FacultyAttendance.objects.filter(date=selected_date)
     att_map = {a.faculty_id: a.status for a in existing}
 
     if request.method == 'POST':
         post_date = request.POST.get('date', '')
         selected_date = parse_date_input(post_date, default=today)
+        send_type = request.POST.get('send_whatsapp', '')  # 'absent', 'all', or ''
+
         for f in faculty_qs:
             status = request.POST.get(f'status_{f.pk}', 'P')
             FacultyAttendance.objects.update_or_create(
                 faculty=f, date=selected_date,
                 defaults={'status': status}
             )
-        messages.success(request, f'Faculty attendance saved for {selected_date}.')
-        return redirect(f'/faculty/attendance/?date={selected_date}')
+
+        messages.success(request, f'Faculty attendance saved for {selected_date.strftime("%d-%m-%Y")}.')
+
+        if send_type in ['absent', 'all']:
+            enqueued_count = 0
+            for f in faculty_qs:
+                status = request.POST.get(f'status_{f.pk}', 'P')
+                if send_type == 'absent' and status != 'A':
+                    continue
+
+                phone = (f.phone or getattr(f.user, 'phone', '') or '').strip()
+
+                if not phone:
+                    continue
+
+                # Avoid duplicate pending message today
+                already_queued = PendingMessage.objects.filter(
+                    faculty=f,
+                    created_at__date=selected_date,
+                    status=PendingMessage.STATUS_PENDING
+                ).exists()
+
+                if not already_queued:
+                    if status == 'A':
+                        msg_text = (
+                            f"Dear {f.name}, You were marked ABSENT on "
+                            f"{selected_date.strftime('%d-%m-%Y')}. "
+                            f"Please contact college administration if this is an error. - Sri NRI Junior College"
+                        )
+                    else:
+                        msg_text = (
+                            f"Dear {f.name}, Your attendance has been marked PRESENT for today, "
+                            f"{selected_date.strftime('%d-%m-%Y')}. Have a great day! - Sri NRI Junior College"
+                        )
+
+                    PendingMessage.objects.create(
+                        faculty=f,
+                        phone=phone,
+                        message=msg_text,
+                        status=PendingMessage.STATUS_PENDING
+                    )
+                    enqueued_count += 1
+
+            messages.success(request, f'Enqueued {enqueued_count} personal WhatsApp alert(s) for faculty on {selected_date.strftime("%d-%m-%Y")}.')
+
+        return redirect(f'/faculty/attendance/?date={selected_date.isoformat()}')
+
+
+
+
+    # Map recent WhatsApp messages for selected date
+    msgs = PendingMessage.objects.filter(
+        faculty__in=faculty_qs,
+        created_at__date=selected_date
+    ).order_by('-created_at')
+    whatsapp_map = {}
+    for m in msgs:
+        if m.faculty_id not in whatsapp_map:
+            whatsapp_map[m.faculty_id] = m
 
     return render(request, 'faculty/attendance.html', {
         'faculty_qs': faculty_qs,
         'att_map': att_map,
+        'whatsapp_map': whatsapp_map,
         'selected_date': selected_date,
         'today': today,
     })
+

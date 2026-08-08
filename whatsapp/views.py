@@ -66,3 +66,24 @@ class SendTemplateView(View):
 
         except json.JSONDecodeError:
             return JsonResponse({"error": "Invalid JSON body"}, status=400)
+
+
+@csrf_exempt
+def trigger_batch_webhook(request):
+    """
+    Status / webhook notification endpoint.
+    
+    PRODUCTION DEPLOYMENT NOTE:
+    In production on Render, do NOT trigger Playwright inside this web process to avoid memory crashes.
+    Instead, configure a Render Cron Job to run `python manage.py send_pending_whatsapp` directly on schedule.
+    """
+    from whatsapp.models import PendingMessage
+    pending_count = PendingMessage.objects.filter(status=PendingMessage.STATUS_PENDING).count()
+    return JsonResponse({
+        "success": True,
+        "message": "Pending WhatsApp messages are queued in database for the scheduled Render Cron Job worker.",
+        "pending_count": pending_count
+    })
+
+
+
