@@ -69,14 +69,19 @@ def get_axes_cooloff_time(request=None, credentials=None):
 
 def get_cooloff_message(request, username=None):
     """Generate dynamic lockout message based on cooloff duration."""
-    cooloff = get_axes_cooloff_time(request, credentials={'username': username} if username else None)
+    from axes.helpers import get_cool_off
+    cooloff = get_cool_off(request)
+    if not cooloff:
+        return "Too many failed attempts. Your access is locked."
     total_seconds = int(cooloff.total_seconds())
     if total_seconds >= 3600:
         hours = total_seconds // 3600
         duration_str = f"{hours} hour" if hours == 1 else f"{hours} hours"
-    else:
+    elif total_seconds >= 60:
         minutes = total_seconds // 60
-        duration_str = f"{minutes} minutes"
+        duration_str = f"{minutes} minute" if minutes == 1 else f"{minutes} minutes"
+    else:
+        duration_str = f"{total_seconds} seconds"
     return f"Too many failed attempts. Your access is locked for {duration_str}."
 
 

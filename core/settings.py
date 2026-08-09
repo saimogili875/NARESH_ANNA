@@ -204,9 +204,8 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 # --- django-axes: Login Lockout ---
-AXES_FAILURE_LIMIT = 3
-# Escalating cooloff: 10min at 3 failures → 24h at 7+ failures (see accounts.views.get_axes_cooloff_time)
-AXES_COOLOFF_TIME = 'accounts.views.get_axes_cooloff_time'
+AXES_FAILURE_LIMIT = config('AXES_FAILURE_LIMIT', default=5, cast=int)
+AXES_COOLOFF_TIME = config('AXES_COOLOFF_TIME', default=1, cast=float)  # hours
 AXES_LOCKOUT_PARAMETERS = [["ip_address", "username"]]
 AXES_RESET_ON_SUCCESS = True
 AXES_LOCKOUT_TEMPLATE = None  # We handle lockout in the login view
