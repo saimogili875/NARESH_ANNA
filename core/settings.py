@@ -192,7 +192,7 @@ SITE_BASE_URL = config('SITE_BASE_URL', default='http://127.0.0.1:8000')
 # --- IP Whitelisting ---
 _raw_ips = os.environ.get('ALLOWED_CLIENT_IPS', '')
 ALLOWED_CLIENT_IPS = [ip.strip() for ip in _raw_ips.split(',') if ip.strip()]
-IP_WHITELIST_EXEMPT_PATHS = ['/healthz']
+IP_WHITELIST_EXEMPT_PATHS = ['/healthz', '/whatsapp/webhook/']
 
 # Render terminates TLS at its proxy
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
