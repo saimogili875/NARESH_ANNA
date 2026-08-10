@@ -102,6 +102,37 @@ def send_absence_alert(student_name: str, parent_phone: str, date_str: str, sect
     return send_whatsapp_template(parent_phone, template_name, components=components)
 
 
+def send_whatsapp_media(to_number: str, media_url: str, caption: str = "") -> dict:
+    phone = _normalize_phone(to_number)
+    phone_id = settings.META_WHATSAPP_PHONE_ID
+    url = f"{META_API_URL}/{phone_id}/messages"
+
+    payload = {
+        "messaging_product": "whatsapp",
+        "to": phone,
+        "type": "document",
+        "document": {
+            "link": media_url,
+            "caption": caption,
+        },
+    }
+
+    try:
+        resp = requests.post(url, json=payload, headers=_get_headers(), timeout=30)
+        data = resp.json()
+        if resp.status_code in (200, 201):
+            msg_id = data.get("messages", [{}])[0].get("id", "")
+            logger.info(f"Media sent to {phone}: {msg_id}")
+            return {"success": True, "message_id": msg_id, "to": phone}
+        else:
+            error = data.get("error", {}).get("message", resp.text)
+            logger.error(f"Media send failed to {phone}: {error}")
+            return {"success": False, "error": error}
+    except Exception as e:
+        logger.error(f"Media send exception to {phone}: {e}")
+        return {"success": False, "error": str(e)}
+
+
 def send_exam_reminder(parent_phone: str, exam_name: str, exam_date: str, venue: str = "") -> dict:
     template_name = settings.META_TEMPLATE_EXAM_REMINDER
     components = [
