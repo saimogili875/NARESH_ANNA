@@ -100,7 +100,9 @@ def faculty_attendance(request):
         messages.success(request, f'Faculty attendance saved for {selected_date.strftime("%d-%m-%Y")}.')
 
         if send_type in ['absent', 'all']:
-            enqueued_count = 0
+            from whatsapp.services import send_faculty_absence_alert, send_whatsapp_text
+            sent_count = 0
+            failed_count = 0
             for f in faculty_qs:
                 status = request.POST.get(f'status_{f.pk}', 'P')
                 if send_type == 'absent' and status != 'A':
@@ -111,35 +113,27 @@ def faculty_attendance(request):
                 if not phone:
                     continue
 
-                # Avoid duplicate pending message today
-                already_queued = PendingMessage.objects.filter(
-                    faculty=f,
-                    created_at__date=selected_date,
-                    status=PendingMessage.STATUS_PENDING
-                ).exists()
-
-                if not already_queued:
-                    if status == 'A':
-                        msg_text = (
-                            f"Dear {f.name}, You were marked ABSENT on "
-                            f"{selected_date.strftime('%d-%m-%Y')}. "
-                            f"Please contact college administration if this is an error. - Sri NRI Junior College"
-                        )
-                    else:
-                        msg_text = (
+                if status == 'A':
+                    result = send_faculty_absence_alert(
+                        faculty_name=f.name,
+                        phone=phone,
+                        date_str=selected_date.strftime('%d-%m-%Y'),
+                    )
+                else:
+                    result = send_whatsapp_text(
+                        to_number=phone,
+                        message=(
                             f"Dear {f.name}, Your attendance has been marked PRESENT for today, "
                             f"{selected_date.strftime('%d-%m-%Y')}. Have a great day! - Sri NRI Junior College"
-                        )
-
-                    PendingMessage.objects.create(
-                        faculty=f,
-                        phone=phone,
-                        message=msg_text,
-                        status=PendingMessage.STATUS_PENDING
+                        ),
                     )
-                    enqueued_count += 1
 
-            messages.success(request, f'Enqueued {enqueued_count} personal WhatsApp alert(s) for faculty on {selected_date.strftime("%d-%m-%Y")}.')
+                if result.get('success'):
+                    sent_count += 1
+                else:
+                    failed_count += 1
+
+            messages.success(request, f'WhatsApp alerts sent: {sent_count} delivered, {failed_count} failed for faculty on {selected_date.strftime("%d-%m-%Y")}.')
 
         return redirect(f'/faculty/attendance/?date={selected_date.isoformat()}')
 

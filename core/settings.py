@@ -186,6 +186,7 @@ META_WHATSAPP_PHONE_ID = config('META_WHATSAPP_PHONE_ID', default='')
 META_WEBHOOK_VERIFY_TOKEN = config('META_WEBHOOK_VERIFY_TOKEN', default='')
 META_TEMPLATE_ABSENCE = config('META_TEMPLATE_ABSENCE', default='absence_alert')
 META_TEMPLATE_EXAM_MARKS = config('META_TEMPLATE_EXAM_MARKS', default='exam_marks')
+META_TEMPLATE_FACULTY_ABSENCE = config('META_TEMPLATE_FACULTY_ABSENCE', default='faculty_absence')
 
 SITE_BASE_URL = config('SITE_BASE_URL', default='http://127.0.0.1:8000')
 

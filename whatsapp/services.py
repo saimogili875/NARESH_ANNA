@@ -102,6 +102,20 @@ def send_absence_alert(student_name: str, parent_phone: str, date_str: str, sect
     return send_whatsapp_template(parent_phone, template_name, components=components)
 
 
+def send_faculty_absence_alert(faculty_name: str, phone: str, date_str: str) -> dict:
+    template_name = settings.META_TEMPLATE_FACULTY_ABSENCE
+    components = [
+        {
+            "type": "body",
+            "parameters": [
+                {"type": "text", "text": faculty_name},
+                {"type": "text", "text": date_str},
+            ],
+        }
+    ]
+    return send_whatsapp_template(phone, template_name, components=components)
+
+
 def send_whatsapp_media(to_number: str, media_url: str, caption: str = "") -> dict:
     phone = _normalize_phone(to_number)
     phone_id = settings.META_WHATSAPP_PHONE_ID
