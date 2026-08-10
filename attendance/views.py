@@ -199,10 +199,9 @@ def attendance_mark(request):
 
 @all_roles_required
 def attendance_send_whatsapp(request):
-    """Send WhatsApp messages to all absent students for a given section+date."""
+    """Send WhatsApp messages to all absent students' parents for a given section+date."""
     from django.http import JsonResponse
-    from django.conf import settings
-    from twilio.rest import Client
+    from whatsapp.services import send_absence_alert
 
     if request.method != 'POST':
         return JsonResponse({'success': False, 'error': 'POST only'}, status=405)
@@ -213,7 +212,6 @@ def attendance_send_whatsapp(request):
     if not section_id or not date_str:
         return JsonResponse({'success': False, 'error': 'section_id and date are required'}, status=400)
 
-    # --- Section restriction ---
     if not _section_allowed(request.user, section_id):
         return JsonResponse({'success': False, 'error': 'You do not have access to that section.'}, status=403)
 
@@ -229,44 +227,34 @@ def attendance_send_whatsapp(request):
     if not absent_records.exists():
         return JsonResponse({'success': True, 'results': [], 'message': 'No absent students found.'})
 
-    try:
-        client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
-    except Exception as e:
-        return JsonResponse({'success': False, 'error': f'Twilio init failed: {e}'}, status=500)
-
     results = []
     for record in absent_records:
         student = record.student
-        phone = student.mobile.strip() if student.mobile else ''
-        if not phone:
+        parent_phone = (student.second_mobile or student.mobile or '').strip()
+        if not parent_phone:
             results.append({'name': student.name, 'status': 'no_phone'})
             continue
 
-        msg_body = (
-            f"Dear {student.name}, You were marked ABSENT on "
-            f"{att_date.strftime('%d-%m-%Y')} for {section}. "
-            f"Please contact college. - Sri NRI Junior College"
+        result = send_absence_alert(
+            student_name=student.name,
+            parent_phone=parent_phone,
+            date_str=att_date.strftime('%d-%m-%Y'),
+            section=str(section),
         )
 
-        try:
-            client.messages.create(
-                from_=settings.TWILIO_WHATSAPP_FROM,
-                body=msg_body,
-                to=f"whatsapp:+91{phone}",
-            )
-            results.append({'name': student.name, 'phone': phone, 'status': 'sent'})
-        except Exception as e:
-            results.append({'name': student.name, 'phone': phone, 'status': 'failed', 'error': str(e)})
+        if result['success']:
+            results.append({'name': student.name, 'phone': parent_phone, 'status': 'sent'})
+        else:
+            results.append({'name': student.name, 'phone': parent_phone, 'status': 'failed', 'error': result.get('error', '')})
 
     return JsonResponse({'success': True, 'results': results})
 
 
 @all_roles_required
 def attendance_save_reasons(request):
-    """Save absence reasons for already-marked absent students, then send WhatsApp."""
+    """Save absence reasons for already-marked absent students, then send WhatsApp to parents."""
     from django.http import JsonResponse
-    from django.conf import settings
-    from twilio.rest import Client
+    from whatsapp.services import send_absence_alert
 
     if request.method != 'POST':
         return JsonResponse({'success': False, 'error': 'POST only'}, status=405)
@@ -274,7 +262,6 @@ def attendance_save_reasons(request):
     section_id = request.POST.get('section_id')
     date_str = request.POST.get('date')
 
-    # --- Section restriction ---
     if not _section_allowed(request.user, section_id):
         return JsonResponse({'success': False, 'error': 'You do not have access to that section.'}, status=403)
 
@@ -299,34 +286,26 @@ def attendance_save_reasons(request):
         record.remarks = remarks
         record.save(update_fields=['remarks'])
 
-    try:
-        client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
-    except Exception as e:
-        return JsonResponse({'success': False, 'error': f'Twilio init failed: {e}'}, status=500)
-
     results = []
     for record in absent_records:
         student = record.student
-        phone = (student.mobile or '').strip()
-        if not phone:
+        parent_phone = (student.second_mobile or student.mobile or '').strip()
+        if not parent_phone:
             results.append({'name': student.name, 'status': 'no_phone'})
             continue
-        reason_text = record.remarks or 'No reason given'
-        msg_body = (
-            f"Dear {student.name}, You were marked ABSENT on "
-            f"{att_date.strftime('%d-%m-%Y')} for {section}. "
-            f"Reason: {reason_text}. "
-            f"Please contact college. - Sri NRI Junior College"
+
+        result = send_absence_alert(
+            student_name=student.name,
+            parent_phone=parent_phone,
+            date_str=att_date.strftime('%d-%m-%Y'),
+            section=str(section),
+            reason=record.remarks or '',
         )
-        try:
-            client.messages.create(
-                from_=settings.TWILIO_WHATSAPP_FROM,
-                body=msg_body,
-                to=f"whatsapp:+91{phone}",
-            )
-            results.append({'name': student.name, 'phone': phone, 'status': 'sent'})
-        except Exception as e:
-            results.append({'name': student.name, 'phone': phone, 'status': 'failed', 'error': str(e)})
+
+        if result['success']:
+            results.append({'name': student.name, 'phone': parent_phone, 'status': 'sent'})
+        else:
+            results.append({'name': student.name, 'phone': parent_phone, 'status': 'failed', 'error': result.get('error', '')})
 
     return JsonResponse({'success': True, 'results': results})
 
@@ -982,10 +961,7 @@ from django.core.management import call_command
 
 
 def trigger_whatsapp_sender_in_background(headless=True, batch_size=None):
-    """
-    Note: Playwright sender has been decoupled from the Django web process to prevent RAM exhaustion.
-    Messages are stored in DB (PendingMessage) and processed by the scheduled Render Cron Job.
-    """
+    """Messages are stored in DB (PendingMessage) and processed by the scheduled Render Cron Job."""
     pass
 
 

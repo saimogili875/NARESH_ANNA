@@ -8,12 +8,12 @@
     <div class="d-flex align-items-center justify-content-between mb-4">
         <div>
             <h3 class="fw-bold mb-0 text-dark"><i class="bi bi-shield-check text-primary me-2"></i>Attendance & WhatsApp Live Review</h3>
-            <span class="text-muted small">Monitor real-time student attendance status and Playwright WhatsApp message dispatch</span>
+            <span class="text-muted small">Monitor real-time student attendance status and WhatsApp message dispatch</span>
         </div>
         <div class="d-flex align-items-center gap-2">
             <form method="POST" action="{% url 'attendance_trigger_whatsapp_sender' %}">
                 {% csrf_token %}
-                <button type="submit" class="btn btn-success btn-sm rounded-pill px-3 py-1.5 fw-semibold shadow-sm" title="Launch background WhatsApp Playwright batch sender without needing a terminal">
+                <button type="submit" class="btn btn-success btn-sm rounded-pill px-3 py-1.5 fw-semibold shadow-sm" title="Dispatch pending WhatsApp messages via Meta Cloud API">
                     <i class="bi bi-rocket-takeoff me-1"></i>Dispatch WhatsApp Messages Now
                 </button>
             </form>

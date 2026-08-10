@@ -1,140 +1,117 @@
-import json
-
-from twilio.rest import Client
+import logging
+import requests
 from django.conf import settings
 
+logger = logging.getLogger('whatsapp_sender')
 
-def _normalize_whatsapp_number(to_number: str) -> str:
-    """
-    Ensure the number is in 'whatsapp:+<countrycode><number>' format,
-    regardless of how it was passed in.
-
-    Handles:
-      - "+919876543210"        -> "whatsapp:+919876543210"
-      - "919876543210"         -> "whatsapp:+919876543210"
-      - "9876543210" (10 digit)-> "whatsapp:+919876543210" (assumes India)
-      - "whatsapp:+919876543210" -> "whatsapp:+919876543210"
-    """
-    to_number = to_number.strip()
-
-    if to_number.startswith("whatsapp:"):
-        to_number = to_number[len("whatsapp:"):]
-
-    # Remove spaces, dashes etc.
-    to_number = "".join(ch for ch in to_number if ch.isdigit() or ch == "+")
-
-    if to_number.startswith("+"):
-        pass  # already has country code
-    elif len(to_number) == 10:
-        # Bare 10-digit number, assume India
-        to_number = f"+91{to_number}"
-    elif to_number.startswith("91") and len(to_number) == 12:
-        to_number = f"+{to_number}"
-    else:
-        to_number = f"+{to_number}"
-
-    return f"whatsapp:{to_number}"
+META_API_URL = "https://graph.facebook.com/v21.0"
 
 
-def send_whatsapp_message(to_number: str, message: str) -> dict:
-    """
-    Send a WhatsApp message via Twilio.
+def _get_headers():
+    return {
+        "Authorization": f"Bearer {settings.META_WHATSAPP_TOKEN}",
+        "Content-Type": "application/json",
+    }
 
-    Args:
-        to_number: Recipient's phone number with country code e.g. +919876543210
-        message: Text message to send
 
-    Returns:
-        dict with status and message SID or error
-    """
+def _normalize_phone(phone: str) -> str:
+    phone = phone.strip()
+    digits = "".join(ch for ch in phone if ch.isdigit())
+    if len(digits) == 10:
+        digits = f"91{digits}"
+    elif digits.startswith("91") and len(digits) == 12:
+        pass
+    elif digits.startswith("+"):
+        digits = digits[1:]
+    return digits
+
+
+def send_whatsapp_template(to_number: str, template_name: str, language: str = "en", components: list = None) -> dict:
+    phone = _normalize_phone(to_number)
+    phone_id = settings.META_WHATSAPP_PHONE_ID
+    url = f"{META_API_URL}/{phone_id}/messages"
+
+    payload = {
+        "messaging_product": "whatsapp",
+        "to": phone,
+        "type": "template",
+        "template": {
+            "name": template_name,
+            "language": {"code": language},
+        },
+    }
+    if components:
+        payload["template"]["components"] = components
+
     try:
-        client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
-
-        msg = client.messages.create(
-            from_=settings.TWILIO_WHATSAPP_FROM,
-            body=message,
-            to=_normalize_whatsapp_number(to_number),
-        )
-
-        return {
-            "success": True,
-            "sid": msg.sid,
-            "status": msg.status,
-            "to": to_number,
-        }
-
+        resp = requests.post(url, json=payload, headers=_get_headers(), timeout=30)
+        data = resp.json()
+        if resp.status_code in (200, 201):
+            msg_id = data.get("messages", [{}])[0].get("id", "")
+            logger.info(f"Template sent to {phone}: {msg_id}")
+            return {"success": True, "message_id": msg_id, "to": phone}
+        else:
+            error = data.get("error", {}).get("message", resp.text)
+            logger.error(f"Template send failed to {phone}: {error}")
+            return {"success": False, "error": error}
     except Exception as e:
-        return {
-            "success": False,
-            "error": str(e),
-        }
+        logger.error(f"Template send exception to {phone}: {e}")
+        return {"success": False, "error": str(e)}
 
 
-def send_whatsapp_media(to_number: str, media_url: str, caption: str = "") -> dict:
-    """
-    Send a media file (e.g. PDF, image) via WhatsApp using Twilio.
+def send_whatsapp_text(to_number: str, message: str) -> dict:
+    phone = _normalize_phone(to_number)
+    phone_id = settings.META_WHATSAPP_PHONE_ID
+    url = f"{META_API_URL}/{phone_id}/messages"
 
-    Args:
-        to_number: Recipient's phone number with country code e.g. +919876543210
-        media_url: Publicly accessible HTTPS URL to the file (Twilio fetches it)
-        caption: Optional text to accompany the media
+    payload = {
+        "messaging_product": "whatsapp",
+        "to": phone,
+        "type": "text",
+        "text": {"body": message},
+    }
 
-    Returns:
-        dict with status and message SID or error
-    """
     try:
-        client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
-
-        msg = client.messages.create(
-            from_=settings.TWILIO_WHATSAPP_FROM,
-            to=_normalize_whatsapp_number(to_number),
-            body=caption,
-            media_url=[media_url],
-        )
-
-        return {
-            "success": True,
-            "sid": msg.sid,
-            "status": msg.status,
-        }
-
+        resp = requests.post(url, json=payload, headers=_get_headers(), timeout=30)
+        data = resp.json()
+        if resp.status_code in (200, 201):
+            msg_id = data.get("messages", [{}])[0].get("id", "")
+            logger.info(f"Text sent to {phone}: {msg_id}")
+            return {"success": True, "message_id": msg_id, "to": phone}
+        else:
+            error = data.get("error", {}).get("message", resp.text)
+            logger.error(f"Text send failed to {phone}: {error}")
+            return {"success": False, "error": error}
     except Exception as e:
-        return {
-            "success": False,
-            "error": str(e),
+        logger.error(f"Text send exception to {phone}: {e}")
+        return {"success": False, "error": str(e)}
+
+
+def send_absence_alert(student_name: str, parent_phone: str, date_str: str, section: str, reason: str = "") -> dict:
+    template_name = settings.META_TEMPLATE_ABSENCE
+    components = [
+        {
+            "type": "body",
+            "parameters": [
+                {"type": "text", "text": student_name},
+                {"type": "text", "text": date_str},
+                {"type": "text", "text": section},
+            ],
         }
+    ]
+    return send_whatsapp_template(parent_phone, template_name, components=components)
 
 
-def send_whatsapp_template(to_number: str, template_sid: str, variables: dict = None) -> dict:
-    """
-    Send a pre-approved WhatsApp template message.
-
-    Args:
-        to_number: Recipient's phone number e.g. +919876543210
-        template_sid: Twilio Content Template SID (HXxxxx)
-        variables: Template variable substitutions e.g. {"1": "John", "2": "Order#123"}
-
-    Returns:
-        dict with status and message SID or error
-    """
-    try:
-        client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
-
-        msg = client.messages.create(
-            from_=settings.TWILIO_WHATSAPP_FROM,
-            to=_normalize_whatsapp_number(to_number),
-            content_sid=template_sid,
-            content_variables=json.dumps(variables or {}),
-        )
-
-        return {
-            "success": True,
-            "sid": msg.sid,
-            "status": msg.status,
+def send_exam_reminder(parent_phone: str, exam_name: str, exam_date: str, venue: str = "") -> dict:
+    template_name = settings.META_TEMPLATE_EXAM_REMINDER
+    components = [
+        {
+            "type": "body",
+            "parameters": [
+                {"type": "text", "text": exam_name},
+                {"type": "text", "text": exam_date},
+                {"type": "text", "text": venue or "College campus"},
+            ],
         }
-
-    except Exception as e:
-        return {
-            "success": False,
-            "error": str(e),
-        }
+    ]
+    return send_whatsapp_template(parent_phone, template_name, components=components)

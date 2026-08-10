@@ -180,13 +180,13 @@ LOGGING = {
 }
 
 
-# --- Twilio WhatsApp Config ---
-TWILIO_ACCOUNT_SID = config('TWILIO_ACCOUNT_SID', default='')
-TWILIO_AUTH_TOKEN = config('TWILIO_AUTH_TOKEN', default='')
-# Twilio sandbox number by default. Replace with your approved sender for production.
-TWILIO_WHATSAPP_FROM = config('TWILIO_WHATSAPP_FROM', default='whatsapp:+14155238886')
+# --- Meta WhatsApp Cloud API Config ---
+META_WHATSAPP_TOKEN = config('META_WHATSAPP_TOKEN', default='')
+META_WHATSAPP_PHONE_ID = config('META_WHATSAPP_PHONE_ID', default='')
+META_WEBHOOK_VERIFY_TOKEN = config('META_WEBHOOK_VERIFY_TOKEN', default='')
+META_TEMPLATE_ABSENCE = config('META_TEMPLATE_ABSENCE', default='absence_alert')
+META_TEMPLATE_EXAM_REMINDER = config('META_TEMPLATE_EXAM_REMINDER', default='exam_reminder')
 
-# Public base URL for this server (use ngrok URL for local dev so Twilio can fetch media files)
 SITE_BASE_URL = config('SITE_BASE_URL', default='http://127.0.0.1:8000')
 
 # --- IP Whitelisting ---
@@ -232,8 +232,6 @@ ATTENDANCE_CUTOFF_MINUTE = 30
 SESSION_EXPIRY_FACULTY_MINUTES = 30   # Faculty accounts
 SESSION_EXPIRY_OTHER_MINUTES = 60     # Admin / accounts / superuser
 
-# --- Playwright WhatsApp Automation (Local Prototype) ---
-HEADLESS_MODE = config('HEADLESS_MODE', default=True, cast=bool)
-WHATSAPP_PLAYWRIGHT_HEADLESS = config('WHATSAPP_PLAYWRIGHT_HEADLESS', default=HEADLESS_MODE, cast=bool)
-WHATSAPP_SESSION_DIR = BASE_DIR / 'whatsapp_session'
+# --- WhatsApp Batch Sender ---
+WHATSAPP_BATCH_SIZE = config('WHATSAPP_BATCH_SIZE', default=50, cast=int)
 

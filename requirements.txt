@@ -4,12 +4,10 @@ python-dotenv>=1.0.0
 Pillow>=10.0
 reportlab>=4.0
 openpyxl>=3.1
-twilio>=8.0
+requests>=2.31
 whitenoise>=6.5
 gunicorn>=21.0
 psycopg2-binary>=2.9
 dj-database-url>=2.0
 django-simple-captcha>=0.6.0
 django-axes>=6.0
-playwright>=1.40.0
-
