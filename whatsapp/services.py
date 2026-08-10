@@ -95,7 +95,7 @@ def send_absence_alert(student_name: str, parent_phone: str, date_str: str, sect
             "parameters": [
                 {"type": "text", "text": student_name},
                 {"type": "text", "text": date_str},
-                {"type": "text", "text": section},
+                {"type": "text", "text": reason or "Not provided"},
             ],
         }
     ]
@@ -133,15 +133,17 @@ def send_whatsapp_media(to_number: str, media_url: str, caption: str = "") -> di
         return {"success": False, "error": str(e)}
 
 
-def send_exam_reminder(parent_phone: str, exam_name: str, exam_date: str, venue: str = "") -> dict:
-    template_name = settings.META_TEMPLATE_EXAM_REMINDER
+def send_exam_marks(parent_phone: str, student_name: str, marks: str, total_marks: str, subject: str, date_str: str) -> dict:
+    template_name = settings.META_TEMPLATE_EXAM_MARKS
     components = [
         {
             "type": "body",
             "parameters": [
-                {"type": "text", "text": exam_name},
-                {"type": "text", "text": exam_date},
-                {"type": "text", "text": venue or "College campus"},
+                {"type": "text", "text": student_name},
+                {"type": "text", "text": str(marks)},
+                {"type": "text", "text": str(total_marks)},
+                {"type": "text", "text": subject},
+                {"type": "text", "text": date_str},
             ],
         }
     ]
