@@ -95,9 +95,43 @@ class SendTemplateView(View):
 @csrf_exempt
 def trigger_batch_webhook(request):
     from whatsapp.models import PendingMessage
-    pending_count = PendingMessage.objects.filter(status=PendingMessage.STATUS_PENDING).count()
+    from .services import send_whatsapp_text
+
+    pending = list(
+        PendingMessage.objects.filter(
+            status=PendingMessage.STATUS_PENDING
+        ).order_by('created_at')[:50]
+    )
+
+    if not pending:
+        return JsonResponse({"success": True, "message": "No pending messages.", "sent": 0, "failed": 0})
+
+    sent = 0
+    failed = 0
+    for msg in pending:
+        phone = (msg.phone or "").strip()
+        if not phone:
+            msg.status = PendingMessage.STATUS_FAILED
+            msg.error_message = "No phone number"
+            msg.save()
+            failed += 1
+            continue
+
+        result = send_whatsapp_text(to_number=phone, message=msg.message)
+        if result["success"]:
+            msg.status = PendingMessage.STATUS_SENT
+            msg.error_message = ""
+            msg.save()
+            sent += 1
+        else:
+            msg.status = PendingMessage.STATUS_FAILED
+            msg.error_message = result.get("error", "Unknown error")
+            msg.save()
+            failed += 1
+
     return JsonResponse({
         "success": True,
-        "message": "Pending messages queued for the scheduled Cron Job worker.",
-        "pending_count": pending_count,
+        "message": f"Dispatched: {sent} sent, {failed} failed out of {len(pending)}.",
+        "sent": sent,
+        "failed": failed,
     })
