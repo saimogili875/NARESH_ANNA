@@ -230,7 +230,7 @@ def attendance_send_whatsapp(request):
     results = []
     for record in absent_records:
         student = record.student
-        parent_phone = (student.second_mobile or student.mobile or '').strip()
+        parent_phone = (student.mobile or student.second_mobile or '').strip()
         if not parent_phone:
             results.append({'name': student.name, 'status': 'no_phone'})
             continue
@@ -292,7 +292,7 @@ def attendance_save_reasons(request):
     results = []
     for record in absent_records:
         student = record.student
-        parent_phone = (student.second_mobile or student.mobile or '').strip()
+        parent_phone = (student.mobile or student.second_mobile or '').strip()
         if not parent_phone:
             results.append({'name': student.name, 'status': 'no_phone'})
             continue
