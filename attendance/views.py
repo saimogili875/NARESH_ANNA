@@ -286,6 +286,9 @@ def attendance_save_reasons(request):
         record.remarks = remarks
         record.save(update_fields=['remarks'])
 
+    if request.POST.get('save_only') == '1':
+        return JsonResponse({'success': True, 'message': 'Reasons saved.'})
+
     results = []
     for record in absent_records:
         student = record.student
