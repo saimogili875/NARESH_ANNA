@@ -170,26 +170,48 @@ def attendance_mark(request):
             'went_out': 'Went Out',
             'no_reason': '',
         }
+
+        # Build all rows in memory first (no DB hits yet) — avoids holding
+        # row locks open across a per-student query loop, which was causing
+        # WORKER TIMEOUT under lock contention / slow round-trips on Render.
+        student_data = []
+        for student in students:
+            status = request.POST.get(f'status_{student.pk}', 'A')
+            remarks = ''
+            if status == 'A':
+                reason = request.POST.get(f'reason_{student.pk}', 'no_reason')
+                if reason == 'other':
+                    remarks = request.POST.get(f'custom_reason_{student.pk}', '').strip()[:100]
+                else:
+                    remarks = _reason_labels.get(reason, '')
+            student_data.append((student, status, remarks))
+
         with transaction.atomic():
-            for student in students:
-                status = request.POST.get(f'status_{student.pk}', 'A')
-                remarks = ''
-                if status == 'A':
-                    reason = request.POST.get(f'reason_{student.pk}', 'no_reason')
-                    if reason == 'other':
-                        remarks = request.POST.get(f'custom_reason_{student.pk}', '').strip()[:100]
-                    else:
-                        remarks = _reason_labels.get(reason, '')
-                # update_or_create prevents IntegrityError if submitted twice
-                Attendance.objects.update_or_create(
-                    student=student,
-                    date=selected_date,
-                    defaults={
-                        'status': status,
-                        'section': section,
-                        'remarks': remarks,
-                    },
-                )
+            # One query to find which rows already exist for this section+date
+            existing = {
+                a.student_id: a
+                for a in Attendance.objects.filter(section=section, date=selected_date)
+            }
+
+            to_create = []
+            to_update = []
+            for student, status, remarks in student_data:
+                existing_row = existing.get(student.pk)
+                if existing_row:
+                    existing_row.status = status
+                    existing_row.remarks = remarks
+                    to_update.append(existing_row)
+                else:
+                    to_create.append(Attendance(
+                        student=student, date=selected_date,
+                        section=section, status=status, remarks=remarks,
+                    ))
+
+            if to_create:
+                Attendance.objects.bulk_create(to_create)
+            if to_update:
+                Attendance.objects.bulk_update(to_update, ['status', 'remarks'])
+
         messages.success(request, f'Attendance saved for {section} on {selected_date}.')
         base_url = reverse('attendance_list')
         query_string = urlencode({'date': selected_date.isoformat(), 'section': section_id})
@@ -1077,8 +1099,3 @@ def enqueue_section_absent_whatsapp(request):
     if referer:
         return redirect(referer)
     return redirect('attendance_review')
-
-
-
-
-
