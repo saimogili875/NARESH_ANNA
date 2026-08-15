@@ -19,6 +19,12 @@ class Faculty(models.Model):
         blank=True,
         help_text='Sections this faculty can access for attendance',
     )
+    assigned_subjects = models.ManyToManyField(
+        'marks.Subject',
+        related_name='faculty_members',
+        blank=True,
+        help_text='Subjects this faculty can enter marks for',
+    )
 
     def __str__(self):
         return f"{self.employee_id} - {self.name}"

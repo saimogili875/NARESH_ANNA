@@ -1,6 +1,6 @@
 from django.db import models
 from students.models import Student
-from accounts.models import AcademicYear, Group
+from accounts.models import AcademicYear, Group, Section, User
 
 
 class Subject(models.Model):
@@ -100,3 +100,36 @@ class Mark(models.Model):
 
     def __str__(self):
         return f"{self.student.name} - {self.exam} - {self.subject}: {self.marks_obtained}"
+
+
+class MarksEntryLock(models.Model):
+    exam = models.ForeignKey(Exam, on_delete=models.CASCADE, related_name='entry_locks')
+    section = models.ForeignKey(Section, on_delete=models.CASCADE, related_name='entry_locks')
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='entry_locks')
+    is_locked = models.BooleanField(default=True)
+    locked_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL)
+    locked_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ['exam', 'section', 'subject']
+        verbose_name_plural = "5. Marks Entry Locks"
+
+    def __str__(self):
+        status = "Locked" if self.is_locked else "Unlocked"
+        return f"{self.exam} - {self.section} - {self.subject}: {status}"
+
+
+class MarksWhatsAppSendLog(models.Model):
+    exam = models.ForeignKey(Exam, on_delete=models.CASCADE, related_name='whatsapp_send_logs')
+    section = models.ForeignKey(Section, on_delete=models.CASCADE, related_name='whatsapp_send_logs')
+    sent_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL)
+    sent_at = models.DateTimeField(auto_now_add=True)
+    student_count = models.IntegerField(default=0)
+
+    class Meta:
+        unique_together = ['exam', 'section']
+        verbose_name = "Marks WhatsApp Send Log"
+        verbose_name_plural = "6. Marks WhatsApp Send Logs"
+
+    def __str__(self):
+        return f"WhatsApp Sent: {self.exam} - {self.section} ({self.student_count} students)"

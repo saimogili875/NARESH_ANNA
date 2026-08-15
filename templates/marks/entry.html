@@ -31,8 +31,18 @@
         <a href="{% url 'exam_list' %}" class="btn btn-outline-secondary btn-sm">Back to Exams</a>
       </div>
     </form>
-  </div>
 </div>
+
+{% if not subjects %}
+<div class="alert alert-warning border-warning shadow-sm mb-3">
+  <i class="bi bi-exclamation-triangle-fill me-2"></i>
+  {% if request.user.role == 'faculty' %}
+  <strong>No assigned subjects!</strong> You are not assigned to enter marks for any subject in this exam.
+  {% else %}
+  <strong>No subjects configured!</strong> No subjects are attached to the exam category <strong>{{ exam.category.name }}</strong>. Please attach subjects in Django Admin.
+  {% endif %}
+</div>
+{% endif %}
 
 {% if selected_section and rows %}
 <div class="card border-0 shadow-sm">
@@ -48,8 +58,23 @@
           <thead class="bg-light">
             <tr>
               <th style="min-width:150px">Student</th>
-              {% for subject, max_val in subjects_with_max %}
-              <th class="text-center" style="min-width:85px">{{ subject }}<div class="text-muted" style="font-size:0.65rem">/ {{ max_val }}</div></th>
+              {% for subject, max_val, is_locked in subjects_with_info %}
+              <th class="text-center" style="min-width:95px">
+                <div>
+                  {{ subject }}
+                  {% if is_locked %}
+                  <span class="badge bg-secondary-subtle text-dark border ms-1" title="Locked">🔒</span>
+                  {% if request.user.role == 'admin' or request.user.is_superuser %}
+                  <a href="{% url 'marks_entry_unlock' exam.id selected_section.pk subject.pk %}"
+                     class="badge bg-warning-subtle text-warning-emphasis text-decoration-none border border-warning ms-1"
+                     title="Click to unlock for faculty editing">
+                    🔓 Unlock
+                  </a>
+                  {% endif %}
+                  {% endif %}
+                </div>
+                <div class="text-muted" style="font-size:0.65rem">/ {{ max_val }}</div>
+              </th>
               {% endfor %}
             </tr>
           </thead>
@@ -60,16 +85,19 @@
                 <div class="fw-500">{{ row.student.name }}</div>
                 <div class="text-muted" style="font-size:0.7rem">{{ row.student.admission_number }}</div>
               </td>
-              {# FIX: row.marks is now a list of (subject, value) tuples — use subject name correctly in input name #}
               {% for subject, mark_val in row.marks %}
-              <td class="text-center p-1">
+              <td class="text-center p-1 align-middle">
+                {% if locked_map|get_item:subject.id and request.user.role == 'faculty' and not request.user.is_superuser %}
+                <span class="fw-bold text-dark" style="font-size:0.9rem">{{ mark_val|default:"—" }}</span>
+                {% else %}
                 <input type="number"
-                  name="mark_{{ row.student.pk }}_{{ subject }}"
+                  name="mark_{{ row.student.pk }}_{{ subject.name }}"
                   class="form-control form-control-sm text-center"
                   style="width:70px;margin:auto"
                   min="0" max="{{ subject_max_marks|get_item:subject }}" step="0.5"
                   value="{{ mark_val }}"
                   placeholder="—">
+                {% endif %}
               </td>
               {% endfor %}
             </tr>

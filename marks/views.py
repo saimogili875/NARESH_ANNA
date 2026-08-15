@@ -1,21 +1,65 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.http import HttpResponse
-from .models import Exam, Mark, ExamSubjectMaxMark, ExamCategory, ExamType, GroupCategoryConfig, Subject
+from .models import Exam, Mark, ExamSubjectMaxMark, ExamCategory, ExamType, GroupCategoryConfig, Subject, MarksEntryLock, MarksWhatsAppSendLog
 from students.models import Student
 from accounts.models import Section, AcademicYear, Group
-from accounts.decorators import all_roles_required, admin_faculty_required
+from accounts.decorators import all_roles_required, admin_faculty_required, admin_required
 
 def get_subjects_for_exam(exam):
     """Return the subject list to use for marks entry/report for this exam."""
-    if exam.category_id:
+    if exam and exam.category_id:
         return list(exam.category.subjects.all())
-    return list(Subject.objects.all())
+    return []
+
+def filter_subjects_for_user(request, subjects):
+    """Filter subject list based on faculty assigned_subjects if user is faculty."""
+    if getattr(request.user, 'role', None) == 'faculty' and not request.user.is_superuser:
+        faculty_profile = getattr(request.user, 'faculty_profile', None)
+        if faculty_profile:
+            assigned_subs = set(faculty_profile.assigned_subjects.all())
+            return [s for s in subjects if s in assigned_subs]
+        return []
+    return subjects
 
 def get_subject_max_marks(exam, subjects):
     """Return {subject: max_marks} for the given exam."""
     saved = {m.subject: m.max_marks for m in exam.subject_max_marks.select_related('subject')}
     return {sub: saved.get(sub, exam.max_marks) for sub in subjects}
+
+def get_section_completion_status(exam):
+    """Return section completion status list for every Section under exam.group."""
+    subjects = get_subjects_for_exam(exam)
+    total_subjects_count = len(subjects)
+    if exam.group_id:
+        sections = list(Section.objects.filter(group=exam.group).select_related('group'))
+    else:
+        sections = list(Section.objects.all().select_related('group'))
+
+    locks = MarksEntryLock.objects.filter(exam=exam, subject__in=subjects, is_locked=True)
+    section_locks_map = {}
+    for l in locks:
+        section_locks_map.setdefault(l.section_id, set()).add(l.subject_id)
+
+    sent_logs = {log.section_id: log for log in MarksWhatsAppSendLog.objects.filter(exam=exam)}
+
+    result = []
+    for sec in sections:
+        locked_subs = section_locks_map.get(sec.id, set())
+        completed_count = len(locked_subs)
+        is_complete = (total_subjects_count > 0 and completed_count == total_subjects_count)
+        send_log = sent_logs.get(sec.id)
+        is_sent = bool(send_log)
+
+        result.append({
+            'section': sec,
+            'is_complete': is_complete,
+            'completed_subject_count': completed_count,
+            'total_subject_count': total_subjects_count,
+            'is_sent': is_sent,
+            'send_log': send_log,
+        })
+    return result
 
 @all_roles_required
 def exam_list(request):
@@ -69,43 +113,50 @@ def exam_add(request):
 
         if not group_id:
             messages.error(request, 'Please select a Student Group.')
+        elif not category_id:
+            messages.error(request, 'Please select an Exam Category.')
         else:
             group = get_object_or_404(Group, pk=group_id)
             category = get_object_or_404(ExamCategory, pk=category_id)
             exam_type = get_object_or_404(ExamType, pk=exam_type_id)
 
-            subjects = list(category.subjects.all())
-
-            subject_max_inputs = {}
-            if category.is_fixed_marks:
-                overall_max = 100 * len(subjects) # simple default for now, can be adjusted
+            if not GroupCategoryConfig.objects.filter(group=group, category=category).exists():
+                messages.error(request, f'Category "{category.name}" is not configured for group "{group.name}".')
             else:
-                for subject in subjects:
-                    val = request.POST.get(f'subject_max_{subject.name}', '').strip()
-                    try:
-                        subject_max_inputs[subject] = int(val) if val else 100
-                    except (TypeError, ValueError):
-                        subject_max_inputs[subject] = 100
-                overall_max = sum(subject_max_inputs.values()) or 100
+                subjects = list(category.subjects.all())
+                if not subjects:
+                    messages.error(request, f'Category "{category.name}" has no subjects attached. Please configure subjects in Admin first.')
+                else:
+                    subject_max_inputs = {}
+                    if category.is_fixed_marks:
+                        overall_max = 100 * len(subjects) # simple default for now, can be adjusted
+                    else:
+                        for subject in subjects:
+                            val = request.POST.get(f'subject_max_{subject.name}', '').strip()
+                            try:
+                                subject_max_inputs[subject] = int(val) if val else 100
+                            except (TypeError, ValueError):
+                                subject_max_inputs[subject] = 100
+                        overall_max = sum(subject_max_inputs.values()) or 100
 
-            exam = Exam.objects.create(
-                exam_type=exam_type,
-                custom_name=custom_name if exam_type.name.lower() == 'custom' else '',
-                academic_year=active_year,
-                group=group,
-                category=category,
-                date=request.POST.get('date'),
-                max_marks=overall_max,
-            )
-
-            if not category.is_fixed_marks:
-                for subject, sub_max in subject_max_inputs.items():
-                    ExamSubjectMaxMark.objects.update_or_create(
-                        exam=exam, subject=subject, defaults={'max_marks': sub_max}
+                    exam = Exam.objects.create(
+                        exam_type=exam_type,
+                        custom_name=custom_name if exam_type.name.lower() == 'custom' else '',
+                        academic_year=active_year,
+                        group=group,
+                        category=category,
+                        date=request.POST.get('date'),
+                        max_marks=overall_max,
                     )
 
-            messages.success(request, 'Exam created successfully.')
-            return redirect('exam_list')
+                    if not category.is_fixed_marks:
+                        for subject, sub_max in subject_max_inputs.items():
+                            ExamSubjectMaxMark.objects.update_or_create(
+                                exam=exam, subject=subject, defaults={'max_marks': sub_max}
+                            )
+
+                    messages.success(request, 'Exam created successfully.')
+                    return redirect('exam_list')
 
     return render(request, 'marks/exam_form.html', {
         'active_year': active_year, 'exam_types': exam_types,
@@ -119,6 +170,18 @@ def exam_add(request):
         'fixed_subject_max_marks': {str(c.id): {} for c in categories_qs if c.is_fixed_marks},
     })
 
+@admin_required
+def marks_entry_unlock(request, exam_id, section_id, subject_id):
+    exam = get_object_or_404(Exam, pk=exam_id)
+    section = get_object_or_404(Section, pk=section_id)
+    subject = get_object_or_404(Subject, pk=subject_id)
+    MarksEntryLock.objects.update_or_create(
+        exam=exam, section=section, subject=subject,
+        defaults={'is_locked': False, 'locked_by': request.user}
+    )
+    messages.success(request, f'Unlocked {subject.name} for editing.')
+    return redirect(f'/marks/exam/{exam_id}/entry/?section={section_id}')
+
 @admin_faculty_required
 def marks_entry(request, exam_id):
     exam = get_object_or_404(Exam, pk=exam_id)
@@ -127,27 +190,62 @@ def marks_entry(request, exam_id):
         sections = Section.objects.select_related('group').filter(group=exam.group)
     else:
         sections = Section.objects.select_related('group').all()
+
     subjects = get_subjects_for_exam(exam)
+    subjects = filter_subjects_for_user(request, subjects)
+
+    if not subjects:
+        if getattr(request.user, 'role', None) == 'faculty':
+            messages.warning(request, 'You are not assigned to enter marks for any subject in this exam.')
+        else:
+            messages.warning(request, f'No subjects are attached to exam category "{exam.category.name}". Please attach subjects in Django Admin.')
+
     subject_max_marks = get_subject_max_marks(exam, subjects)
     rows = []
     selected_section = None
+    locked_map = {}
+
+    if section_id and str(section_id).isdigit():
+        selected_section = get_object_or_404(Section, pk=section_id)
+        locks = MarksEntryLock.objects.filter(exam=exam, section=selected_section, subject__in=subjects)
+        locked_subject_ids = set(locks.filter(is_locked=True).values_list('subject_id', flat=True))
+        locked_map = {sub.id: (sub.id in locked_subject_ids) for sub in subjects}
 
     if request.method == 'POST':
         sid = request.POST.get('section_id')
         sec = get_object_or_404(Section, pk=sid)
+
+        # Server-side lock check
+        locks = MarksEntryLock.objects.filter(exam=exam, section=sec, subject__in=subjects)
+        locked_subject_ids = set(locks.filter(is_locked=True).values_list('subject_id', flat=True))
+        is_faculty = (getattr(request.user, 'role', None) == 'faculty' and not request.user.is_superuser)
+        saved_subjects_set = set()
+
         for student in Student.objects.filter(section=sec, is_active=True):
             for subject in subjects:
+                if is_faculty and subject.id in locked_subject_ids:
+                    continue
+
                 val = request.POST.get(f'mark_{student.pk}_{subject.name}', '').strip()
                 if val:
                     Mark.objects.update_or_create(
                         student=student, exam=exam, subject=subject,
                         defaults={'marks_obtained': val, 'is_absent': False}
                     )
+                    saved_subjects_set.add(subject)
+
+        # Lock saved subjects for faculty
+        if is_faculty:
+            for subject in saved_subjects_set:
+                MarksEntryLock.objects.update_or_create(
+                    exam=exam, section=sec, subject=subject,
+                    defaults={'is_locked': True, 'locked_by': request.user}
+                )
+
         messages.success(request, 'Marks saved successfully.')
         return redirect(f'/marks/exam/{exam_id}/entry/?section={sid}')
 
-    if section_id and str(section_id).isdigit():
-        selected_section = get_object_or_404(Section, pk=section_id)
+    if selected_section:
         students = list(Student.objects.filter(section=selected_section, is_active=True))
         existing = Mark.objects.filter(exam=exam, student__in=students)
         marks_map = {}
@@ -157,13 +255,136 @@ def marks_entry(request, exam_id):
             s_marks = [(sub, marks_map.get(student.pk, {}).get(sub.id, '')) for sub in subjects]
             rows.append({'student': student, 'marks': s_marks})
 
-    subjects_with_max = [(sub, subject_max_marks.get(sub, exam.max_marks)) for sub in subjects]
+    subjects_with_info = [
+        (sub, subject_max_marks.get(sub, exam.max_marks), locked_map.get(sub.id, False))
+        for sub in subjects
+    ]
 
     return render(request, 'marks/entry.html', {
         'exam': exam, 'sections': sections, 'rows': rows,
         'selected_section': selected_section, 'section_id': str(section_id),
         'subjects': subjects, 'subject_max_marks': subject_max_marks,
-        'subjects_with_max': subjects_with_max,
+        'subjects_with_info': subjects_with_info,
+        'locked_map': locked_map,
+    })
+
+@admin_required
+def marks_whatsapp_send(request, exam_id):
+    from whatsapp.models import PendingMessage
+    exam = get_object_or_404(Exam, pk=exam_id)
+    statuses = get_section_completion_status(exam)
+
+    total_sections = len(statuses)
+    sent_sections_count = sum(1 for s in statuses if s['is_sent'])
+    ready_sections_count = sum(1 for s in statuses if s['is_complete'] and not s['is_sent'])
+    pending_marks_count = sum(1 for s in statuses if not s['is_complete'])
+
+    if request.method == 'POST':
+        selected_section_ids = request.POST.getlist('selected_sections')
+        if not selected_section_ids:
+            messages.warning(request, 'No section selected to send.')
+            return redirect(f'/marks/exam/{exam_id}/whatsapp/send/')
+
+        sec_map = {str(s['section'].id): s for s in statuses}
+        target_statuses = []
+        for sid in selected_section_ids:
+            status = sec_map.get(str(sid))
+            if status and status['is_complete'] and not status['is_sent']:
+                target_statuses.append(status)
+
+        if not target_statuses:
+            messages.warning(request, 'Selected section(s) are either incomplete or already sent.')
+            return redirect(f'/marks/exam/{exam_id}/whatsapp/send/')
+
+        subjects = get_subjects_for_exam(exam)
+        subject_max_marks = get_subject_max_marks(exam, subjects)
+
+        total_queued_messages = 0
+        sent_section_names = []
+
+        for st in target_statuses:
+            sec = st['section']
+            students = Student.objects.filter(section=sec, is_active=True)
+            if not students.exists():
+                MarksWhatsAppSendLog.objects.create(
+                    exam=exam, section=sec, sent_by=request.user, student_count=0
+                )
+                sent_section_names.append(str(sec))
+                continue
+
+            marks_qs = Mark.objects.filter(exam=exam, student__in=students).select_related('subject')
+            student_marks_map = {}
+            for m in marks_qs:
+                student_marks_map.setdefault(m.student_id, {})[m.subject_id] = m
+
+            sec_message_count = 0
+            for student in students:
+                phone = (student.mobile or getattr(student, 'second_mobile', '') or '').strip()
+                if not phone:
+                    continue
+
+                s_marks = student_marks_map.get(student.id, {})
+                mark_lines = []
+                total_obtained = 0.0
+                total_max = 0
+
+                for sub in subjects:
+                    m = s_marks.get(sub.id)
+                    s_max = subject_max_marks.get(sub, exam.max_marks)
+                    total_max += s_max
+                    if m:
+                        if m.is_absent:
+                            mark_lines.append(f"• {sub.name}: AB / {s_max}")
+                        elif m.marks_obtained is not None:
+                            val = float(m.marks_obtained)
+                            total_obtained += val
+                            mark_lines.append(f"• {sub.name}: {val:g} / {s_max}")
+                        else:
+                            mark_lines.append(f"• {sub.name}: - / {s_max}")
+                    else:
+                        mark_lines.append(f"• {sub.name}: - / {s_max}")
+
+                pct = round(total_obtained / total_max * 100, 1) if total_max else 0
+
+                msg_text = (
+                    f"Sri NRI Junior College — Marks Report\n"
+                    f"Student: {student.name} ({student.admission_number})\n"
+                    f"Exam: {exam.display_name()} ({exam.category.name})\n"
+                    f"Date: {exam.date.strftime('%d-%m-%Y')}\n\n"
+                    f"Subject-wise Marks:\n" + "\n".join(mark_lines) + "\n\n"
+                    f"Total Obtained: {total_obtained:g} / {total_max} ({pct}%)"
+                )
+
+                PendingMessage.objects.create(
+                    student=student,
+                    phone=phone,
+                    message=msg_text,
+                    status=PendingMessage.STATUS_PENDING,
+                )
+                sec_message_count += 1
+                total_queued_messages += 1
+
+            MarksWhatsAppSendLog.objects.create(
+                exam=exam,
+                section=sec,
+                sent_by=request.user,
+                student_count=sec_message_count,
+            )
+            sent_section_names.append(str(sec))
+
+        messages.success(
+            request,
+            f"Successfully queued {total_queued_messages} WhatsApp message(s) for section(s): {', '.join(sent_section_names)}."
+        )
+        return redirect(f'/marks/exam/{exam_id}/whatsapp/send/')
+
+    return render(request, 'marks/whatsapp_send.html', {
+        'exam': exam,
+        'statuses': statuses,
+        'total_sections': total_sections,
+        'sent_sections_count': sent_sections_count,
+        'ready_sections_count': ready_sections_count,
+        'pending_marks_count': pending_marks_count,
     })
 
 @all_roles_required
@@ -246,13 +467,8 @@ def marks_report(request):
             students = _resolve_students()
 
             marks = Mark.objects.filter(exam=selected_exam, student__in=students).select_related('subject')
-            subjects_dict = {}
-            for m in marks:
-                if m.subject_id not in subjects_dict:
-                    subjects_dict[m.subject_id] = m.subject
-            subjects = sorted(list(subjects_dict.values()), key=lambda x: x.name)
-            if not subjects:
-                subjects = get_subjects_for_exam(selected_exam)
+            subjects = get_subjects_for_exam(selected_exam)
+            subjects = filter_subjects_for_user(request, subjects)
             subject_max_marks = get_subject_max_marks(selected_exam, subjects)
             total_max = sum(subject_max_marks.get(sub, 0) for sub in subjects)
             marks_map = {}
@@ -301,13 +517,8 @@ def marks_report_export_excel(request):
     selected_exam = get_object_or_404(Exam, pk=exam_id)
     students = Student.objects.filter(section=selected_section, is_active=True)
     marks = Mark.objects.filter(exam=selected_exam, student__in=students).select_related('subject')
-    subjects_dict = {}
-    for m in marks:
-        if m.subject_id not in subjects_dict:
-            subjects_dict[m.subject_id] = m.subject
-    subjects = sorted(list(subjects_dict.values()), key=lambda x: x.name)
-    if not subjects:
-        subjects = get_subjects_for_exam(selected_exam)
+    subjects = get_subjects_for_exam(selected_exam)
+    subjects = filter_subjects_for_user(request, subjects)
     subject_max_marks = get_subject_max_marks(selected_exam, subjects)
 
     marks_map = {}
@@ -368,13 +579,8 @@ def marks_report_export_pdf(request):
     selected_exam = get_object_or_404(Exam, pk=exam_id)
     students = Student.objects.filter(section=selected_section, is_active=True)
     marks = Mark.objects.filter(exam=selected_exam, student__in=students).select_related('subject')
-    subjects_dict = {}
-    for m in marks:
-        if m.subject_id not in subjects_dict:
-            subjects_dict[m.subject_id] = m.subject
-    subjects = sorted(list(subjects_dict.values()), key=lambda x: x.name)
-    if not subjects:
-        subjects = get_subjects_for_exam(selected_exam)
+    subjects = get_subjects_for_exam(selected_exam)
+    subjects = filter_subjects_for_user(request, subjects)
     subject_max_marks = get_subject_max_marks(selected_exam, subjects)
 
     marks_map = {}

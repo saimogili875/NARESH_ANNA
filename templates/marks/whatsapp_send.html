@@ -1,0 +1,145 @@
+{% extends 'base.html' %}
+{% block title %}Send Marks on WhatsApp — {{ exam.display_name }}{% endblock %}
+{% block page_title %}Send Marks on WhatsApp{% endblock %}
+{% block content %}
+
+<div class="mb-3">
+  <a href="{% url 'exam_list' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left"></i> Back to Exams
+  </a>
+</div>
+
+<!-- Progress Banner -->
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-body p-4">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+      <div>
+        <h5 class="fw-bold mb-1"><i class="bi bi-whatsapp text-success me-2"></i>{{ exam.display_name }} ({{ exam.category.name }})</h5>
+        <div class="text-muted small">
+          Group: <strong>{{ exam.group.code|default:"All" }}</strong> | Date: <strong>{{ exam.date|date:"d M Y" }}</strong>
+        </div>
+      </div>
+      <div class="d-flex gap-3 text-center">
+        <div class="border-end pe-3">
+          <div class="fs-4 fw-bold text-success">{{ sent_sections_count }} / {{ total_sections }}</div>
+          <div class="text-muted small">Sections Sent</div>
+        </div>
+        <div class="border-end pe-3">
+          <div class="fs-4 fw-bold text-primary">{{ ready_sections_count }}</div>
+          <div class="text-muted small">Ready to Send</div>
+        </div>
+        <div>
+          <div class="fs-4 fw-bold text-warning">{{ pending_marks_count }}</div>
+          <div class="text-muted small">Pending Marks</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<form method="post" id="whatsappSendForm">
+  {% csrf_token %}
+  <div class="card border-0 shadow-sm">
+    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+      <span class="fw-bold">Section Progress Checklist</span>
+      {% if ready_sections_count > 0 %}
+      <button type="submit" class="btn btn-success btn-sm fw-semibold">
+        <i class="bi bi-send me-1"></i> Send Selected Sections on WhatsApp
+      </button>
+      {% endif %}
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="bg-light">
+            <tr>
+              <th style="width:40px" class="text-center">
+                <input type="checkbox" id="selectAll" class="form-check-input" onclick="toggleSelectAll(this)">
+              </th>
+              <th>Section</th>
+              <th>Marks Entry Progress</th>
+              <th>Status</th>
+              <th>Log / Timestamp</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in statuses %}
+            <tr>
+              <td class="text-center">
+                {% if item.is_complete and not item.is_sent %}
+                <input type="checkbox" name="selected_sections" value="{{ item.section.pk }}" class="form-check-input section-checkbox">
+                {% else %}
+                <input type="checkbox" class="form-check-input" disabled>
+                {% endif %}
+              </td>
+              <td>
+                <div class="fw-semibold">{{ item.section }}</div>
+                <div class="text-muted small">Group: {{ item.section.group.name }}</div>
+              </td>
+              <td>
+                <div class="d-flex align-items-center gap-2">
+                  <div class="progress flex-grow-1" style="height: 8px;">
+                    <div class="progress-bar {% if item.is_complete %}bg-success{% else %}bg-warning{% endif %}"
+                         role="progressbar"
+                         style="width: {% if item.total_subject_count %}{% widthratio item.completed_subject_count item.total_subject_count 100 %}{% else %}0{% endif %}%">
+                    </div>
+                  </div>
+                  <span class="small fw-semibold text-muted">{{ item.completed_subject_count }}/{{ item.total_subject_count }} subjects</span>
+                </div>
+              </td>
+              <td>
+                {% if item.is_sent %}
+                <span class="badge bg-success-subtle text-success-emphasis border border-success">
+                  <i class="bi bi-check-circle-fill me-1"></i> Sent
+                </span>
+                {% elif item.is_complete %}
+                <span class="badge bg-primary-subtle text-primary-emphasis border border-primary">
+                  <i class="bi bi-clock-history me-1"></i> Ready to Send
+                </span>
+                {% else %}
+                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning">
+                  <i class="bi bi-hourglass-split me-1"></i> Pending Marks
+                </span>
+                {% endif %}
+              </td>
+              <td class="small text-muted">
+                {% if item.is_sent %}
+                <div>Sent on {{ item.send_log.sent_at|date:"d M Y, h:i A" }}</div>
+                <div class="text-muted" style="font-size:0.75rem">({{ item.send_log.student_count }} students queued by {{ item.send_log.sent_by.username|default:"System" }})</div>
+                {% elif item.is_complete %}
+                <span class="text-success">All subjects locked and complete</span>
+                {% else %}
+                <span>Awaiting faculty submission for remaining subjects</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="5" class="text-center py-4 text-muted">No sections found for this exam's group.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% if ready_sections_count > 0 %}
+    <div class="card-footer bg-white py-3 text-end">
+      <button type="submit" class="btn btn-success">
+        <i class="bi bi-send me-1"></i> Send Selected Sections on WhatsApp
+      </button>
+    </div>
+    {% endif %}
+  </div>
+</form>
+
+<script>
+function toggleSelectAll(master) {
+  const checkboxes = document.querySelectorAll('.section-checkbox');
+  checkboxes.forEach(cb => {
+    if (!cb.disabled) {
+      cb.checked = master.checked;
+    }
+  });
+}
+</script>
+{% endblock %}

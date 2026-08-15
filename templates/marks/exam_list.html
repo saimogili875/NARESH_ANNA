@@ -58,10 +58,18 @@
                   </span>
                 </div>
               </div>
-              <a href="{% url 'marks_entry' exam.pk %}"
-                 class="btn btn-sm btn-primary ms-2 flex-shrink-0">
-                <i class="bi bi-pencil"></i>
-              </a>
+              <div class="d-flex gap-1 ms-2 flex-shrink-0">
+                <a href="{% url 'marks_entry' exam.pk %}"
+                   class="btn btn-sm btn-primary" title="Enter / Edit Marks">
+                  <i class="bi bi-pencil"></i>
+                </a>
+                {% if request.user.role == 'admin' or request.user.is_superuser %}
+                <a href="{% url 'marks_whatsapp_send' exam.pk %}"
+                   class="btn btn-sm btn-outline-success" title="Send Marks on WhatsApp">
+                  <i class="bi bi-whatsapp"></i>
+                </a>
+                {% endif %}
+              </div>
             </div>
           </li>
           {% endfor %}

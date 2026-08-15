@@ -118,6 +118,11 @@ function onGroupChange() {
   const container = document.getElementById('categoryButtons');
   container.innerHTML = '';
 
+  if (cats.length === 0) {
+    container.innerHTML = '<div class="alert alert-warning py-2 px-3 small mb-0"><i class="bi bi-exclamation-triangle me-1"></i>No Exam Categories are configured for this Group. Please link categories in Django Admin (Connect Category to Group).</div>';
+    return;
+  }
+
   cats.forEach(function(cat) {
     const label = CL[cat] || cat;
     const btn = document.createElement('button');
@@ -145,8 +150,12 @@ function onCategorySelect(cat, groupCode) {
   document.getElementById('categoryInput').value = cat;
 
   const subjects = SS[cat] || [];
-  document.getElementById('subjectPreview').textContent =
-    subjects.length ? 'Subjects: ' + subjects.join(', ') : '';
+  if (!subjects.length) {
+    document.getElementById('subjectPreview').innerHTML =
+      '<span class="text-danger fw-bold"><i class="bi bi-x-circle me-1"></i>No subjects attached to this category! Please attach subjects in Django Admin.</span>';
+  } else {
+    document.getElementById('subjectPreview').textContent = 'Subjects: ' + subjects.join(', ');
+  }
 
   // Populate exam type dropdown — name ends with category label
   const catLabel = CL[cat] || cat;
@@ -163,7 +172,7 @@ function onCategorySelect(cat, groupCode) {
   document.getElementById('examNameSection').style.display = 'block';
   document.getElementById('dateSection').style.display = 'block';
   document.getElementById('submitSection').style.display = 'flex';
-  document.getElementById('submitBtn').style.display = 'inline-block';
+  document.getElementById('submitBtn').style.display = subjects.length ? 'inline-block' : 'none';
   onExamTypeChange();
 
   // Max marks

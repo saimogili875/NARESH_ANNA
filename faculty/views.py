@@ -4,12 +4,13 @@ from django.utils import timezone
 from datetime import date as Date
 from .models import Faculty, FacultyAttendance
 from accounts.models import User, Section
+from marks.models import Subject
 from accounts.decorators import admin_required, all_roles_required
 
 
 @all_roles_required
 def faculty_list(request):
-    faculty = Faculty.objects.select_related('user').prefetch_related('assigned_sections__group').filter(is_active=True)
+    faculty = Faculty.objects.select_related('user').prefetch_related('assigned_sections__group', 'assigned_subjects').filter(is_active=True)
     return render(request, 'faculty/list.html', {'faculty': faculty})
 
 
@@ -17,6 +18,7 @@ def faculty_list(request):
 def faculty_add(request):
     users = User.objects.filter(role='faculty').exclude(faculty_profile__isnull=False)
     sections = Section.objects.select_related('group').all()
+    all_subjects = Subject.objects.all().order_by('name')
     if request.method == 'POST':
         user_id = request.POST.get('user')
         user = get_object_or_404(User, pk=user_id)
@@ -32,10 +34,12 @@ def faculty_add(request):
         )
         section_ids = request.POST.getlist('assigned_sections')
         faculty.assigned_sections.set(section_ids)
+        subject_ids = request.POST.getlist('assigned_subjects')
+        faculty.assigned_subjects.set(subject_ids)
         messages.success(request, 'Faculty added successfully.')
         return redirect('faculty_list')
     return render(request, 'faculty/form.html', {
-        'users': users, 'sections': sections, 'title': 'Add Faculty',
+        'users': users, 'sections': sections, 'all_subjects': all_subjects, 'title': 'Add Faculty',
     })
 
 
@@ -43,7 +47,9 @@ def faculty_add(request):
 def faculty_edit(request, pk):
     obj = get_object_or_404(Faculty, pk=pk)
     sections = Section.objects.select_related('group').all()
+    all_subjects = Subject.objects.all().order_by('name')
     assigned_ids = set(obj.assigned_sections.values_list('pk', flat=True))
+    assigned_subject_ids = set(obj.assigned_subjects.values_list('pk', flat=True))
     if request.method == 'POST':
         obj.name = request.POST.get('name')
         obj.subject = request.POST.get('subject')
@@ -53,10 +59,13 @@ def faculty_edit(request, pk):
         obj.save()
         section_ids = request.POST.getlist('assigned_sections')
         obj.assigned_sections.set(section_ids)
+        subject_ids = request.POST.getlist('assigned_subjects')
+        obj.assigned_subjects.set(subject_ids)
         messages.success(request, 'Faculty updated successfully.')
         return redirect('faculty_list')
     return render(request, 'faculty/form.html', {
         'obj': obj, 'sections': sections, 'assigned_ids': assigned_ids,
+        'all_subjects': all_subjects, 'assigned_subject_ids': assigned_subject_ids,
         'title': 'Edit Faculty',
     })
 
