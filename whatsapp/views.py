@@ -32,7 +32,16 @@ def meta_webhook(request):
                     value = change.get("value", {})
                     statuses = value.get("statuses", [])
                     for status in statuses:
-                        logger.info(f"Message {status.get('id')} status: {status.get('status')}")
+                        status_val = status.get('status')
+                        if status_val == 'failed':
+                            errors = status.get('errors', [])
+                            error_detail = "; ".join(
+                                f"code={e.get('code')} title={e.get('title')} detail={e.get('error_data', {}).get('details', e.get('message', ''))}"
+                                for e in errors
+                            )
+                            logger.error(f"Message {status.get('id')} FAILED: {error_detail} | recipient={status.get('recipient_id')}")
+                        else:
+                            logger.info(f"Message {status.get('id')} status: {status_val}")
 
                     incoming = value.get("messages", [])
                     for msg in incoming:
