@@ -234,13 +234,12 @@ def marks_entry(request, exam_id):
                     )
                     saved_subjects_set.add(subject)
 
-        # Lock saved subjects for faculty
-        if is_faculty:
-            for subject in saved_subjects_set:
-                MarksEntryLock.objects.update_or_create(
-                    exam=exam, section=sec, subject=subject,
-                    defaults={'is_locked': True, 'locked_by': request.user}
-                )
+        # Lock saved subjects for both Admin and Faculty
+        for subject in saved_subjects_set:
+            MarksEntryLock.objects.update_or_create(
+                exam=exam, section=sec, subject=subject,
+                defaults={'is_locked': True, 'locked_by': request.user}
+            )
 
         messages.success(request, 'Marks saved successfully.')
         return redirect(f'/marks/exam/{exam_id}/entry/?section={sid}')

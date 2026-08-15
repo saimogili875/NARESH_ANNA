@@ -246,5 +246,41 @@ class SubjectAllotmentTestCase(TestCase):
         sec_status = next(s for s in statuses if s['section'] == section)
         self.assertTrue(sec_status['is_sent'])
 
+    def test_admin_marks_entry_creates_locks(self):
+        from accounts.models import Section
+        from students.models import Student
+        from marks.models import MarksEntryLock
+
+        section = Section.objects.create(group=self.group, year="1", name="C", academic_year=self.year)
+        student = Student.objects.create(
+            admission_number="STU-1001", name="Admin Entry Student", father_name="Parent",
+            mobile="9876543211", section=section, academic_year=self.year, is_active=True
+        )
+
+        # Admin logs in and saves marks for Physics & Maths
+        self.client.force_login(self.admin_user)
+        entry_url = reverse('marks_entry', args=[self.exam.id])
+        post_data = {
+            'section_id': section.id,
+            f'mark_{student.pk}_Physics': '92',
+            f'mark_{student.pk}_Maths': '96',
+        }
+        res = self.client.post(entry_url, post_data)
+        self.assertEqual(res.status_code, 302)
+
+        # Verify marks saved
+        m_phys = Mark.objects.get(student=student, exam=self.exam, subject=self.subject1)
+        m_math = Mark.objects.get(student=student, exam=self.exam, subject=self.subject2)
+        self.assertEqual(float(m_phys.marks_obtained), 92.0)
+        self.assertEqual(float(m_math.marks_obtained), 96.0)
+
+        # Verify MarksEntryLock created for both subjects by Admin
+        lock1 = MarksEntryLock.objects.get(exam=self.exam, section=section, subject=self.subject1)
+        lock2 = MarksEntryLock.objects.get(exam=self.exam, section=section, subject=self.subject2)
+        self.assertTrue(lock1.is_locked)
+        self.assertTrue(lock2.is_locked)
+        self.assertEqual(lock1.locked_by, self.admin_user)
+
+
 
 
