@@ -28,17 +28,28 @@ def _normalize_phone(phone: str) -> str:
     return digits
 
 
+def _sanitize_param(val) -> str:
+    if val is None:
+        return "-"
+    s = str(val).strip()
+    if not s:
+        return "-"
+    # Replace newlines with spaces as required by Meta Cloud API template parameter rules
+    s = s.replace("\r\n", " ").replace("\n", " ").replace("\r", " ")
+    return s[:1000]
+
+
 def build_template_components(params: list) -> list:
     """
     Constructs Meta WhatsApp Graph API components list from a list of parameter strings/values.
-    If params is already a list of dicts (e.g. [{"type": "body", ...}]), returns it directly.
+    Sanitizes each parameter to ensure no raw newlines or empty values break Meta Cloud API rules.
     """
     if not params:
         return []
     if isinstance(params, list) and len(params) > 0 and isinstance(params[0], dict) and "type" in params[0]:
         return params
 
-    text_params = [{"type": "text", "text": str(p)} for p in params]
+    text_params = [{"type": "text", "text": _sanitize_param(p)} for p in params]
     return [
         {
             "type": "body",
