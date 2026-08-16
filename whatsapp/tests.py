@@ -13,6 +13,11 @@ class WhatsAppMultilingualTestCase(TestCase):
         translated = translate_text(original, "te")
         self.assertEqual(translated, original)
 
+    def test_trilingual_translation_single_call(self):
+        original = "Student is absent"
+        translated = translate_text(original, "all")
+        self.assertEqual(translated, original)
+
     def test_build_template_components(self):
         params = ["John Doe", "16-08-2026", "Absent"]
         components = build_template_components(params)

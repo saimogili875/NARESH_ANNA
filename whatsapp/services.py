@@ -52,13 +52,16 @@ def send_whatsapp_template(to_number: str, template_name: str, language: str = "
     phone_id = settings.META_WHATSAPP_PHONE_ID
     url = f"{META_API_URL}/{phone_id}/messages"
 
+    # Meta API expects standard language code (e.g. 'en') when sending trilingual parameters
+    meta_lang_code = "en" if (language or "").lower() in ('all', 'trilingual', 'multi') else (language or "en")
+
     payload = {
         "messaging_product": "whatsapp",
         "to": phone,
         "type": "template",
         "template": {
             "name": template_name,
-            "language": {"code": language},
+            "language": {"code": meta_lang_code},
         },
     }
     if components:
@@ -69,7 +72,7 @@ def send_whatsapp_template(to_number: str, template_name: str, language: str = "
         data = resp.json()
         if resp.status_code in (200, 201):
             msg_id = data.get("messages", [{}])[0].get("id", "")
-            logger.info(f"Template '{template_name}' ({language}) sent to {phone}: {msg_id}")
+            logger.info(f"Template '{template_name}' ({meta_lang_code}) sent to {phone}: {msg_id}")
             return {"success": True, "message_id": msg_id, "to": phone}
         else:
             error = data.get("error", {}).get("message", resp.text)
@@ -112,8 +115,8 @@ def send_absence_alert(student_name: str, parent_phone: str, date_str: str, sect
     template_name = settings.META_TEMPLATE_ABSENCE
     raw_reason = reason or "Not provided"
     
-    # Translate reason using Gemini AI if language is hindi/telugu
-    translated_reason = translate_text(raw_reason, language) if language in ('hi', 'te') else raw_reason
+    # Translate reason using Gemini AI if language is hindi, telugu, or trilingual (all)
+    translated_reason = translate_text(raw_reason, language) if language != 'en' else raw_reason
 
     components = build_template_components([
         student_name,
@@ -165,7 +168,7 @@ def send_whatsapp_media(to_number: str, media_url: str, caption: str = "") -> di
 
 def send_exam_marks(parent_phone: str, student_name: str, marks: str, total_marks: str, subject: str, date_str: str, language: str = "en") -> dict:
     template_name = settings.META_TEMPLATE_EXAM_MARKS
-    translated_subject = translate_text(subject, language) if language in ('hi', 'te') else subject
+    translated_subject = translate_text(subject, language) if language != 'en' else subject
     
     components = build_template_components([
         student_name,
@@ -180,10 +183,10 @@ def send_exam_marks(parent_phone: str, student_name: str, marks: str, total_mark
 def send_generic_template(to_number: str, message: str, template_name: str = None, language: str = "en") -> dict:
     """
     Sends generic message using Meta WhatsApp Template payload.
-    Translates message using Gemini AI if language is hindi/telugu.
+    Translates message using Gemini AI if language is hindi, telugu, or trilingual (all).
     """
     template = template_name or getattr(settings, 'META_TEMPLATE_GENERAL', 'general_notification')
-    translated_message = translate_text(message, language) if language in ('hi', 'te') else message
+    translated_message = translate_text(message, language) if language != 'en' else message
     components = build_template_components([translated_message])
     return send_whatsapp_template(to_number, template, language=language, components=components)
 
