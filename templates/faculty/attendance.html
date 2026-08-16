@@ -102,6 +102,7 @@
         <button type="submit" name="send_whatsapp" value="" class="btn btn-primary rounded-3 px-3">
           <i class="bi bi-check-circle me-1"></i>Save Attendance
         </button>
+        {% if request.user.role == 'admin' or request.user.is_superuser %}
         <div class="d-flex gap-2">
           <button type="submit" name="send_whatsapp" value="absent" class="btn btn-danger rounded-3 px-3">
             <i class="bi bi-whatsapp me-1"></i>Save & Send Absent WhatsApp Alerts
@@ -110,6 +111,7 @@
             <i class="bi bi-whatsapp me-1"></i>Save & Send All WhatsApp Alerts
           </button>
         </div>
+        {% endif %}
       </div>
 
     </form>

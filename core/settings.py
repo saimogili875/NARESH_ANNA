@@ -189,6 +189,7 @@ META_TEMPLATE_EXAM_MARKS = config('META_TEMPLATE_EXAM_MARKS', default='exam_mark
 META_TEMPLATE_FACULTY_ABSENCE = config('META_TEMPLATE_FACULTY_ABSENCE', default='faculty_absence')
 META_TEMPLATE_GENERAL = config('META_TEMPLATE_GENERAL', default='general_notification')
 WHATSAPP_DEFAULT_LANGUAGE = config('WHATSAPP_DEFAULT_LANGUAGE', default='en')
+WHATSAPP_DAILY_DISPATCH_TIME = config('WHATSAPP_DAILY_DISPATCH_TIME', default='10:30')
 
 # --- Gemini AI Multilingual Config ---
 GEMINI_API_KEY = config('GEMINI_API_KEY', default='')

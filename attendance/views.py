@@ -12,7 +12,7 @@ import json
 from .models import Attendance, AttendanceWindow
 from students.models import Student
 from accounts.models import Section
-from accounts.decorators import all_roles_required, admin_faculty_required
+from accounts.decorators import all_roles_required, admin_faculty_required, admin_required
 from whatsapp.models import PendingMessage
 
 
@@ -219,7 +219,7 @@ def attendance_mark(request):
     return redirect('attendance_list')
 
 
-@all_roles_required
+@admin_required
 def attendance_send_whatsapp(request):
     """Send WhatsApp messages to all absent students' parents for a given section+date."""
     from django.http import JsonResponse
@@ -993,12 +993,12 @@ def trigger_whatsapp_sender_in_background(headless=True, batch_size=None):
     pass
 
 
-@all_roles_required
+@admin_required
 def trigger_whatsapp_sender_view(request):
     """
     Admin UI view ("Dispatch WhatsApp Messages Now" / "Retry Dispatch" button).
     Signals background Cron Job to process messages by resetting failed messages to 'pending'.
-    Does NOT launch Chromium inside the web process to preserve RAM.
+    Reflects the daily fixed dispatch schedule (10:30 AM).
     """
     if request.method == 'POST':
         today = timezone.localdate()
@@ -1008,13 +1008,14 @@ def trigger_whatsapp_sender_view(request):
         ).update(status=PendingMessage.STATUS_PENDING, error_message='')
 
         pending_count = PendingMessage.objects.filter(status=PendingMessage.STATUS_PENDING).count()
+        dispatch_time = getattr(settings, 'WHATSAPP_DAILY_DISPATCH_TIME', '10:30')
 
         if reset_count > 0:
-            messages.success(request, f"Re-queued {reset_count} failed message(s) for the next Render Cron Job run ({pending_count} total pending).")
+            messages.success(request, f"Re-queued {reset_count} failed message(s) for daily 10:30 AM dispatch ({pending_count} total pending).")
         elif pending_count > 0:
-            messages.info(request, f"{pending_count} message(s) are queued in DB and will be dispatched on the next Render Cron Job run.")
+            messages.info(request, f"{pending_count} message(s) are queued in DB and scheduled for daily dispatch at {dispatch_time} AM.")
         else:
-            messages.info(request, "No pending or failed messages to dispatch.")
+            messages.info(request, f"No pending or failed messages. Daily dispatch is scheduled for {dispatch_time} AM.")
 
         referer = request.META.get('HTTP_REFERER')
         if referer:
@@ -1023,7 +1024,7 @@ def trigger_whatsapp_sender_view(request):
     return JsonResponse({'success': False, 'error': 'POST required'}, status=405)
 
 
-@all_roles_required
+@admin_required
 def enqueue_section_absent_whatsapp(request):
     """
     Enqueues PendingMessage rows for all students marked ABSENT ('A') in a section today (or selected date).

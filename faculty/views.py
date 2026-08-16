@@ -108,7 +108,7 @@ def faculty_attendance(request):
 
         messages.success(request, f'Faculty attendance saved for {selected_date.strftime("%d-%m-%Y")}.')
 
-        if send_type in ['absent', 'all']:
+        if send_type in ['absent', 'all'] and (getattr(request.user, 'role', '') == 'admin' or request.user.is_superuser):
             from whatsapp.services import send_faculty_absence_alert, send_generic_template
             target_lang = (request.POST.get('language') or 'en').lower().strip()
             sent_count = 0
