@@ -105,6 +105,11 @@ def axes_admin_whitelist(request, credentials=None):
             pass
     return False
 
+def landing_view(request):
+    """Public Entrance / Landing Page for Sri NRI Junior College."""
+    return render(request, 'landing.html')
+
+
 def login_view(request):
     if request.user.is_authenticated:
         return redirect('dashboard')
