@@ -5,6 +5,7 @@ urlpatterns = [
     path('', views.landing_view, name='landing'),
     path('dashboard/', views.dashboard, name='dashboard'),
     path('login/', views.login_view, name='login'),
+    path('logins/', views.login_view, name='logins'),
     path('logout/', views.logout_view, name='logout'),
 
     # Academic structure
