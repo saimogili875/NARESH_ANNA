@@ -4,115 +4,389 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Login — Sri NRI Junior College</title>
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
   body {
-    background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%);
     min-height: 100vh;
-    display: flex; align-items: center; justify-content: center;
-    font-family: 'Segoe UI', sans-serif;
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: #F8FAFC;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    -webkit-font-smoothing: antialiased;
   }
-  .login-card {
-    background: #fff;
-    border-radius: 16px;
-    padding: 2.5rem;
+
+  /* ── Left Panel ── */
+  .left-panel {
+    background: #0F172A;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 48px 56px;
+    position: relative;
+    overflow: hidden;
+  }
+  .left-panel::before {
+    content: '';
+    position: absolute;
+    top: -120px; left: -80px;
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(255,106,31,0.25) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .left-panel::after {
+    content: '';
+    position: absolute;
+    bottom: -80px; right: -60px;
+    width: 320px; height: 320px;
+    background: radial-gradient(circle, rgba(16,185,129,0.18) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .left-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: relative;
+    z-index: 1;
+  }
+  .left-brand-icon {
+    width: 46px; height: 46px;
+    background: linear-gradient(135deg, #FF6A1F, #FF4500);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; color: #fff;
+  }
+  .left-brand-name {
+    font-size: 17px;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: -0.02em;
+  }
+  .left-brand-name small {
+    display: block;
+    font-size: 11px;
+    font-weight: 500;
+    color: rgba(255,255,255,0.45);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-top: 1px;
+  }
+
+  .left-content {
+    position: relative;
+    z-index: 1;
+  }
+  .left-content h2 {
+    font-size: 36px;
+    font-weight: 800;
+    color: #fff;
+    line-height: 1.15;
+    letter-spacing: -0.03em;
+    margin-bottom: 16px;
+  }
+  .left-content h2 span {
+    background: linear-gradient(120deg, #FF6A1F 0%, #10B981 60%, #38BDF8 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .left-content p {
+    font-size: 15px;
+    color: rgba(255,255,255,0.55);
+    line-height: 1.65;
+    max-width: 38ch;
+  }
+
+  .left-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    position: relative;
+    z-index: 1;
+  }
+  .stat-item {}
+  .stat-item b {
+    display: block;
+    font-size: 26px;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: -0.02em;
+  }
+  .stat-item span {
+    font-size: 11px;
+    color: rgba(255,255,255,0.4);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 500;
+  }
+
+  /* ── Right Panel ── */
+  .right-panel {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 24px;
+    background: #F8FAFC;
+  }
+
+  .login-box {
     width: 100%;
     max-width: 400px;
-    box-shadow: 0 25px 50px rgba(0,0,0,0.4);
   }
-  .logo { font-size: 2.5rem; color: #1a56db; }
-  .college-name { font-size: 1.4rem; font-weight: 700; color: #0f172a; }
-  .college-sub { font-size: .8rem; color: #64748b; }
-  .form-control { border-radius: 8px; padding: .65rem 1rem; }
-  .form-control:focus { border-color: #1a56db; box-shadow: 0 0 0 3px rgba(26,86,219,.15); }
-  .btn-login {
-    background: #1a56db; color: #fff;
-    border: none; border-radius: 8px;
-    padding: .75rem; font-weight: 600;
-    width: 100%; font-size: .95rem;
-    transition: background .2s;
+
+  .login-box-header {
+    margin-bottom: 32px;
   }
-  .btn-login:hover { background: #1240a5; color: #fff; }
-  .role-badge {
-    display: inline-block;
-    background: #f1f5f9; color: #475569;
-    padding: 3px 10px; border-radius: 20px;
-    font-size: .7rem; margin: 2px;
+  .login-box-header h1 {
+    font-size: 26px;
+    font-weight: 800;
+    color: #0F172A;
+    letter-spacing: -0.03em;
+    margin-bottom: 6px;
   }
-  #autofill-warning {
+  .login-box-header p {
+    font-size: 14px;
+    color: #64748B;
+    line-height: 1.5;
+  }
+
+  /* Form Fields */
+  .field-group { margin-bottom: 18px; }
+  .field-group label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: #0F172A;
+    margin-bottom: 7px;
+    letter-spacing: 0.01em;
+  }
+  .field-group input,
+  .field-group select {
+    width: 100%;
+    padding: 11px 14px;
+    border: 1.5px solid #E2E8F0;
+    border-radius: 10px;
+    font-family: 'Inter', sans-serif;
+    font-size: 14.5px;
+    color: #0F172A;
+    background: #fff;
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    appearance: none;
+  }
+  .field-group input::placeholder { color: #94A3B8; }
+  .field-group input:focus,
+  .field-group select:focus {
+    border-color: #0F172A;
+    box-shadow: 0 0 0 3px rgba(15,23,42,0.08);
+  }
+  .field-group select {
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%2364748B' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 40px;
+  }
+
+  /* Captcha row */
+  .captcha-row { display: flex; align-items: center; gap: 12px; }
+  .captcha-row > *:first-child { flex: 1; }
+
+  /* Autofill warning */
+  .autofill-warn {
     display: none;
-    background: #fef2f2; border: 1px solid #fca5a5; color: #991b1b;
-    border-radius: 8px; padding: .5rem .75rem; font-size: .82rem;
-    margin-bottom: .75rem;
+    background: #FFF1F1;
+    border: 1.5px solid #FECACA;
+    color: #991B1B;
+    border-radius: 8px;
+    padding: 9px 12px;
+    font-size: 13px;
+    margin-bottom: 16px;
+    line-height: 1.45;
+  }
+  .autofill-warn i { margin-right: 4px; }
+
+  /* Alert */
+  .alert-error {
+    background: #FFF1F1;
+    border: 1.5px solid #FECACA;
+    color: #991B1B;
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 13.5px;
+    margin-bottom: 20px;
+  }
+
+  /* ── Black Submit Button (Sarvam style) ── */
+  .btn-signin {
+    width: 100%;
+    padding: 13px 20px;
+    background: #0F172A;
+    color: #fff;
+    font-family: 'Inter', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: background 0.18s ease, transform 0.12s ease, box-shadow 0.18s ease;
+    box-shadow: 0 2px 8px rgba(15,23,42,0.18);
+    letter-spacing: -0.01em;
+    margin-top: 8px;
+  }
+  .btn-signin:hover {
+    background: #1E293B;
+    box-shadow: 0 6px 20px rgba(15,23,42,0.28);
+    transform: translateY(-1px);
+  }
+  .btn-signin:active { transform: translateY(0); box-shadow: none; }
+
+  /* Role badges at bottom */
+  .role-pills {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid #E2E8F0;
+  }
+  .role-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: #F1F5F9;
+    color: #475569;
+    padding: 4px 11px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+    border: 1px solid #E2E8F0;
+  }
+  .role-pill-label {
+    font-size: 12px;
+    color: #94A3B8;
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    body { grid-template-columns: 1fr; }
+    .left-panel { display: none; }
+    .right-panel { padding: 40px 20px; }
+    .login-box { max-width: 100%; }
   }
 </style>
 </head>
 <body>
-<div class="login-card">
-  <div class="text-center mb-4">
-    <div class="logo"><i class="bi bi-mortarboard-fill"></i></div>
-    <div class="college-name">Sri NRI Junior College</div>
-    <div class="college-sub">Management Portal</div>
+
+<!-- Left decorative panel -->
+<div class="left-panel">
+  <div class="left-brand">
+    <div class="left-brand-icon"><i class="bi bi-mortarboard-fill"></i></div>
+    <div class="left-brand-name">
+      Sri NRI Junior College
+      <small>Management Portal</small>
+    </div>
   </div>
 
-  {% if messages %}
-    {% for msg in messages %}
-    <div class="alert alert-danger py-2 small">{{ msg }}</div>
-    {% endfor %}
-  {% endif %}
-
-  <div id="autofill-warning">
-    <i class="bi bi-exclamation-triangle-fill me-1"></i>
-    Please type your credentials manually. Autofill is not allowed.
+  <div class="left-content">
+    <h2>Empowering <span>Academic Excellence</span> Since 1998</h2>
+    <p>Manage attendance, marks, fees, and faculty — all in one secure portal built for Sri NRI Junior College.</p>
   </div>
 
-  <form method="post" id="loginForm" autocomplete="off">
-    {% csrf_token %}
-    <input type="hidden" name="human_typed" id="humanTyped" value="">
-    <div class="mb-3">
-      <label class="form-label small fw-500">Role</label>
-      <select name="role" class="form-select" required>
-        <option value="">Select Role</option>
-        <option value="admin">Admin</option>
-        <option value="faculty">Faculty</option>
-        <option value="accounts">Accounts</option>
-      </select>
+  <div class="left-stats">
+    <div class="stat-item">
+      <b>1200+</b>
+      <span>Students</span>
     </div>
-    <div class="mb-3">
-      <label class="form-label small fw-500">Username</label>
-      <input type="text" name="username" id="id_username" class="form-control"
-             placeholder="Enter username" required autofocus
-             autocomplete="off" data-typed="false">
+    <div class="stat-item">
+      <b>60+</b>
+      <span>Faculty</span>
     </div>
-    <div class="mb-3">
-      <label class="form-label small fw-500">Password</label>
-      <input type="password" name="password" id="id_password" class="form-control"
-             placeholder="Enter password" required
-             autocomplete="new-password" data-typed="false">
+    <div class="stat-item">
+      <b>25+</b>
+      <span>Years</span>
     </div>
-    <div class="mb-4">
-      <label class="form-label small fw-500">Captcha</label>
-      <div class="d-flex align-items-center gap-2">
-        {{ form.captcha }}
-      </div>
-      {% if form.captcha.errors %}
-        <div class="text-danger small mt-1">{{ form.captcha.errors.0 }}</div>
-      {% endif %}
-    </div>
-    <button type="submit" class="btn-login">
-      <i class="bi bi-box-arrow-in-right me-1"></i> Sign In
-    </button>
-  </form>
-
-  <div class="text-center mt-4">
-    <div class="text-muted small mb-2">Login available for</div>
-    <span class="role-badge"><i class="bi bi-shield-fill"></i> Admin</span>
-    <span class="role-badge"><i class="bi bi-person-badge"></i> Faculty</span>
-    <span class="role-badge"><i class="bi bi-cash"></i> Accounts</span>
   </div>
 </div>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- Right login panel -->
+<div class="right-panel">
+  <div class="login-box">
+    <div class="login-box-header">
+      <h1>Welcome back</h1>
+      <p>Sign in to your Sri NRI management account</p>
+    </div>
+
+    {% if messages %}
+      {% for msg in messages %}
+      <div class="alert-error"><i class="bi bi-exclamation-circle me-1"></i>{{ msg }}</div>
+      {% endfor %}
+    {% endif %}
+
+    <div class="autofill-warn" id="autofill-warning">
+      <i class="bi bi-exclamation-triangle-fill"></i>
+      Please type your credentials manually. Autofill is not allowed.
+    </div>
+
+    <form method="post" id="loginForm" autocomplete="off">
+      {% csrf_token %}
+      <input type="hidden" name="human_typed" id="humanTyped" value="">
+
+      <div class="field-group">
+        <label for="id_role">Role</label>
+        <select name="role" id="id_role" required>
+          <option value="">Select your role</option>
+          <option value="admin">Admin</option>
+          <option value="faculty">Faculty</option>
+          <option value="accounts">Accounts</option>
+        </select>
+      </div>
+
+      <div class="field-group">
+        <label for="id_username">Username</label>
+        <input type="text" name="username" id="id_username"
+               placeholder="Enter your username" required autofocus
+               autocomplete="off" data-typed="false">
+      </div>
+
+      <div class="field-group">
+        <label for="id_password">Password</label>
+        <input type="password" name="password" id="id_password"
+               placeholder="Enter your password" required
+               autocomplete="new-password" data-typed="false">
+      </div>
+
+      <div class="field-group">
+        <label>Security Check</label>
+        <div class="captcha-row">{{ form.captcha }}</div>
+        {% if form.captcha.errors %}
+          <div style="color:#DC2626;font-size:12px;margin-top:5px;">{{ form.captcha.errors.0 }}</div>
+        {% endif %}
+      </div>
+
+      <button type="submit" class="btn-signin">
+        <i class="bi bi-box-arrow-in-right"></i> Sign In
+      </button>
+    </form>
+
+    <div class="role-pills">
+      <span class="role-pill-label" style="width:100%;">Access for</span>
+      <span class="role-pill"><i class="bi bi-shield-fill"></i> Admin</span>
+      <span class="role-pill"><i class="bi bi-person-badge"></i> Faculty</span>
+      <span class="role-pill"><i class="bi bi-cash"></i> Accounts</span>
+    </div>
+  </div>
+</div>
+
 <script>
 (function() {
   const uField = document.getElementById('id_username');
@@ -121,13 +395,11 @@
   const warning = document.getElementById('autofill-warning');
   const form = document.getElementById('loginForm');
 
-  // Track real keystrokes (keydown fires before autofill)
   function markTyped(e) {
     if (['Tab','Shift','Control','Alt','Meta','CapsLock'].includes(e.key)) return;
     e.target.dataset.typed = 'true';
     updateHidden();
   }
-
   uField.addEventListener('keydown', markTyped);
   pField.addEventListener('keydown', markTyped);
 
@@ -137,7 +409,6 @@
     }
   }
 
-  // Detect :-webkit-autofill (Chrome/Safari)
   function isAutofilled(el) {
     try { return el.matches(':-webkit-autofill'); } catch(e) { return false; }
   }
@@ -146,7 +417,6 @@
     const uTyped = uField.dataset.typed === 'true';
     const pTyped = pField.dataset.typed === 'true';
     const autofilled = isAutofilled(uField) || isAutofilled(pField);
-
     if (!uTyped || !pTyped || autofilled) {
       e.preventDefault();
       warning.style.display = 'block';
@@ -156,7 +426,6 @@
     }
   });
 
-  // Clear autofill on page load (some browsers fill after DOMContentLoaded)
   setTimeout(function() {
     if (isAutofilled(uField) || isAutofilled(pField)) {
       uField.value = '';
