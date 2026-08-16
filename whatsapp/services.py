@@ -60,7 +60,14 @@ def build_template_components(params: list) -> list:
 
 def send_whatsapp_template(to_number: str, template_name: str, language: str = "en", components: list = None) -> dict:
     phone = _normalize_phone(to_number)
-    phone_id = settings.META_WHATSAPP_PHONE_ID
+    phone_id = getattr(settings, 'META_WHATSAPP_PHONE_ID', '').strip()
+    token = getattr(settings, 'META_WHATSAPP_TOKEN', '').strip()
+
+    if not phone_id or not token:
+        error_msg = "META_WHATSAPP_PHONE_ID or META_WHATSAPP_TOKEN is missing in environment variables."
+        logger.error(f"Template '{template_name}' send failed to {phone}: {error_msg}")
+        return {"success": False, "error": error_msg}
+
     url = f"{META_API_URL}/{phone_id}/messages"
 
     # Meta API expects standard language code (e.g. 'en') when sending trilingual parameters
@@ -96,7 +103,14 @@ def send_whatsapp_template(to_number: str, template_name: str, language: str = "
 
 def send_whatsapp_text(to_number: str, message: str) -> dict:
     phone = _normalize_phone(to_number)
-    phone_id = settings.META_WHATSAPP_PHONE_ID
+    phone_id = getattr(settings, 'META_WHATSAPP_PHONE_ID', '').strip()
+    token = getattr(settings, 'META_WHATSAPP_TOKEN', '').strip()
+
+    if not phone_id or not token:
+        error_msg = "META_WHATSAPP_PHONE_ID or META_WHATSAPP_TOKEN is missing in environment variables."
+        logger.error(f"Text send failed to {phone}: {error_msg}")
+        return {"success": False, "error": error_msg}
+
     url = f"{META_API_URL}/{phone_id}/messages"
 
     payload = {

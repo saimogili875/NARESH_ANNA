@@ -1,11 +1,12 @@
 from unittest.mock import patch
-from django.test import TestCase
+from django.test import TestCase, override_settings
+from django.core.management import call_command
 from whatsapp.models import PendingMessage
 from whatsapp.gemini_service import translate_text, translate_template_params
 from whatsapp.services import send_absence_alert, build_template_components
-from django.core.management import call_command
 
 
+@override_settings(META_WHATSAPP_PHONE_ID="123456789", META_WHATSAPP_TOKEN="test_token")
 class WhatsAppMultilingualTestCase(TestCase):
     def test_gemini_translation_fallback(self):
         # Without GEMINI_API_KEY set, translate_text should safely return original text
