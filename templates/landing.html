@@ -420,6 +420,116 @@
   footer ul a:hover{color:var(--c1);}
   .foot-bottom{display:flex; justify-content:space-between; padding-top:22px; font-size:12.5px; flex-wrap:wrap; gap:10px;}
 
+  /* ---------- DEDICATED SMART MOBILE UI OPTIMIZATIONS (Laptop Unchanged) ---------- */
+  @media (max-width: 768px) {
+    header { padding: 10px 12px 0; }
+    .nav { padding: 6px 8px 6px 14px; gap: 10px; border-radius: 999px; }
+    .brand-mark { width: 32px; height: 32px; border-radius: 8px; }
+    .brand-name { font-size: 15px; }
+    .brand-name span { font-size: 9px; }
+    .nav-actions { gap: 6px; }
+    .nav-login { padding: 8px 16px; font-size: 12.5px; font-weight: 700; border-radius: 999px; }
+    .nav-cta { display: none; }
+    .nav.open ul { top: 54px; border-radius: 20px; padding: 18px 22px; gap: 14px; box-shadow: 0 16px 40px rgba(0,0,0,0.15); }
+    
+    .hero { padding: 48px 0 36px; }
+    .hero-top { width: 100%; min-width: 100%; }
+    .hero-top h1 { font-size: clamp(30px, 8.5vw, 44px); line-height: 1.14; letter-spacing: -0.03em; }
+    .eyebrow { font-size: 11px; gap: 6px; }
+    .hero-top p.lede { font-size: 14.5px; margin-top: 14px; line-height: 1.55; }
+    
+    .hero-actions { margin-top: 24px; flex-direction: column; width: 100%; gap: 10px; }
+    .btn-primary, .btn-ghost { width: 100%; text-align: center; justify-content: center; display: flex; align-items: center; padding: 14px 20px; font-size: 14.5px; border-radius: 999px; }
+
+    .stream-select { margin-top: 36px; padding: 20px 16px; border-radius: 20px; }
+    .stream-tabs { display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 8px; padding-bottom: 8px; -webkit-overflow-scrolling: touch; }
+    .stream-tab { flex-shrink: 0; padding: 8px 16px; font-size: 13px; border-radius: 999px; }
+    .stream-panel h3 { font-size: 20px; }
+    .stream-panel p { font-size: 13.5px; }
+
+    .stats .wrap { grid-template-columns: repeat(2, 1fr); gap: 20px 14px; padding: 32px 18px; }
+    .stat b { font-size: 30px; }
+    .stat span { font-size: 12px; }
+
+    .sec-head { margin-bottom: 32px; }
+    .sec-head h2 { font-size: clamp(24px, 6vw, 32px); }
+    .sec-head p { font-size: 14.5px; margin-top: 10px; }
+    
+    .about-grid { gap: 32px; }
+    .pillar { padding: 16px 18px; border-radius: 14px; }
+    .pillar-num { width: 28px; height: 28px; font-size: 11px; }
+
+    /* Values Mobile Animation Adjustments */
+    .values-scroll { height: 320vh; }
+    .stack-tower { width: 90px; height: 320px; }
+    .anim-row { width: 85px; height: 85px; margin-left: -42px; }
+    .side-label { left: 95px; font-size: 18px; }
+    .stack-caption { margin-top: 18px; min-height: 48px; }
+    .stack-caption h4 { font-size: 17px; }
+    .stack-caption p { font-size: 13.5px; }
+
+    .course-grid { grid-template-columns: 1fr; gap: 16px; }
+    .course-card { border-radius: 18px; }
+    .course-body { padding: 18px 20px 22px; }
+
+    .toppers-grid { grid-template-columns: repeat(2, 1fr); gap: 16px 12px; }
+    .topper-photo-wrap { width: 96px; height: 96px; margin-bottom: 10px; }
+    .topper-score { min-width: 44px; height: 44px; right: -4px; bottom: -4px; border-width: 2px; }
+    .topper-score b { font-size: 11.5px; }
+    .topper-score span { font-size: 7.5px; }
+    .topper-name { font-size: 13px; }
+    .topper-stream { font-size: 10.5px; }
+
+    .fac-grid { grid-template-columns: repeat(2, 1fr); gap: 14px; }
+    .fac-avatar { border-radius: 14px; font-size: 26px; }
+    .fac-card h4 { font-size: 14.5px; }
+    .fac-card .role { font-size: 11.5px; }
+    .fac-card .dept { font-size: 12px; }
+
+    .parents-grid { grid-template-columns: 1fr; gap: 16px; }
+    .parent-card { padding: 18px 20px; border-radius: 16px; }
+    .parent-quote { font-size: 13.5px; }
+
+    .timeline { padding-left: 26px; }
+    .t-item { padding-bottom: 36px; }
+    .t-item::before { left: -26px; width: 16px; height: 16px; }
+    .t-item h4 { font-size: 15.5px; }
+    .t-item p { font-size: 13.5px; }
+
+    .adm-card { padding: 24px 20px; border-radius: 18px; }
+    .adm-card h3 { font-size: 19px; }
+    .adm-card li { font-size: 13.5px; }
+
+    .contact-grid { gap: 36px; }
+    .info-row { gap: 12px; margin-bottom: 18px; }
+    .info-row .ico { width: 34px; height: 34px; font-size: 14px; border-radius: 8px; }
+    .info-row h4 { font-size: 14.5px; }
+    .info-row p { font-size: 13.5px; }
+
+    form { gap: 12px; }
+    .field label { font-size: 12.5px; }
+    .field input, .field select, .field textarea { padding: 11px 13px; font-size: 14px; border-radius: 10px; }
+
+    footer { padding: 44px 0 20px; }
+    .foot-grid { grid-template-columns: 1fr 1fr; gap: 28px 16px; padding-bottom: 28px; }
+    footer h4 { font-size: 12px; margin-bottom: 10px; }
+    footer ul a { font-size: 13px; }
+    .foot-bottom { font-size: 11.5px; flex-direction: column; gap: 6px; text-align: center; }
+  }
+
+  @media (max-width: 480px) {
+    .nav { padding: 5px 6px 5px 12px; }
+    .brand-name { font-size: 14px; }
+    .brand-name span { display: none; }
+    .hero-top h1 { font-size: 28px; }
+    .stats .wrap { grid-template-columns: repeat(2, 1fr); gap: 16px 10px; padding: 26px 14px; }
+    .stat b { font-size: 26px; }
+    .toppers-grid { grid-template-columns: repeat(2, 1fr); gap: 14px 10px; }
+    .topper-photo-wrap { width: 84px; height: 84px; }
+    .fac-grid { grid-template-columns: 1fr; gap: 16px; }
+    .foot-grid { grid-template-columns: 1fr; gap: 24px; }
+  }
+
   a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible{
     outline:2px solid var(--c1); outline-offset:2px;
   }
