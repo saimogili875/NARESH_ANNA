@@ -104,7 +104,7 @@ class SendTemplateView(View):
 @csrf_exempt
 def trigger_batch_webhook(request):
     from whatsapp.models import PendingMessage
-    from .services import send_whatsapp_text
+    from .services import send_whatsapp_text, send_whatsapp_template, build_template_components
 
     pending = list(
         PendingMessage.objects.filter(
@@ -126,7 +126,20 @@ def trigger_batch_webhook(request):
             failed += 1
             continue
 
-        result = send_whatsapp_text(to_number=phone, message=msg.message)
+        if getattr(msg, 'message_type', 'template') == PendingMessage.TYPE_TEMPLATE:
+            template_name = msg.template_name or getattr(settings, 'META_TEMPLATE_GENERAL', 'general_notification')
+            params = msg.template_params or [msg.message]
+            components = build_template_components(params)
+            language = msg.language or getattr(settings, 'WHATSAPP_DEFAULT_LANGUAGE', 'en')
+            result = send_whatsapp_template(
+                to_number=phone,
+                template_name=template_name,
+                language=language,
+                components=components
+            )
+        else:
+            result = send_whatsapp_text(to_number=phone, message=msg.message)
+
         if result["success"]:
             msg.status = PendingMessage.STATUS_SENT
             msg.error_message = ""

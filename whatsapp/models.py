@@ -12,10 +12,21 @@ class PendingMessage(models.Model):
         (STATUS_FAILED, 'Failed'),
     ]
 
+    TYPE_TEMPLATE = 'template'
+    TYPE_TEXT = 'text'
+    TYPE_CHOICES = [
+        (TYPE_TEMPLATE, 'Template'),
+        (TYPE_TEXT, 'Text'),
+    ]
+
     student = models.ForeignKey(Student, on_delete=models.CASCADE, null=True, blank=True, related_name='whatsapp_messages')
     faculty = models.ForeignKey('faculty.Faculty', on_delete=models.SET_NULL, null=True, blank=True, related_name='whatsapp_messages')
     phone = models.CharField(max_length=20)
-    message = models.TextField()
+    message_type = models.CharField(max_length=10, choices=TYPE_CHOICES, default=TYPE_TEMPLATE)
+    template_name = models.CharField(max_length=100, blank=True, default='')
+    template_params = models.JSONField(blank=True, null=True, default=list)
+    language = models.CharField(max_length=10, default='en')
+    message = models.TextField()  # Fallback or display text preview
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=STATUS_PENDING)
     error_message = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)

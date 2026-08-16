@@ -8,4 +8,7 @@ staticfiles/
 whatsapp_session/
 logs/
 .agents/
+venv/
+.venv/
+
 

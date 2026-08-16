@@ -230,6 +230,7 @@ def attendance_send_whatsapp(request):
 
     section_id = request.POST.get('section_id')
     date_str = request.POST.get('date')
+    target_lang = (request.POST.get('language') or request.GET.get('language') or 'en').lower().strip()
 
     if not section_id or not date_str:
         return JsonResponse({'success': False, 'error': 'section_id and date are required'}, status=400)
@@ -262,6 +263,8 @@ def attendance_send_whatsapp(request):
             parent_phone=parent_phone,
             date_str=att_date.strftime('%d-%m-%Y'),
             section=str(section),
+            reason=getattr(record, 'reason', '') or "Absent",
+            language=target_lang,
         )
 
         if result['success']:
@@ -1047,6 +1050,7 @@ def enqueue_section_absent_whatsapp(request):
 
     section = get_object_or_404(Section, pk=section_id)
     date_str = request.POST.get('date', '') or request.GET.get('date', '')
+    target_lang = (request.POST.get('language') or request.GET.get('language') or 'en').lower().strip()
     today = timezone.localdate()
     selected_date = parse_date_input(date_str, default=today)
 
@@ -1059,6 +1063,7 @@ def enqueue_section_absent_whatsapp(request):
     total_absent = absent_records.count()
     already_queued_count = 0
     enqueued_count = 0
+    template_name = getattr(settings, 'META_TEMPLATE_ABSENCE', 'absence_alert')
 
     for record in absent_records:
         student = record.student
@@ -1076,9 +1081,18 @@ def enqueue_section_absent_whatsapp(request):
                 f"{selected_date.strftime('%d-%m-%Y')} for {section}. "
                 f"Please contact college. - Sri NRI Junior College"
             )
+            template_params = [
+                student.name,
+                selected_date.strftime('%d-%m-%Y'),
+                "Absent Alert",
+            ]
             PendingMessage.objects.create(
                 student=student,
                 phone=phone,
+                message_type=PendingMessage.TYPE_TEMPLATE,
+                template_name=template_name,
+                template_params=template_params,
+                language=target_lang,
                 message=msg_text,
                 status=PendingMessage.STATUS_PENDING
             )

@@ -109,7 +109,8 @@ def faculty_attendance(request):
         messages.success(request, f'Faculty attendance saved for {selected_date.strftime("%d-%m-%Y")}.')
 
         if send_type in ['absent', 'all']:
-            from whatsapp.services import send_faculty_absence_alert, send_whatsapp_text
+            from whatsapp.services import send_faculty_absence_alert, send_generic_template
+            target_lang = (request.POST.get('language') or 'en').lower().strip()
             sent_count = 0
             failed_count = 0
             for f in faculty_qs:
@@ -127,14 +128,16 @@ def faculty_attendance(request):
                         faculty_name=f.name,
                         phone=phone,
                         date_str=selected_date.strftime('%d-%m-%Y'),
+                        language=target_lang,
                     )
                 else:
-                    result = send_whatsapp_text(
+                    result = send_generic_template(
                         to_number=phone,
                         message=(
                             f"Dear {f.name}, Your attendance has been marked PRESENT for today, "
                             f"{selected_date.strftime('%d-%m-%Y')}. Have a great day! - Sri NRI Junior College"
                         ),
+                        language=target_lang,
                     )
 
                 if result.get('success'):

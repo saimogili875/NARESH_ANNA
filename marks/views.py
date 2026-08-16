@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.http import HttpResponse
+from django.conf import settings
 from .models import Exam, Mark, ExamSubjectMaxMark, ExamCategory, ExamType, GroupCategoryConfig, Subject, MarksEntryLock, MarksWhatsAppSendLog
 from students.models import Student
 from accounts.models import Section, AcademicYear, Group
@@ -280,6 +281,7 @@ def marks_whatsapp_send(request, exam_id):
 
     if request.method == 'POST':
         selected_section_ids = request.POST.getlist('selected_sections')
+        target_lang = (request.POST.get('language') or 'en').lower().strip()
         if not selected_section_ids:
             messages.warning(request, 'No section selected to send.')
             return redirect(f'/marks/exam/{exam_id}/whatsapp/send/')
@@ -300,6 +302,7 @@ def marks_whatsapp_send(request, exam_id):
 
         total_queued_messages = 0
         sent_section_names = []
+        template_name = getattr(settings, 'META_TEMPLATE_EXAM_MARKS', 'exam_marks')
 
         for st in target_statuses:
             sec = st['section']
@@ -354,9 +357,21 @@ def marks_whatsapp_send(request, exam_id):
                     f"Total Obtained: {total_obtained:g} / {total_max} ({pct}%)"
                 )
 
+                template_params = [
+                    student.name,
+                    f"{total_obtained:g}",
+                    str(total_max),
+                    f"{exam.display_name()} ({pct}%)",
+                    exam.date.strftime('%d-%m-%Y'),
+                ]
+
                 PendingMessage.objects.create(
                     student=student,
                     phone=phone,
+                    message_type=PendingMessage.TYPE_TEMPLATE,
+                    template_name=template_name,
+                    template_params=template_params,
+                    language=target_lang,
                     message=msg_text,
                     status=PendingMessage.STATUS_PENDING,
                 )
