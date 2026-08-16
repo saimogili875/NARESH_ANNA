@@ -10,31 +10,35 @@
 <style>
   :root {
     --sidebar-width: 240px;
-    --primary: #1a56db;
-    --primary-dark: #1240a5;
-    --sidebar-bg: #0f172a;
-    --sidebar-text: #94a3b8;
-    --sidebar-active: #1a56db;
+    --primary: #FF6A1F; /* Warm Saffron Orange */
+    --primary-dark: #E05A00;
+    --light-blue: #38BDF8; /* Soft Sky Light Blue */
+    --light-blue-bg: #F0F9FF;
+    --light-green: #10B981; /* Light Green */
+    --sidebar-bg: #0284C7; /* Deep Sky Blue Sidebar */
+    --sidebar-text: #E0F2FE;
+    --sidebar-active: #FF6A1F;
   }
-  body { background: #f1f5f9; font-family: 'Segoe UI', sans-serif; }
+  body { background: #F8FAFC; color: #0F172A; font-family: 'Inter', 'Segoe UI', sans-serif; }
 
   /* Sidebar */
   #sidebar {
     width: var(--sidebar-width);
-    background: var(--sidebar-bg);
+    background: linear-gradient(180deg, #0284C7 0%, #0369A1 100%);
     height: 100vh;
     position: fixed;
     top: 0; left: 0;
     overflow-y: auto;
     z-index: 1000;
     transition: width 0.2s;
+    box-shadow: 2px 0 12px rgba(2,132,199,0.15);
   }
   #sidebar .brand {
     padding: 1rem;
-    border-bottom: 1px solid #1e293b;
+    border-bottom: 1px solid rgba(255,255,255,0.2);
     color: #fff;
-    font-weight: 700;
-    font-size: 1rem;
+    font-weight: 800;
+    font-size: 1.05rem;
     display: flex; align-items: center; gap: 0.6rem;
   }
   #sidebar .brand img {
@@ -44,52 +48,66 @@
     border-radius: 6px;
   }
   #sidebar .nav-label {
-    padding: 0.75rem 1rem 0.25rem;
-    font-size: 0.65rem;
+    padding: 0.85rem 1rem 0.25rem;
+    font-size: 0.68rem;
     text-transform: uppercase;
     letter-spacing: .08em;
-    color: #475569;
+    color: #BAE6FD;
+    font-weight: 700;
   }
   #sidebar .nav-link {
     color: var(--sidebar-text);
-    padding: 0.55rem 1rem;
+    padding: 0.6rem 1rem;
     display: flex; align-items: center; gap: 0.6rem;
     font-size: 0.875rem;
+    font-weight: 600;
     border-radius: 0;
     transition: background .15s, color .15s;
   }
-  #sidebar .nav-link:hover, #sidebar .nav-link.active {
-    background: #1e293b;
+  #sidebar .nav-link:hover {
+    background: rgba(255,255,255,0.15);
     color: #fff;
   }
-  #sidebar .nav-link.active { border-left: 3px solid var(--sidebar-active); }
+  #sidebar .nav-link.active {
+    background: #FF6A1F;
+    color: #fff;
+    border-left: 4px solid #fff;
+  }
   #sidebar .nav-link i { width: 18px; text-align: center; font-size: 1rem; }
 
   /* Main */
   #main { margin-left: var(--sidebar-width); min-height: 100vh; }
   .topbar {
-    background: #fff;
-    border-bottom: 1px solid #e2e8f0;
+    background: #F0F9FF;
+    border-bottom: 1.5px solid #BAE6FD;
     padding: .75rem 1.5rem;
     display: flex; align-items: center; justify-content: space-between;
     position: sticky; top: 0; z-index: 100;
   }
   .page-content { padding: 1.5rem; }
 
+  /* Buttons & Badges */
+  .btn-primary { background: linear-gradient(135deg, #FF6A1F, #FF4500) !important; border-color: #FF6A1F !important; color: #fff !important; }
+  .btn-primary:hover { background: linear-gradient(135deg, #E05A00, #D03D00) !important; border-color: #E05A00 !important; }
+  .badge.bg-primary { background-color: #FF6A1F !important; }
+  .badge.bg-success { background-color: #10B981 !important; }
+  .badge.bg-info { background-color: #38BDF8 !important; color: #0F172A !important; }
+
   /* Cards */
   .stat-card {
-    border-radius: 12px;
+    border-radius: 14px;
     padding: 1.25rem;
     color: #fff;
     position: relative;
     overflow: hidden;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.06);
   }
-  .stat-card .value { font-size: 2rem; font-weight: 700; }
-  .stat-card .label { font-size: .8rem; opacity: .85; }
-  .stat-card i { position: absolute; right: 1rem; top: 1rem; font-size: 2.5rem; opacity: .15; }
+  .stat-card .value { font-size: 2rem; font-weight: 800; }
+  .stat-card .label { font-size: .8rem; opacity: .9; font-weight: 600; }
+  .stat-card i { position: absolute; right: 1rem; top: 1rem; font-size: 2.5rem; opacity: .2; }
 
   /* Table */
-  .table th { font-size: .75rem; text-transform: uppercase; letter-spacing: .05em; color: #64748b; }
+  .table th { font-size: .75rem; text-transform: uppercase; letter-spacing: .05em; color: #0284C7; font-weight: 700; }
   .badge-paid { background: #dcfce7; color: #166534; }
   .badge-partial { background: #fef9c3; color: #854d0e; }
   .badge-pending { background: #fee2e2; color: #991b1b; }
