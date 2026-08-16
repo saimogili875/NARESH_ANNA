@@ -52,16 +52,10 @@
                                 </div>
                             </div>
                             <div class="card-footer bg-light border-0 px-3 py-2.5 d-flex justify-content-between align-items-center">
-                                <form method="POST" action="{% url 'attendance_send_section_absent' %}" class="d-inline-flex align-items-center" onclick="event.stopPropagation();">
+                                <form method="POST" action="{% url 'attendance_send_section_absent' %}" class="d-inline" onclick="event.stopPropagation();">
                                     {% csrf_token %}
                                     <input type="hidden" name="section_id" value="{{ item.section.id }}">
                                     <input type="hidden" name="date" value="{{ selected_date|date:'Y-m-d' }}">
-                                    <select name="language" class="form-select form-select-sm me-1 rounded-pill" style="width: auto; font-size: 0.75rem; padding: 0.2rem 0.5rem;" title="Target Language">
-                                        <option value="all" selected>ALL (EN+HI+TE)</option>
-                                        <option value="en">EN</option>
-                                        <option value="hi">HI (हिन्दी)</option>
-                                        <option value="te">TE (తెలుగు)</option>
-                                    </select>
                                     <button type="submit" class="btn btn-outline-danger btn-sm rounded-pill px-2.5 py-1 text-nowrap font-weight-semibold" title="Send WhatsApp alert to all absent students in this section for {{ selected_date|date:'d M Y' }}">
                                         <i class="bi bi-whatsapp me-1"></i>Send Absent Alerts
                                     </button>

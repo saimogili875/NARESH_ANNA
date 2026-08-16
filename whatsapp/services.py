@@ -113,17 +113,14 @@ def send_whatsapp_text(to_number: str, message: str) -> dict:
 
 def send_absence_alert(student_name: str, parent_phone: str, date_str: str, section: str, reason: str = "", language: str = "en") -> dict:
     template_name = settings.META_TEMPLATE_ABSENCE
-    raw_reason = reason or "Not provided"
-    
-    # Translate reason using Gemini AI if language is hindi, telugu, or trilingual (all)
-    translated_reason = translate_text(raw_reason, language) if language != 'en' else raw_reason
+    reason_text = reason or "Not provided"
 
     components = build_template_components([
         student_name,
         date_str,
-        translated_reason,
+        reason_text,
     ])
-    return send_whatsapp_template(parent_phone, template_name, language=language, components=components)
+    return send_whatsapp_template(parent_phone, template_name, language="en", components=components)
 
 
 def send_faculty_absence_alert(faculty_name: str, phone: str, date_str: str, language: str = "en") -> dict:
@@ -132,7 +129,7 @@ def send_faculty_absence_alert(faculty_name: str, phone: str, date_str: str, lan
         faculty_name,
         date_str,
     ])
-    return send_whatsapp_template(phone, template_name, language=language, components=components)
+    return send_whatsapp_template(phone, template_name, language="en", components=components)
 
 
 def send_whatsapp_media(to_number: str, media_url: str, caption: str = "") -> dict:
@@ -168,25 +165,21 @@ def send_whatsapp_media(to_number: str, media_url: str, caption: str = "") -> di
 
 def send_exam_marks(parent_phone: str, student_name: str, marks: str, total_marks: str, subject: str, date_str: str, language: str = "en") -> dict:
     template_name = settings.META_TEMPLATE_EXAM_MARKS
-    translated_subject = translate_text(subject, language) if language != 'en' else subject
-    
     components = build_template_components([
         student_name,
         str(marks),
         str(total_marks),
-        translated_subject,
+        subject,
         date_str,
     ])
-    return send_whatsapp_template(parent_phone, template_name, language=language, components=components)
+    return send_whatsapp_template(parent_phone, template_name, language="en", components=components)
 
 
 def send_generic_template(to_number: str, message: str, template_name: str = None, language: str = "en") -> dict:
     """
-    Sends generic message using Meta WhatsApp Template payload.
-    Translates message using Gemini AI if language is hindi, telugu, or trilingual (all).
+    Sends generic message using Meta WhatsApp Template payload in English.
     """
     template = template_name or getattr(settings, 'META_TEMPLATE_GENERAL', 'general_notification')
-    translated_message = translate_text(message, language) if language != 'en' else message
-    components = build_template_components([translated_message])
-    return send_whatsapp_template(to_number, template, language=language, components=components)
+    components = build_template_components([message])
+    return send_whatsapp_template(to_number, template, language="en", components=components)
 

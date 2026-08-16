@@ -45,7 +45,7 @@ class WhatsAppMultilingualTestCase(TestCase):
         self.assertTrue(mock_post.called)
         payload = mock_post.call_args[1]["json"]
         self.assertEqual(payload["type"], "template")
-        self.assertEqual(payload["template"]["language"]["code"], "te")
+        self.assertEqual(payload["template"]["language"]["code"], "en")
 
     @patch('whatsapp.services.requests.post')
     def test_send_pending_whatsapp_command_template(self, mock_post):
