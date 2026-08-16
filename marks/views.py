@@ -386,6 +386,10 @@ def marks_whatsapp_send(request, exam_id):
             )
             sent_section_names.append(str(sec))
 
+        if total_queued_messages > 0:
+            from whatsapp.services import dispatch_pending_messages_async
+            dispatch_pending_messages_async()
+
         messages.success(
             request,
             f"Successfully queued {total_queued_messages} WhatsApp message(s) for section(s): {', '.join(sent_section_names)}."

@@ -1010,12 +1010,16 @@ def trigger_whatsapp_sender_view(request):
         pending_count = PendingMessage.objects.filter(status=PendingMessage.STATUS_PENDING).count()
         dispatch_time = getattr(settings, 'WHATSAPP_DAILY_DISPATCH_TIME', '10:30')
 
+        if pending_count > 0 or reset_count > 0:
+            from whatsapp.services import dispatch_pending_messages_async
+            dispatch_pending_messages_async()
+
         if reset_count > 0:
-            messages.success(request, f"Re-queued {reset_count} failed message(s) for daily 10:30 AM dispatch ({pending_count} total pending).")
+            messages.success(request, f"Re-queued and dispatched {reset_count} failed message(s).")
         elif pending_count > 0:
-            messages.info(request, f"{pending_count} message(s) are queued in DB and scheduled for daily dispatch at {dispatch_time} AM.")
+            messages.info(request, f"Triggered immediate dispatch for {pending_count} pending message(s). Scheduled daily auto-dispatch is at {dispatch_time} AM.")
         else:
-            messages.info(request, f"No pending or failed messages. Daily dispatch is scheduled for {dispatch_time} AM.")
+            messages.info(request, f"No pending or failed messages. Scheduled daily auto-dispatch is at {dispatch_time} AM.")
 
         referer = request.META.get('HTTP_REFERER')
         if referer:
@@ -1028,7 +1032,7 @@ def trigger_whatsapp_sender_view(request):
 def enqueue_section_absent_whatsapp(request):
     """
     Enqueues PendingMessage rows for all students marked ABSENT ('A') in a section today (or selected date).
-    Can be called via AJAX or standard POST form submit.
+    Can be called via AJAX or standard POST form submit. Triggers instant async dispatch.
     """
     if request.method != 'POST':
         return JsonResponse({'success': False, 'error': 'POST required'}, status=405)
@@ -1098,6 +1102,10 @@ def enqueue_section_absent_whatsapp(request):
                 status=PendingMessage.STATUS_PENDING
             )
             enqueued_count += 1
+
+    if enqueued_count > 0:
+        from whatsapp.services import dispatch_pending_messages_async
+        dispatch_pending_messages_async()
 
     if total_absent == 0:
         msg_text = f"No absent students found in {section} on {selected_date.strftime('%d-%m-%Y')} (all marked Present or unmarked)."

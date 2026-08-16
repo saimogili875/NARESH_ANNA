@@ -194,3 +194,78 @@ def send_generic_template(to_number: str, message: str, template_name: str = Non
     components = build_template_components([message])
     return send_whatsapp_template(to_number, template, language="en", components=components)
 
+
+def dispatch_pending_messages(batch_size: int = 50) -> dict:
+    """
+    Dispatches pending messages in DB via Meta Cloud API templates/text.
+    """
+    from django.db import close_old_connections
+    close_old_connections()
+    from whatsapp.models import PendingMessage
+
+    try:
+        pending = list(
+            PendingMessage.objects.filter(
+                status=PendingMessage.STATUS_PENDING
+            ).order_by('created_at')[:batch_size]
+        )
+    except Exception as err:
+        logger.error(f"Error querying pending messages: {err}")
+        return {"sent": 0, "failed": 0}
+    if not pending:
+        return {"sent": 0, "failed": 0}
+
+    sent = 0
+    failed = 0
+    for msg in pending:
+        phone = (msg.phone or "").strip()
+        if not phone:
+            msg.status = PendingMessage.STATUS_FAILED
+            msg.error_message = "No phone number"
+            msg.save()
+            failed += 1
+            continue
+
+        if getattr(msg, 'message_type', 'template') == PendingMessage.TYPE_TEMPLATE:
+            template_name = msg.template_name or getattr(settings, 'META_TEMPLATE_GENERAL', 'general_notification')
+            params = msg.template_params or [msg.message]
+            components = build_template_components(params)
+            language = msg.language or getattr(settings, 'WHATSAPP_DEFAULT_LANGUAGE', 'en')
+            result = send_whatsapp_template(
+                to_number=phone,
+                template_name=template_name,
+                language=language,
+                components=components
+            )
+            gen_template = getattr(settings, 'META_TEMPLATE_GENERAL', 'general_notification')
+            if not result["success"] and template_name != gen_template:
+                gen_components = build_template_components([msg.message])
+                result = send_whatsapp_template(
+                    to_number=phone,
+                    template_name=gen_template,
+                    language=language,
+                    components=gen_components
+                )
+        else:
+            result = send_whatsapp_text(to_number=phone, message=msg.message)
+
+        if result["success"]:
+            msg.status = PendingMessage.STATUS_SENT
+            msg.error_message = ""
+            msg.save()
+            sent += 1
+        else:
+            msg.status = PendingMessage.STATUS_FAILED
+            msg.error_message = result.get("error", "Unknown error")
+            msg.save()
+            failed += 1
+
+    return {"sent": sent, "failed": failed}
+
+
+def dispatch_pending_messages_async(batch_size: int = 50):
+    import threading
+    thread = threading.Thread(target=dispatch_pending_messages, args=(batch_size,))
+    thread.daemon = True
+    thread.start()
+
