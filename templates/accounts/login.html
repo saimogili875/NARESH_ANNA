@@ -3,328 +3,390 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Login — Sri NRI Junior College</title>
+<title>Sri NRI Junior College — Login</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rozha+One&family=Hind:wght@400;500;600;700&family=Cormorant+Garamond:ital@1&display=swap" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-  body {
-    min-height: 100vh;
-    font-family: 'Inter', -apple-system, sans-serif;
-    background: #F8FAFC;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    -webkit-font-smoothing: antialiased;
+  :root{
+    --maroon-deep:#5C1626;
+    --maroon:#7A1F2B;
+    --vermilion:#C1440E;
+    --turmeric:#D9A441;
+    --turmeric-soft:#F0C868;
+    --ivory:#F6EEDD;
+    --ivory-dim:#EAE0C9;
+    --peacock:#0F5257;
+    --peacock-light:#1C7A80;
+    --ink:#2B1810;
   }
 
-  /* ── Left Panel ── */
-  .left-panel {
-    background: #0F172A;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    padding: 48px 56px;
-    position: relative;
-    overflow: hidden;
-  }
-  .left-panel::before {
-    content: '';
-    position: absolute;
-    top: -120px; left: -80px;
-    width: 400px; height: 400px;
-    background: radial-gradient(circle, rgba(255,106,31,0.25) 0%, transparent 70%);
-    pointer-events: none;
-  }
-  .left-panel::after {
-    content: '';
-    position: absolute;
-    bottom: -80px; right: -60px;
-    width: 320px; height: 320px;
-    background: radial-gradient(circle, rgba(16,185,129,0.18) 0%, transparent 70%);
-    pointer-events: none;
-  }
-  .left-brand {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    position: relative;
-    z-index: 1;
-  }
-  .left-brand-icon {
-    width: 46px; height: 46px;
-    background: linear-gradient(135deg, #FF6A1F, #FF4500);
-    border-radius: 12px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 22px; color: #fff;
-  }
-  .left-brand-name {
-    font-size: 17px;
-    font-weight: 800;
-    color: #fff;
-    letter-spacing: -0.02em;
-  }
-  .left-brand-name small {
-    display: block;
-    font-size: 11px;
-    font-weight: 500;
-    color: rgba(255,255,255,0.45);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    margin-top: 1px;
+  *{box-sizing:border-box; margin:0; padding:0;}
+
+  html,body{height:100%;}
+
+  body{
+    font-family:'Hind', sans-serif;
+    background:
+      radial-gradient(circle at 15% 20%, rgba(217,164,65,0.10), transparent 45%),
+      radial-gradient(circle at 85% 80%, rgba(15,82,87,0.18), transparent 50%),
+      linear-gradient(160deg, var(--maroon-deep), var(--maroon) 55%, #481017 100%);
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    overflow-x:hidden;
+    padding:24px;
+    position:relative;
   }
 
-  .left-content {
-    position: relative;
-    z-index: 1;
+  /* ---------- ambient paisley drift ---------- */
+  .paisley-field{
+    position:fixed; inset:0; z-index:0; pointer-events:none; opacity:0.09;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cpath d='M60 10c20 0 30 20 22 38-6 14-24 16-24 30 0 10 10 14 20 12l4 8c-16 8-38 2-40-16-2-16 14-20 16-32 2-12-8-22-20-20-14 2-20 16-14 28l-8 4C6 46 20 10 60 10z' fill='%23D9A441'/%3E%3C/svg%3E");
+    background-size:120px 120px;
+    animation: driftPaisley 60s linear infinite;
   }
-  .left-content h2 {
-    font-size: 36px;
-    font-weight: 800;
-    color: #fff;
-    line-height: 1.15;
-    letter-spacing: -0.03em;
-    margin-bottom: 16px;
-  }
-  .left-content h2 span {
-    background: linear-gradient(120deg, #FF6A1F 0%, #10B981 60%, #38BDF8 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-  }
-  .left-content p {
-    font-size: 15px;
-    color: rgba(255,255,255,0.55);
-    line-height: 1.65;
-    max-width: 38ch;
+  @keyframes driftPaisley{
+    from{ background-position:0 0; }
+    to{ background-position:-480px 480px; }
   }
 
-  .left-stats {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 20px;
-    position: relative;
-    z-index: 1;
-  }
-  .stat-item {}
-  .stat-item b {
-    display: block;
-    font-size: 26px;
-    font-weight: 800;
-    color: #fff;
-    letter-spacing: -0.02em;
-  }
-  .stat-item span {
-    font-size: 11px;
-    color: rgba(255,255,255,0.4);
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    font-weight: 500;
+  .stage{
+    position:relative; z-index:1;
+    width:100%; max-width:1040px;
+    display:grid;
+    grid-template-columns: 1.05fr 1fr;
+    background:var(--ivory);
+    border-radius:18px;
+    overflow:hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
   }
 
-  /* ── Right Panel ── */
-  .right-panel {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 40px 24px;
-    background: #F8FAFC;
+  /* ================= LEFT: temple panel ================= */
+  .temple-panel{
+    position:relative;
+    background:linear-gradient(180deg, #3B0E17 0%, var(--maroon-deep) 55%, #2A0A10 100%);
+    display:flex; flex-direction:column; align-items:center; justify-content:flex-end;
+    padding:36px 20px 0;
+    overflow:hidden;
+    min-height:560px;
   }
 
-  .login-box {
-    width: 100%;
-    max-width: 400px;
+  .temple-panel::before{
+    content:"";
+    position:absolute; inset:0;
+    z-index:1;
+    background:
+      radial-gradient(ellipse at 50% 100%, rgba(217,164,65,0.20), transparent 60%),
+      linear-gradient(180deg, rgba(59,14,23,0.55) 0%, rgba(92,22,38,0.55) 55%, rgba(42,10,16,0.72) 100%);
   }
 
-  .login-box-header {
-    margin-bottom: 32px;
-  }
-  .login-box-header h1 {
-    font-size: 26px;
-    font-weight: 800;
-    color: #0F172A;
-    letter-spacing: -0.03em;
-    margin-bottom: 6px;
-  }
-  .login-box-header p {
-    font-size: 14px;
-    color: #64748B;
-    line-height: 1.5;
+  .bg-video{
+    position:absolute; inset:0; z-index:0;
+    width:100%; height:100%;
+    object-fit:cover;
+    opacity:0.55;
   }
 
-  /* Form Fields */
-  .field-group { margin-bottom: 18px; }
-  .field-group label {
-    display: block;
-    font-size: 13px;
-    font-weight: 600;
-    color: #0F172A;
-    margin-bottom: 7px;
-    letter-spacing: 0.01em;
+  .mandala{
+    position:absolute; top:-60px; right:-60px; z-index:2;
+    width:260px; height:260px;
+    opacity:0.14;
+    animation: spinSlow 90s linear infinite;
   }
-  .field-group input,
-  .field-group select {
-    width: 100%;
-    padding: 11px 14px;
-    border: 1.5px solid #E2E8F0;
-    border-radius: 10px;
-    font-family: 'Inter', sans-serif;
-    font-size: 14.5px;
-    color: #0F172A;
-    background: #fff;
-    outline: none;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
-    appearance: none;
-  }
-  .field-group input::placeholder { color: #94A3B8; }
-  .field-group input:focus,
-  .field-group select:focus {
-    border-color: #0F172A;
-    box-shadow: 0 0 0 3px rgba(15,23,42,0.08);
-  }
-  .field-group select {
-    cursor: pointer;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%2364748B' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 14px center;
-    padding-right: 40px;
+  @keyframes spinSlow{ to{ transform:rotate(360deg); } }
+
+  .eyebrow{
+    position:relative; z-index:2;
+    color:var(--turmeric-soft);
+    letter-spacing:0.32em;
+    font-size:11px;
+    text-transform:uppercase;
+    margin-bottom:6px;
+    font-weight:600;
   }
 
-  /* Captcha row */
-  .captcha-row { display: flex; align-items: center; gap: 12px; }
-  .captcha-row > *:first-child { flex: 1; }
-
-  /* Autofill warning */
-  .autofill-warn {
-    display: none;
-    background: #FFF1F1;
-    border: 1.5px solid #FECACA;
-    color: #991B1B;
-    border-radius: 8px;
-    padding: 9px 12px;
-    font-size: 13px;
-    margin-bottom: 16px;
-    line-height: 1.45;
-  }
-  .autofill-warn i { margin-right: 4px; }
-
-  /* Alert */
-  .alert-error {
-    background: #FFF1F1;
-    border: 1.5px solid #FECACA;
-    color: #991B1B;
-    border-radius: 10px;
-    padding: 10px 14px;
-    font-size: 13.5px;
-    margin-bottom: 20px;
+  .temple-title{
+    position:relative; z-index:2;
+    font-family:'Rozha One', serif;
+    color:var(--ivory);
+    font-size:clamp(26px, 3.4vw, 34px);
+    text-align:center;
+    line-height:1.25;
+    margin-bottom:4px;
+    text-shadow:0 2px 12px rgba(0,0,0,0.4);
   }
 
-  /* ── Black Submit Button (Sarvam style) ── */
-  .btn-signin {
-    width: 100%;
-    padding: 13px 20px;
-    background: #0F172A;
-    color: #fff;
-    font-family: 'Inter', sans-serif;
-    font-size: 15px;
-    font-weight: 600;
-    border: none;
-    border-radius: 10px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    transition: background 0.18s ease, transform 0.12s ease, box-shadow 0.18s ease;
-    box-shadow: 0 2px 8px rgba(15,23,42,0.18);
-    letter-spacing: -0.01em;
-    margin-top: 8px;
-  }
-  .btn-signin:hover {
-    background: #1E293B;
-    box-shadow: 0 6px 20px rgba(15,23,42,0.28);
-    transform: translateY(-1px);
-  }
-  .btn-signin:active { transform: translateY(0); box-shadow: none; }
-
-  /* Role badges at bottom */
-  .role-pills {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-    margin-top: 24px;
-    padding-top: 20px;
-    border-top: 1px solid #E2E8F0;
-  }
-  .role-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    background: #F1F5F9;
-    color: #475569;
-    padding: 4px 11px;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: 500;
-    border: 1px solid #E2E8F0;
-  }
-  .role-pill-label {
-    font-size: 12px;
-    color: #94A3B8;
-    display: block;
-    margin-bottom: 8px;
-    font-weight: 500;
+  .temple-sub{
+    position:relative; z-index:2;
+    font-family:'Cormorant Garamond', serif;
+    font-style:italic;
+    color:var(--ivory-dim);
+    font-size:15px;
+    text-align:center;
+    margin-bottom:22px;
+    opacity:0.85;
   }
 
-  /* Responsive */
-  @media (max-width: 768px) {
-    body { grid-template-columns: 1fr; }
-    .left-panel { display: none; }
-    .right-panel { padding: 40px 20px; }
-    .login-box { max-width: 100%; }
+  .gopuram-wrap{
+    position:relative; z-index:2;
+    width:100%;
+    display:flex; justify-content:center;
+  }
+
+  svg.gopuram{ width:100%; max-width:340px; height:auto; display:block; }
+
+  .flame{ transform-origin:center bottom; animation: flicker 2.4s ease-in-out infinite; }
+  .flame.f2{ animation-delay:0.5s; animation-duration:2.1s; }
+  .flame.f3{ animation-delay:1.1s; animation-duration:2.6s; }
+  .flame.f4{ animation-delay:0.3s; animation-duration:2.0s; }
+  .flame.f5{ animation-delay:0.8s; animation-duration:2.3s; }
+  @keyframes flicker{
+    0%,100%{ transform:scaleY(1) scaleX(1) skewX(0deg); opacity:1; }
+    30%{ transform:scaleY(1.12) scaleX(0.92) skewX(-2deg); opacity:0.92; }
+    55%{ transform:scaleY(0.9) scaleX(1.05) skewX(2deg); opacity:1; }
+    80%{ transform:scaleY(1.05) scaleX(0.96) skewX(-1deg); opacity:0.95; }
+  }
+
+  .glow-dot{ animation: glowPulse 2.4s ease-in-out infinite; }
+  @keyframes glowPulse{
+    0%,100%{ opacity:0.55; r:3; }
+    50%{ opacity:1; r:4.6; }
+  }
+
+  .kalasha-shine{
+    animation: shine 3.2s ease-in-out infinite;
+  }
+  @keyframes shine{
+    0%,100%{ opacity:0.5; }
+    50%{ opacity:1; }
+  }
+
+  .temple-foot{
+    position:relative; z-index:2;
+    width:100%;
+    text-align:center;
+    padding:16px 0 20px;
+    color:var(--turmeric-soft);
+    font-size:12px;
+    letter-spacing:0.08em;
+    opacity:0.75;
+  }
+
+  /* ================= RIGHT: form panel ================= */
+  .form-panel{
+    position:relative;
+    padding:44px 44px 40px;
+    display:flex; flex-direction:column; justify-content:center;
+    background:var(--ivory);
+  }
+
+  .kolam-border{ display:none; 
+    position:absolute; inset:14px;
+    pointer-events:none;
+  }
+  .kolam-border path{
+    fill:none;
+    stroke:var(--turmeric);
+    stroke-width:1.4;
+    stroke-linecap:round;
+    stroke-dasharray:14 10;
+    opacity:0.55;
+    stroke-dashoffset:1000;
+    animation: drawBorder 3.2s ease forwards;
+  }
+  @keyframes drawBorder{ to{ stroke-dashoffset:0; } }
+
+  .brand-row{
+    display:flex; align-items:center; gap:12px; margin-bottom:26px;
+  }
+  .brand-mark{
+    width:40px; height:40px; border-radius:10px;
+    background:linear-gradient(135deg, var(--vermilion), var(--turmeric));
+    display:flex; align-items:center; justify-content:center;
+    color:var(--ivory); font-family:'Rozha One', serif; font-size:20px;
+    box-shadow:0 6px 14px rgba(193,68,14,0.35);
+  }
+  .brand-text{ font-size:13px; color:var(--maroon); letter-spacing:0.04em; }
+  .brand-text b{ display:block; font-size:15px; color:var(--ink); font-family:'Hind'; }
+
+  h1.form-title{
+    font-family:'Rozha One', serif;
+    font-size:28px;
+    color:var(--ink);
+    margin-bottom:6px;
+  }
+  .form-hint{
+    font-family:'Cormorant Garamond', serif; font-style:italic;
+    color:#7A6A54; font-size:16px; margin-bottom:18px;
+  }
+
+  .alert-error{
+    background:#FFF1F1;
+    border:1.5px solid #FECACA;
+    color:#991B1B;
+    border-radius:10px;
+    padding:10px 14px;
+    font-size:13.5px;
+    margin-bottom:18px;
+  }
+
+  .autofill-warn{
+    display:none;
+    background:#FFF1F1;
+    border:1.5px solid #FECACA;
+    color:#991B1B;
+    border-radius:10px;
+    padding:9px 12px;
+    font-size:13px;
+    margin-bottom:16px;
+    line-height:1.45;
+  }
+
+  .field{ margin-bottom:18px; }
+  .field label{
+    display:block; font-size:12.5px; font-weight:600; letter-spacing:0.04em;
+    color:var(--maroon); margin-bottom:6px; text-transform:uppercase;
+  }
+  .field input{
+    width:100%;
+    padding:12px 14px;
+    border:1.5px solid #D9CBAE;
+    background:#FFFDF7;
+    border-radius:8px;
+    font-family:'Hind', sans-serif;
+    font-size:15px;
+    color:var(--ink);
+    transition:border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  .field input:focus{
+    outline:none;
+    border-color:var(--peacock);
+    box-shadow:0 0 0 3px rgba(15,82,87,0.15);
+  }
+
+  .captcha-row{ display:flex; align-items:center; gap:12px; margin-top:4px; }
+
+  .row-between{
+    display:flex; align-items:center; justify-content:space-between;
+    font-size:13px; color:#6B5A45; margin-bottom:24px;
+  }
+  .row-between a{ color:var(--peacock); text-decoration:none; font-weight:600; }
+  .row-between a:hover{ text-decoration:underline; }
+  .remember{ display:flex; align-items:center; gap:6px; }
+
+  button.login-btn{
+    width:100%;
+    padding:13px;
+    border:none;
+    border-radius:8px;
+    background:linear-gradient(135deg, var(--vermilion), #A6350D);
+    color:var(--ivory);
+    font-family:'Hind', sans-serif;
+    font-weight:700;
+    font-size:15px;
+    letter-spacing:0.03em;
+    cursor:pointer;
+    position:relative;
+    overflow:hidden;
+    transition:transform 0.15s ease, box-shadow 0.15s ease;
+    box-shadow:0 10px 24px rgba(193,68,14,0.35);
+  }
+  button.login-btn:hover{ transform:translateY(-1px); box-shadow:0 14px 30px rgba(193,68,14,0.45); }
+  button.login-btn:active{ transform:translateY(0px) scale(0.99); }
+
+  .divider{
+    display:flex; align-items:center; gap:10px;
+    margin:26px 0 18px;
+    color:#B3A385; font-size:12px; letter-spacing:0.08em;
+  }
+  .divider::before, .divider::after{
+    content:""; flex:1; height:1px; background:#E1D5B8;
+  }
+
+  .footnote{
+    text-align:center; font-size:12px; color:#9A8B70; margin-top:8px;
+  }
+
+  @media (max-width: 768px){
+    html, body {
+      height: auto;
+      min-height: 100%;
+    }
+    body {
+      display: block;
+      padding: 12px 12px 32px;
+      align-items: flex-start;
+      justify-content: flex-start;
+    }
+    .stage { 
+      grid-template-columns: 1fr; 
+      margin: 0 auto; 
+      width: 100%;
+      border-radius: 14px;
+    }
+    /* Header / Logo comes FIRST at the top of the mobile screen */
+    .temple-panel { 
+      order: 1;
+      min-height: 360px; 
+      padding: 40px 20px 32px; 
+    }
+    /* Login Form comes SECOND on scroll down */
+    .form-panel { 
+      order: 2;
+      padding: 32px 20px; 
+    }
+    .eyebrow {
+      font-size: 11px;
+      margin-bottom: 8px;
+    }
+    .temple-title {
+      font-size: 26px;
+      margin-bottom: 8px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .paisley-field, .kolam-border path{
+      animation:none !important;
+    }
+    .kolam-border path{ stroke-dashoffset:0; }
   }
 </style>
 </head>
 <body>
 
-<!-- Left decorative panel -->
-<div class="left-panel">
-  <div class="left-brand">
-    <div class="left-brand-icon"><i class="bi bi-mortarboard-fill"></i></div>
-    <div class="left-brand-name">
-      Sri NRI Junior College
-      <small>Management Portal</small>
-    </div>
+<div class="paisley-field"></div>
+
+<div class="stage">
+
+  <!-- ===== LEFT PANEL: animated temple gopuram ===== -->
+  <div class="temple-panel">
+    <video id="bgVideo" class="bg-video" autoplay loop muted playsinline preload="auto">
+      <source src="/static/bg-video.mp4" type="video/mp4">
+    </video>
+    <div class="eyebrow">Sri Vigneswara Educational Society</div>
+    <div class="temple-title">Sri NRI Junior<br>College</div>
+    <div class="temple-sub">— knowledge is the true ornament —</div>
+
+    <div class="temple-foot">Excellence in Education, Rooted in Tradition</div>
   </div>
 
-  <div class="left-content">
-    <h2>Empowering <span>Academic Excellence</span> Since 1998</h2>
-    <p>Manage attendance, marks, fees, and faculty — all in one secure portal built for Sri NRI Junior College.</p>
-  </div>
+  <!-- ===== RIGHT PANEL: login form ===== -->
+  <div class="form-panel">
+    <svg class="kolam-border" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+      <rect x="8" y="8" width="100%" height="100%" fill="none" stroke="var(--turmeric)" stroke-width="1.4" rx="10"/>
+    </svg>
 
-  <div class="left-stats">
-    <div class="stat-item">
-      <b>1200+</b>
-      <span>Students</span>
+    <div class="brand-row">
+      <div class="brand-mark">S</div>
+      <div class="brand-text">Sri NRI<b>Student &amp; Staff Portal</b></div>
     </div>
-    <div class="stat-item">
-      <b>60+</b>
-      <span>Faculty</span>
-    </div>
-    <div class="stat-item">
-      <b>25+</b>
-      <span>Years</span>
-    </div>
-  </div>
-</div>
 
-<!-- Right login panel -->
-<div class="right-panel">
-  <div class="login-box">
-    <div class="login-box-header">
-      <h1>Welcome back</h1>
-      <p>Sign in to your Sri NRI management account</p>
-    </div>
+    <h1 class="form-title">Welcome back</h1>
+    <p class="form-hint">Sign in to continue to your dashboard</p>
 
     {% if messages %}
       {% for msg in messages %}
@@ -341,54 +403,65 @@
       {% csrf_token %}
       <input type="hidden" name="human_typed" id="humanTyped" value="">
 
-      <div class="field-group">
-        <label for="id_role">Role</label>
-        <select name="role" id="id_role" required>
-          <option value="">Select your role</option>
-          <option value="admin">Admin</option>
-          <option value="faculty">Faculty</option>
-          <option value="accounts">Accounts</option>
-        </select>
+      <div class="field">
+        <label for="id_username">Username / Roll No.</label>
+        <input id="id_username" name="username" type="text" placeholder="e.g. 24NRI0142" required autofocus autocomplete="off" data-typed="false">
       </div>
-
-      <div class="field-group">
-        <label for="id_username">Username</label>
-        <input type="text" name="username" id="id_username"
-               placeholder="Enter your username" required autofocus
-               autocomplete="off" data-typed="false">
-      </div>
-
-      <div class="field-group">
+      <div class="field">
         <label for="id_password">Password</label>
-        <input type="password" name="password" id="id_password"
-               placeholder="Enter your password" required
-               autocomplete="new-password" data-typed="false">
+        <input id="id_password" name="password" type="password" placeholder="Enter your password" required autocomplete="new-password" data-typed="false">
       </div>
 
-      <div class="field-group">
+      {% if form.captcha %}
+      <div class="field">
         <label>Security Check</label>
         <div class="captcha-row">{{ form.captcha }}</div>
         {% if form.captcha.errors %}
           <div style="color:#DC2626;font-size:12px;margin-top:5px;">{{ form.captcha.errors.0 }}</div>
         {% endif %}
       </div>
+      {% endif %}
 
-      <button type="submit" class="btn-signin">
-        <i class="bi bi-box-arrow-in-right"></i> Sign In
-      </button>
+      <div class="row-between">
+        <label class="remember"><input type="checkbox"> Remember me</label>
+        <a href="#">Forgot password?</a>
+      </div>
+
+      <button class="login-btn" type="submit"><i class="bi bi-box-arrow-in-right me-1"></i> Sign In</button>
     </form>
 
-    <div class="role-pills">
-      <span class="role-pill-label" style="width:100%;">Access for</span>
-      <span class="role-pill"><i class="bi bi-shield-fill"></i> Admin</span>
-      <span class="role-pill"><i class="bi bi-person-badge"></i> Faculty</span>
-      <span class="role-pill"><i class="bi bi-cash"></i> Accounts</span>
-    </div>
+    <div class="divider">NEED HELP</div>
+    <p class="footnote">Contact your section coordinator for login assistance.</p>
   </div>
+
 </div>
 
 <script>
 (function() {
+  const bgVideo = document.getElementById('bgVideo') || document.querySelector('.bg-video');
+  if (bgVideo) {
+    bgVideo.muted = true;
+    bgVideo.defaultMuted = true;
+    bgVideo.setAttribute('muted', '');
+    bgVideo.setAttribute('playsinline', '');
+
+    const tryPlay = () => {
+      bgVideo.muted = true;
+      const promise = bgVideo.play();
+      if (promise !== undefined) {
+        promise.catch(() => {
+          window.addEventListener('touchstart', () => bgVideo.play(), { once: true });
+          window.addEventListener('click', () => bgVideo.play(), { once: true });
+        });
+      }
+    };
+
+    bgVideo.addEventListener('loadedmetadata', tryPlay);
+    bgVideo.addEventListener('loadeddata', tryPlay);
+    bgVideo.addEventListener('canplay', tryPlay);
+    if (bgVideo.readyState >= 1) { tryPlay(); }
+  }
+
   const uField = document.getElementById('id_username');
   const pField = document.getElementById('id_password');
   const hidden = document.getElementById('humanTyped');
@@ -400,11 +473,11 @@
     e.target.dataset.typed = 'true';
     updateHidden();
   }
-  uField.addEventListener('keydown', markTyped);
-  pField.addEventListener('keydown', markTyped);
+  if (uField) uField.addEventListener('keydown', markTyped);
+  if (pField) pField.addEventListener('keydown', markTyped);
 
   function updateHidden() {
-    if (uField.dataset.typed === 'true' && pField.dataset.typed === 'true') {
+    if (uField && pField && uField.dataset.typed === 'true' && pField.dataset.typed === 'true') {
       hidden.value = 'true';
     }
   }
@@ -413,26 +486,29 @@
     try { return el.matches(':-webkit-autofill'); } catch(e) { return false; }
   }
 
-  form.addEventListener('submit', function(e) {
-    const uTyped = uField.dataset.typed === 'true';
-    const pTyped = pField.dataset.typed === 'true';
-    const autofilled = isAutofilled(uField) || isAutofilled(pField);
-    if (!uTyped || !pTyped || autofilled) {
-      e.preventDefault();
-      warning.style.display = 'block';
-      if (!uTyped) { uField.value = ''; uField.focus(); }
-      else if (!pTyped) { pField.value = ''; pField.focus(); }
-      return false;
-    }
-  });
+  if (form) {
+    form.addEventListener('submit', function(e) {
+      const uTyped = uField ? uField.dataset.typed === 'true' : true;
+      const pTyped = pField ? pField.dataset.typed === 'true' : true;
+      const autofilled = (uField && isAutofilled(uField)) || (pField && isAutofilled(pField));
+      if (!uTyped || !pTyped || autofilled) {
+        e.preventDefault();
+        if (warning) warning.style.display = 'block';
+        if (uField && !uTyped) { uField.value = ''; uField.focus(); }
+        else if (pField && !pTyped) { pField.value = ''; pField.focus(); }
+        return false;
+      }
+    });
+  }
 
   setTimeout(function() {
-    if (isAutofilled(uField) || isAutofilled(pField)) {
-      uField.value = '';
-      pField.value = '';
+    if ((uField && isAutofilled(uField)) || (pField && isAutofilled(pField))) {
+      if (uField) uField.value = '';
+      if (pField) pField.value = '';
     }
   }, 100);
 })();
 </script>
+
 </body>
 </html>

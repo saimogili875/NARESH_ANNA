@@ -167,8 +167,7 @@ def login_view(request):
             user = authenticate(request,
                                 username=form.cleaned_data['username'],
                                 password=form.cleaned_data['password'])
-            selected_role = form.cleaned_data['role']
-            if user and user.role == selected_role:
+            if user:
                 login(request, user)
                 # --- Create LoginSession ---
                 ua_raw = request.META.get('HTTP_USER_AGENT', '')
@@ -183,8 +182,6 @@ def login_view(request):
                 if user.role == 'faculty':
                     return redirect('/attendance/')
                 return redirect('dashboard')
-            elif user and user.role != selected_role:
-                messages.error(request, 'Selected role does not match your account.')
             else:
                 # authenticate() failed — axes already recorded the failure via signal
                 if not is_admin_attempt and AxesProxyHandler.is_locked(request, credentials={'username': form.cleaned_data['username']}):

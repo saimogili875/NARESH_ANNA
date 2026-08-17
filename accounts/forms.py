@@ -5,13 +5,7 @@ from .models import User, Group, Section, AcademicYear
 
 
 class LoginForm(forms.Form):
-    ROLE_CHOICES = [
-        ('', 'Select Role'),
-        ('admin', 'Admin'),
-        ('faculty', 'Faculty'),
-        ('accounts', 'Accounts'),
-    ]
-    role = forms.ChoiceField(choices=ROLE_CHOICES, widget=forms.Select(attrs={'class': 'form-select'}))
+    role = forms.CharField(required=False, widget=forms.HiddenInput())
     username = forms.CharField(widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Username'}))
     password = forms.CharField(widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Password'}))
     captcha = CaptchaField()
