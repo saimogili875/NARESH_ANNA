@@ -331,8 +331,9 @@
   /* ---------- gallery ---------- */
   .gallery-grid{ display:grid; grid-template-columns:repeat(6,1fr); grid-auto-rows:120px; gap:14px;}
   @media(max-width:760px){ .gallery-grid{grid-template-columns:repeat(2,1fr); grid-auto-rows:130px;} }
-  .g-item{border-radius:16px; position:relative; overflow:hidden;}
-  .g-item span{ position:absolute; left:14px; bottom:12px; color:#fff; font-size:12px; font-family:'IBM Plex Mono',monospace; opacity:.95; font-weight:500;}
+  .g-item{border-radius:16px; position:relative; overflow:hidden; transition:transform 0.25s ease, box-shadow 0.25s ease;}
+  .g-item:hover{transform:scale(1.02); box-shadow:0 12px 30px rgba(15,23,42,0.25);}
+  .g-item span{ position:absolute; left:14px; bottom:12px; color:#fff; font-size:12px; font-family:'IBM Plex Mono',monospace; opacity:.95; font-weight:600; text-shadow:0 2px 6px rgba(0,0,0,0.6);}
   .g1{grid-column:span 3; grid-row:span 2;} .g2{grid-column:span 3; grid-row:span 1;}
   .g3{grid-column:span 2; grid-row:span 1;} .g4{grid-column:span 2; grid-row:span 2;}
   .g5{grid-column:span 2; grid-row:span 1;} .g6{grid-column:span 3; grid-row:span 1;}
@@ -1165,20 +1166,29 @@
   });
 
   const gtiles = [
-    {c:"g1", label:"Main quad", grad:"linear-gradient(135deg,#FF6A3D,#FF3D81)"},
+    {c:"g1", label:"Freshers Party 2K26 — Aarambh@15", img:"{% static 'images/freshers_party_2k26.jpg' %}", fallbackImg:"/static/freshers_party_2k26.jpg", grad:"linear-gradient(135deg,#FF6A3D,#FF3D81)"},
     {c:"g2", label:"Chemistry lab", grad:"linear-gradient(135deg,#7B5CFF,#FF3D81)"},
     {c:"g3", label:"Library block", grad:"linear-gradient(135deg,#22C77C,#7B5CFF)"},
-    {c:"g4", label:"Sports ground", grad:"linear-gradient(135deg,#FF3D81,#7B5CFF)"},
-    {c:"g5", label:"Annual fest", grad:"linear-gradient(135deg,#FF6A3D,#22C77C)"},
-    {c:"g6", label:"Physics lab", grad:"linear-gradient(135deg,#7B5CFF,#FF6A3D)"},
-    {c:"g7", label:"Orientation day", grad:"linear-gradient(135deg,#22C77C,#FF3D81)"}
+    {c:"g4", label:"Sports ground & Quad", grad:"linear-gradient(135deg,#FF3D81,#7B5CFF)"},
+    {c:"g5", label:"Annual Fest Celebration", grad:"linear-gradient(135deg,#FF6A3D,#22C77C)"},
+    {c:"g6", label:"Physics & Robotics Lab", grad:"linear-gradient(135deg,#7B5CFF,#FF6A3D)"},
+    {c:"g7", label:"Orientation & Academic Honor Day", grad:"linear-gradient(135deg,#22C77C,#FF3D81)"}
   ];
   const galleryGrid = document.getElementById('galleryGrid');
   gtiles.forEach(g=>{
     const div = document.createElement('div');
     div.className = 'g-item ' + g.c;
     div.style.background = g.grad;
-    div.innerHTML = `<span>${g.label}</span>`;
+    if (g.img) {
+      div.innerHTML = `
+        <img src="${g.img}" alt="${g.label}" style="width:100%;height:100%;object-fit:cover;display:block;"
+             onerror="this.src='${g.fallbackImg}';">
+        <div style="position:absolute;inset:0;background:linear-gradient(180deg,transparent 30%,rgba(15,23,42,0.85) 100%);"></div>
+        <span style="z-index:2;font-size:13px;font-weight:700;letter-spacing:0.02em;">${g.label}</span>
+      `;
+    } else {
+      div.innerHTML = `<span>${g.label}</span>`;
+    }
     galleryGrid.appendChild(div);
   });
 </script>
