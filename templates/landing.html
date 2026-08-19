@@ -1077,14 +1077,10 @@
   });
 
   const toppers = [
-    { name:"A. Sahithi", stream:"SR MPC", score:"974/1000", photo:"photos/toppers/1.jpg", color:"linear-gradient(135deg,#FF6A3D,#FF3D81)", init:"AS" },
-    { name:"V. Karthik", stream:"SR MPC", score:"968/1000", photo:"photos/toppers/2.jpg", color:"linear-gradient(135deg,#22C77C,#7B5CFF)", init:"VK" },
-    { name:"S. Meghana", stream:"SR BiPC", score:"959/1000", photo:"photos/toppers/3.jpg", color:"linear-gradient(135deg,#7B5CFF,#FF3D81)", init:"SM" },
-    { name:"P. Deepak", stream:"SR BiPC", score:"951/1000", photo:"photos/toppers/4.jpg", color:"linear-gradient(135deg,#FF3D81,#FF6A3D)", init:"PD" },
-    { name:"N. Bhavya", stream:"JR MPC", score:"461/470", photo:"photos/toppers/5.jpg", color:"linear-gradient(135deg,#22C77C,#FF3D81)", init:"NB" },
-    { name:"R. Akhil", stream:"JR CEC", score:"481/500", photo:"photos/toppers/6.jpg", color:"linear-gradient(135deg,#7B5CFF,#FF6A3D)", init:"RA" },
-    { name:"T. Divya", stream:"JR CEC", score:"473/500", photo:"photos/toppers/7.jpg", color:"linear-gradient(135deg,#FF6A3D,#22C77C)", init:"TD" },
-    { name:"M. Yashwanth", stream:"JR BiPC", score:"438/440", photo:"photos/toppers/8.jpg", color:"linear-gradient(135deg,#FF3D81,#7B5CFF)", init:"MY" }
+    { name:"Priyanka", stream:"SR BiPC", score:"982/1000", photo:"{% static 'images/toppers/topper1.jpg' %}", color:"linear-gradient(135deg,#FF6A3D,#FF3D81)", init:"PR" },
+    { name:"V. Karthik", stream:"SR MPC", score:"976/1000", photo:"{% static 'images/toppers/topper2.jpg' %}", color:"linear-gradient(135deg,#22C77C,#7B5CFF)", init:"VK" },
+    { name:"S. Nikhita", stream:"JR MPC", score:"466/470", photo:"{% static 'images/toppers/topper3.jpg' %}", color:"linear-gradient(135deg,#7B5CFF,#FF3D81)", init:"SN" },
+    { name:"K. Anirudh", stream:"SR MEC", score:"968/1000", photo:"{% static 'images/toppers/topper4.jpg' %}", color:"linear-gradient(135deg,#FF3D81,#FF6A3D)", init:"KA" }
   ];
   const toppersGrid = document.getElementById('toppersGrid');
   toppers.forEach((t, i)=>{
