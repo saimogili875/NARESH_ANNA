@@ -336,14 +336,48 @@ def group_list(request):
     total_sections = Section.objects.count()
     total_students = Student.objects.filter(is_active=True).count()
 
+    STREAM_THEMES = {
+        'MPC': {
+            'color': '#1d4ed8', 'bg': '#eff6ff', 'border': '#3b82f6',
+            'gradient': 'linear-gradient(135deg, #1e40af, #3b82f6)',
+            'image': 'images/stream_mpc.jpg', 'icon': 'bi-calculator-fill'
+        },
+        'BIPC': {
+            'color': '#047857', 'bg': '#ecfdf5', 'border': '#10b981',
+            'gradient': 'linear-gradient(135deg, #065f46, #10b981)',
+            'image': 'images/stream_bipc.jpg', 'icon': 'bi-heart-pulse-fill'
+        },
+        'CEC': {
+            'color': '#7e22ce', 'bg': '#faf5ff', 'border': '#a855f7',
+            'gradient': 'linear-gradient(135deg, #6b21a8, #a855f7)',
+            'image': 'images/stream_cec.jpg', 'icon': 'bi-briefcase-fill'
+        },
+        'MEC': {
+            'color': '#c2410c', 'bg': '#fff7ed', 'border': '#f97316',
+            'gradient': 'linear-gradient(135deg, #9a3412, #f97316)',
+            'image': 'images/stream_mec.jpg', 'icon': 'bi-graph-up-arrow'
+        },
+    }
+
     group_data = []
     for group in groups:
+        code_upper = (group.code or '').upper().strip()
+        theme = STREAM_THEMES.get(code_upper, {
+            'color': group.color if group.color and group.color != '#374151' else '#1d4ed8',
+            'bg': group.bg_color if group.bg_color and group.bg_color != '#f3f4f6' else '#eff6ff',
+            'border': group.border_color if group.border_color and group.border_color != '#9ca3af' else '#3b82f6',
+            'gradient': 'linear-gradient(135deg, #1d4ed8, #3b82f6)',
+            'image': 'images/stream_mpc.jpg',
+            'icon': group.icon or 'bi-grid-fill'
+        })
         style = {
-            'color': group.color,
-            'bg': group.bg_color,
-            'border': group.border_color,
-            'icon': group.icon,
-            'subjects': group.subjects_text
+            'color': theme['color'],
+            'bg': theme['bg'],
+            'border': theme['border'],
+            'gradient': theme['gradient'],
+            'image': theme['image'],
+            'icon': theme['icon'],
+            'subjects': group.subjects_text or 'Maths, Physics, Chemistry'
         }
         sections = list(group.sections.all())
         section_count = len(sections)

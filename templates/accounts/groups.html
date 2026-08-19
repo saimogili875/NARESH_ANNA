@@ -158,19 +158,24 @@
 <!-- Group cards -->
 {% for gd in group_data %}
 {% with s=gd.style %}
-<div class="group-card" style="--gc-color:{{ s.color }}; --gc-bg:{{ s.bg }}; --gc-border:{{ s.border }};">
+<div class="group-card shadow-sm mb-4" style="--gc-color:{{ s.color }}; --gc-bg:{{ s.bg }}; --gc-border:{{ s.border }}; border-left: 6px solid {{ s.border }};">
   <div class="p-4">
     <div class="row align-items-start g-3">
 
-      <!-- Left: icon + name + subjects + stats -->
+      <!-- Left: Stream logo photo + name + subjects + stats -->
       <div class="col-12 col-md-6">
-        <div class="d-flex align-items-start gap-3 mb-3">
-          <div class="group-icon-box" style="background:{{ s.bg }}; color:{{ s.color }};">
-            <i class="bi {{ s.icon }}"></i>
-          </div>
+        <div class="d-flex align-items-center gap-3 mb-3">
+          <img src="{% static s.image %}" alt="{{ gd.group.name }}" 
+               class="rounded-3 shadow-sm border" 
+               style="width: 68px; height: 68px; object-fit: cover; border-color: {{ s.border }} !important;">
           <div>
-            <div style="font-size:1.2rem; font-weight:700; color:{{ s.color }};">{{ gd.group.name }}</div>
-            <div class="text-muted" style="font-size:.82rem;">{{ s.subjects }}</div>
+            <div class="d-flex align-items-center gap-2">
+              <span class="fs-4 fw-bold" style="color: {{ s.color }};">{{ gd.group.name }}</span>
+              <span class="badge px-2 py-1 text-white fw-semibold" style="background: {{ s.gradient }}; font-size: 0.72rem;">
+                {{ gd.group.code }} STREAM
+              </span>
+            </div>
+            <div class="text-secondary fw-500 small mt-1"><i class="bi bi-book me-1"></i>{{ s.subjects }}</div>
           </div>
         </div>
 
