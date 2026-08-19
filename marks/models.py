@@ -63,6 +63,10 @@ class Exam(models.Model):
     )
     date = models.DateField()
     max_marks = models.IntegerField(default=100)
+    excluded_subjects = models.ManyToManyField(
+        Subject, blank=True, related_name='excluded_from_exams',
+        help_text='Subjects excluded/not conducted for this specific exam instance.'
+    )
 
     def display_name(self):
         if self.custom_name:

@@ -38,10 +38,24 @@ class SubjectAllotmentTestCase(TestCase):
         self.client.force_login(self.admin_user)
 
     def test_get_subjects_for_exam(self):
-        subjects = get_subjects_for_exam(self.exam)
-        self.assertEqual(len(subjects), 2)
-        self.assertIn(self.subject1, subjects)
-        self.assertIn(self.subject2, subjects)
+        subs = get_subjects_for_exam(self.exam)
+        self.assertEqual(len(subs), 2)
+        self.assertIn(self.subject1, subs)
+        self.assertIn(self.subject2, subs)
+
+    def test_excluded_subjects_for_specific_exam_instance(self):
+        subs = get_subjects_for_exam(self.exam)
+        self.assertEqual(len(subs), 2)
+
+        # Exclude subject2 for this specific exam instance only
+        self.exam.excluded_subjects.add(self.subject2)
+        subs_after = get_subjects_for_exam(self.exam)
+        self.assertEqual(len(subs_after), 1)
+        self.assertIn(self.subject1, subs_after)
+        self.assertNotIn(self.subject2, subs_after)
+
+        # Verify master category subjects remain untouched for future exams
+        self.assertEqual(self.category.subjects.count(), 2)
 
     def test_get_subjects_for_exam_without_category(self):
         # Exam with no category should return empty list, not all subjects

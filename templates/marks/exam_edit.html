@@ -32,17 +32,36 @@
 
       {% if not exam.category.is_fixed_marks and subjects %}
       <div class="mb-3">
-        <label class="form-label fw-bold">Subject Maximum Marks</label>
-        <div class="p-3 border rounded bg-light">
+        <label class="form-label fw-bold">Subjects & Maximum Marks</label>
+        <div class="alert alert-info py-1 px-2 small mb-2">
+          <i class="bi bi-info-circle me-1"></i>Click <strong>- Omit</strong> if a subject was not conducted for this specific exam instance.
+        </div>
+        <div class="p-2 border rounded bg-light">
           {% for sub in subjects %}
-          <div class="row align-items-center mb-2">
-            <div class="col-6 fw-500">{{ sub.name }}</div>
+          {% with is_excluded=sub.id in excluded_subject_ids %}
+          <div class="row align-items-center mb-2 p-2 rounded border bg-white subject-edit-row {% if is_excluded %}subject-excluded{% endif %}" id="edit_sub_row_{{ sub.id }}">
             <div class="col-6">
-              <input type="number" name="subject_max_{{ sub.name }}" class="form-control form-control-sm"
+              <div class="fw-bold sub-name-title">{{ sub.name }}</div>
+              <span class="badge bg-danger-subtle text-danger border border-danger ex-badge" style="{% if not is_excluded %}display:none;{% endif %} font-size:0.7rem;">Not Conducted This Exam</span>
+            </div>
+            <div class="col-4">
+              <input type="number" name="subject_max_{{ sub.name }}" class="form-control form-control-sm subject-max-input"
                      value="{% for s_id, val in existing_max_marks.items %}{% if s_id == sub.id %}{{ val }}{% endif %}{% endfor %}"
-                     placeholder="100" min="1">
+                     placeholder="100" min="1" {% if is_excluded %}disabled{% endif %}>
+            </div>
+            <div class="col-2 text-end">
+              <button type="button" class="btn btn-sm {% if is_excluded %}btn-outline-success{% else %}btn-outline-danger{% endif %} py-0 px-2 btn-toggle-omit"
+                      onclick="toggleEditSubjectExclude(this, '{{ sub.id }}')">
+                {% if is_excluded %}
+                <i class="bi bi-plus-circle me-1"></i>+ Include
+                {% else %}
+                <i class="bi bi-dash-circle me-1"></i>- Omit
+                {% endif %}
+              </button>
+              <input type="checkbox" name="excluded_subjects" value="{{ sub.id }}" id="chk_ex_{{ sub.id }}" style="display:none;" {% if is_excluded %}checked{% endif %}>
             </div>
           </div>
+          {% endwith %}
           {% endfor %}
         </div>
       </div>
@@ -55,5 +74,33 @@
     </form>
   </div>
 </div>
+
+<style>
+.subject-excluded .sub-name-title { text-decoration: line-through; color: #9ca3af !important; }
+.subject-excluded .ex-badge { display: inline-block !important; }
+.subject-excluded { background-color: #fef2f2 !important; border-color: #fca5a5 !important; }
+</style>
+
+<script>
+function toggleEditSubjectExclude(btn, subId) {
+  const row = document.getElementById('edit_sub_row_' + subId);
+  const chk = document.getElementById('chk_ex_' + subId);
+  const maxInput = row.querySelector('.subject-max-input');
+
+  if (row.classList.contains('subject-excluded')) {
+    row.classList.remove('subject-excluded');
+    btn.className = 'btn btn-sm btn-outline-danger py-0 px-2 btn-toggle-omit';
+    btn.innerHTML = '<i class="bi bi-dash-circle me-1"></i>- Omit';
+    if (chk) chk.checked = false;
+    if (maxInput) { maxInput.disabled = false; }
+  } else {
+    row.classList.add('subject-excluded');
+    btn.className = 'btn btn-sm btn-outline-success py-0 px-2 btn-toggle-omit';
+    btn.innerHTML = '<i class="bi bi-plus-circle me-1"></i>+ Include';
+    if (chk) chk.checked = true;
+    if (maxInput) { maxInput.disabled = true; }
+  }
+}
+</script>
 
 {% endblock %}

@@ -10,7 +10,12 @@ from accounts.decorators import all_roles_required, admin_faculty_required, admi
 def get_subjects_for_exam(exam):
     """Return the subject list to use for marks entry/report for this exam."""
     if exam and exam.category_id:
-        return list(exam.category.subjects.all())
+        all_subs = list(exam.category.subjects.all())
+        if hasattr(exam, 'excluded_subjects'):
+            excluded_ids = set(exam.excluded_subjects.values_list('id', flat=True))
+            if excluded_ids:
+                return [s for s in all_subs if s.id not in excluded_ids]
+        return all_subs
     return []
 
 def filter_subjects_for_user(request, subjects):
@@ -102,7 +107,7 @@ def exam_add(request):
         gco_data.setdefault(g_pk, []).append(c_pk)
 
     for cat in categories_qs.prefetch_related('subjects'):
-        ss_data[str(cat.id)] = [sub.name for sub in cat.subjects.all()]
+        ss_data[str(cat.id)] = [{'id': sub.id, 'name': sub.name} for sub in cat.subjects.all()]
         
     exam_types_js = [[str(et.id), et.name] for et in exam_types]
 
@@ -150,6 +155,10 @@ def exam_add(request):
                         max_marks=overall_max,
                     )
 
+                    excluded_sub_ids = request.POST.getlist('excluded_subjects')
+                    if excluded_sub_ids:
+                        exam.excluded_subjects.set(excluded_sub_ids)
+
                     if not category.is_fixed_marks:
                         for subject, sub_max in subject_max_inputs.items():
                             ExamSubjectMaxMark.objects.update_or_create(
@@ -176,7 +185,7 @@ def exam_add(request):
 def exam_edit(request, exam_id):
     active_year = AcademicYear.objects.filter(is_active=True).first()
     exam = get_object_or_404(Exam, pk=exam_id)
-    subjects = get_subjects_for_exam(exam)
+    all_category_subjects = list(exam.category.subjects.all())
 
     if request.method == 'POST':
         custom_name = request.POST.get('custom_name', '').strip()
@@ -187,9 +196,15 @@ def exam_edit(request, exam_id):
         if exam_date:
             exam.date = exam_date
 
-        if not exam.category.is_fixed_marks and subjects:
+        excluded_sub_ids = [int(i) for i in request.POST.getlist('excluded_subjects') if str(i).isdigit()]
+        exam.excluded_subjects.set(excluded_sub_ids)
+        exam.save()
+
+        # Update max marks for included subjects
+        active_subjects = [s for s in all_category_subjects if s.id not in set(excluded_sub_ids)]
+        if not exam.category.is_fixed_marks and active_subjects:
             subject_max_inputs = {}
-            for subject in subjects:
+            for subject in active_subjects:
                 val = request.POST.get(f'subject_max_{subject.name}', '').strip()
                 try:
                     subject_max_inputs[subject] = int(val) if val else 100
@@ -200,8 +215,8 @@ def exam_edit(request, exam_id):
                     exam=exam, subject=subject, defaults={'max_marks': subject_max_inputs[subject]}
                 )
             exam.max_marks = sum(subject_max_inputs.values()) or 100
+            exam.save()
 
-        exam.save()
         messages.success(request, f"Exam '{exam.display_name()}' updated successfully.")
         return redirect('exam_list')
 
@@ -209,11 +224,13 @@ def exam_edit(request, exam_id):
         m.subject_id: m.max_marks
         for m in ExamSubjectMaxMark.objects.filter(exam=exam)
     }
+    excluded_subject_ids = set(exam.excluded_subjects.values_list('id', flat=True))
 
     return render(request, 'marks/exam_edit.html', {
         'exam': exam,
         'active_year': active_year,
-        'subjects': subjects,
+        'subjects': all_category_subjects,
+        'excluded_subject_ids': excluded_subject_ids,
         'existing_max_marks': existing_max_marks,
     })
 

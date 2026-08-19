@@ -85,6 +85,12 @@
 {{ fixed_subject_max_marks|json_script:"fsmm-data" }}
 {{ fixed_categories|json_script:"fc-data" }}
 {{ exam_types_js|json_script:"et-data" }}
+<style>
+.subject-excluded .sub-name-title { text-decoration: line-through; color: #9ca3af !important; }
+.subject-excluded .ex-badge { display: inline-block !important; }
+.subject-excluded { background-color: #fef2f2 !important; border-color: #fca5a5 !important; }
+</style>
+
 <script>
 const GCO   = JSON.parse(document.getElementById('gco-data').textContent);
 const CL    = JSON.parse(document.getElementById('cl-data').textContent);
@@ -95,6 +101,33 @@ const FC    = JSON.parse(document.getElementById('fc-data').textContent);
 const EXAM_TYPES = JSON.parse(document.getElementById('et-data').textContent);
 
 let selectedCategory = '';
+
+function toggleSubjectExclude(btn, subId) {
+  const row = btn.closest('.subject-row');
+  const maxInput = row.querySelector('.subject-max-input');
+  let exInput = document.getElementById('ex_sub_' + subId);
+
+  if (row.classList.contains('subject-excluded')) {
+    row.classList.remove('subject-excluded');
+    btn.className = 'btn btn-sm btn-outline-danger py-0 px-2';
+    btn.innerHTML = '<i class="bi bi-dash-circle me-1"></i>- Omit';
+    if (maxInput) { maxInput.disabled = false; maxInput.required = true; }
+    if (exInput) { exInput.remove(); }
+  } else {
+    row.classList.add('subject-excluded');
+    btn.className = 'btn btn-sm btn-outline-success py-0 px-2';
+    btn.innerHTML = '<i class="bi bi-plus-circle me-1"></i>+ Include';
+    if (maxInput) { maxInput.disabled = true; maxInput.required = false; }
+    if (!exInput) {
+      exInput = document.createElement('input');
+      exInput.type = 'hidden';
+      exInput.name = 'excluded_subjects';
+      exInput.value = subId;
+      exInput.id = 'ex_sub_' + subId;
+      document.getElementById('examForm').appendChild(exInput);
+    }
+  }
+}
 
 function onGroupChange() {
   const sel = document.getElementById('groupSelect');
@@ -150,12 +183,14 @@ function onCategorySelect(cat, groupCode) {
   selectedCategory = cat;
   document.getElementById('categoryInput').value = cat;
 
-  const subjects = SS[cat] || [];
+  const rawSubjects = SS[cat] || [];
+  const subjects = rawSubjects.map(s => (typeof s === 'string' ? {id: s, name: s} : s));
+
   if (!subjects.length) {
     document.getElementById('subjectPreview').innerHTML =
       '<span class="text-danger fw-bold"><i class="bi bi-x-circle me-1"></i>No subjects attached to this category! Please attach subjects in Django Admin.</span>';
   } else {
-    document.getElementById('subjectPreview').textContent = 'Subjects: ' + subjects.join(', ');
+    document.getElementById('subjectPreview').textContent = 'Category Subjects: ' + subjects.map(s => s.name).join(', ');
   }
 
   // Populate exam type dropdown — name ends with category label
@@ -165,7 +200,6 @@ function onCategorySelect(cat, groupCode) {
   EXAM_TYPES.forEach(function([val, label]) {
     const o = document.createElement('option');
     o.value = val;
-    // Name ends with selected application: "Unit Test 1 — JEE Main"
     o.textContent = label + ' — ' + catLabel;
     sel.appendChild(o);
   });
@@ -176,15 +210,15 @@ function onCategorySelect(cat, groupCode) {
   document.getElementById('submitBtn').style.display = subjects.length ? 'inline-block' : 'none';
   onExamTypeChange();
 
-  // Max marks
+  // Max marks & subject omit options
   if (FC.includes(cat)) {
     const fixed = FSMM[cat] || {};
     let html = '<table class="table table-sm mb-0"><tbody>';
     let total = 0;
     subjects.forEach(sub => {
-      const v = fixed[sub] !== undefined ? fixed[sub] : '—';
+      const v = fixed[sub.name] !== undefined ? fixed[sub.name] : '—';
       if (typeof v === 'number') total += v;
-      html += `<tr><td>${sub}</td><td class="text-end fw-bold">${v}</td></tr>`;
+      html += `<tr><td>${sub.name}</td><td class="text-end fw-bold">${v}</td></tr>`;
     });
     html += `<tr class="table-active"><td class="fw-bold">Total</td><td class="text-end fw-bold">${total}</td></tr>`;
     html += '</tbody></table>';
@@ -195,14 +229,24 @@ function onCategorySelect(cat, groupCode) {
   } else {
     document.getElementById('fixedMarksDiv').style.display = 'none';
     const def = DMM[cat] !== undefined ? DMM[cat] : 100;
-    let html = '';
+    let html = '<div class="alert alert-info py-1 px-2 small mb-2"><i class="bi bi-info-circle me-1"></i>Click <strong>- Omit</strong> if a subject was not conducted for this specific weekend exam.</div>';
     subjects.forEach(sub => {
-      html += `<div class="row g-2 align-items-center mb-2">
-        <div class="col-6 small">${sub}</div>
+      html += `<div class="row g-2 align-items-center mb-2 p-2 rounded border bg-white subject-row" id="sub_row_${sub.id}">
         <div class="col-6">
-          <input type="number" min="0" class="form-control form-control-sm"
-            name="subject_max_${sub}" value="${def}" required>
-        </div></div>`;
+          <div class="fw-bold sub-name-title">${sub.name}</div>
+          <span class="badge bg-danger-subtle text-danger border border-danger ex-badge" style="display:none; font-size:0.7rem;">Not Conducted This Exam</span>
+        </div>
+        <div class="col-4">
+          <input type="number" min="0" class="form-control form-control-sm subject-max-input"
+            name="subject_max_${sub.name}" value="${def}" required placeholder="Max Marks">
+        </div>
+        <div class="col-2 text-end">
+          <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2" title="Omit subject for this exam only"
+                  onclick="toggleSubjectExclude(this, '${sub.id}')">
+            <i class="bi bi-dash-circle me-1"></i>- Omit
+          </button>
+        </div>
+      </div>`;
     });
     document.getElementById('subjectMarksInputs').innerHTML = html;
     document.getElementById('subjectMarksDiv').style.display = subjects.length ? 'block' : 'none';
