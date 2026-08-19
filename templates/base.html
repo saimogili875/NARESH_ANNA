@@ -170,6 +170,9 @@
   </a>
 
   <div class="nav-label">System</div>
+  <a href="{% url 'login_logs' %}" class="nav-link {% if 'login_log' in request.resolver_match.url_name %}active{% endif %}">
+    <i class="bi bi-shield-lock"></i> Login Audit Logs
+  </a>
   <a href="/admin/accounts/academicyear/" class="nav-link">
     <i class="bi bi-calendar2-range"></i> Academic Year
   </a>

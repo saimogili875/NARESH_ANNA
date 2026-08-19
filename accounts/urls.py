@@ -16,10 +16,11 @@ urlpatterns = [
     path('sections/<int:pk>/edit/', views.section_edit, name='section_edit'),
     path('sections/<int:pk>/delete/', views.section_delete, name='section_delete'),
 
-    # Users
+    # Users & Logs
     path('users/', views.user_list, name='user_list'),
     path('users/add/', views.user_add, name='user_add'),
     path('users/<int:pk>/edit/', views.user_edit, name='user_edit'),
     path('users/<int:pk>/toggle/', views.user_toggle, name='user_toggle'),
     path('users/<int:pk>/reset-password/', views.user_reset_password, name='user_reset_password'),
+    path('login-logs/', views.login_logs_view, name='login_logs'),
 ]

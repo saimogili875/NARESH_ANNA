@@ -216,3 +216,34 @@ class ActivityLog(models.Model):
 
     def __str__(self):
         return f"{self.user.username}: {self.action} ({self.timestamp:%H:%M:%S})"
+
+
+# ---------------------------------------------------------------------------
+# Login Audit & Failed Attempt Log
+# ---------------------------------------------------------------------------
+
+class LoginLog(models.Model):
+    STATUS_SUCCESS = 'SUCCESS'
+    STATUS_FAILED = 'FAILED'
+    STATUS_BLOCKED = 'BLOCKED'
+    STATUS_CHOICES = [
+        (STATUS_SUCCESS, 'Success'),
+        (STATUS_FAILED, 'Failed'),
+        (STATUS_BLOCKED, 'Blocked'),
+    ]
+
+    username = models.CharField(max_length=150, help_text='Attempted username')
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='login_logs')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES)
+    failure_reason = models.CharField(max_length=255, blank=True, help_text='Reason for failure')
+    ip_address = models.GenericIPAddressField()
+    device_info = models.CharField(max_length=255, help_text='Parsed browser + OS from User-Agent')
+    user_agent_raw = models.TextField(blank=True)
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-timestamp']
+
+    def __str__(self):
+        return f"{self.username} — {self.status} ({self.timestamp:%d %b %Y %H:%M})"
+

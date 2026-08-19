@@ -1,0 +1,178 @@
+{% extends 'base.html' %}
+{% block title %}Login Audit & Security Logs{% endblock %}
+{% block page_title %}Login Audit & Security Logs{% endblock %}
+{% block content %}
+
+<!-- Top Stats Cards -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="stat-card" style="background:linear-gradient(135deg,#1a56db,#3b82f6)">
+      <i class="bi bi-shield-lock-fill"></i>
+      <div class="value">{{ logs|length }}</div>
+      <div class="label">Recent Login Logs</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card" style="background:linear-gradient(135deg,#059669,#10b981)">
+      <i class="bi bi-check-circle-fill"></i>
+      <div class="value">
+        {% with success_count=0 %}
+          {% for l in logs %}{% if l.status == 'SUCCESS' %}{{ forloop.counter0|add:1 }}{% endif %}{% endfor %}
+        {% endwith %}
+      </div>
+      <div class="label">Successful Logins</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card" style="background:linear-gradient(135deg,#dc2626,#ef4444)">
+      <i class="bi bi-exclamation-triangle-fill"></i>
+      <div class="value">
+        {% with fail_count=0 %}
+          {% for l in logs %}{% if l.status == 'FAILED' or l.status == 'BLOCKED' %}{{ forloop.counter0|add:1 }}{% endif %}{% endfor %}
+        {% endwith %}
+      </div>
+      <div class="label">Failed / Blocked</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card" style="background:linear-gradient(135deg,#d97706,#f59e0b)">
+      <i class="bi bi-lock-fill"></i>
+      <div class="value">{{ locked_attempts|length }}</div>
+      <div class="label">Axes Lockouts</div>
+    </div>
+  </div>
+</div>
+
+<!-- Axes Active Lockouts Section if any exist -->
+{% if locked_attempts %}
+<div class="card border-danger shadow-sm mb-4">
+  <div class="card-header bg-danger text-white py-2 fw-bold d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-shield-exclamation me-2"></i>Active Security Lockouts (Django Axes)</span>
+    <span class="badge bg-white text-danger">{{ locked_attempts|length }} Locked Out</span>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="bg-light">
+          <tr>
+            <th>Attempted Username</th>
+            <th>IP Address</th>
+            <th>Failed Count</th>
+            <th>Lockout Time</th>
+            <th class="text-end pe-3">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for attempt in locked_attempts %}
+          <tr>
+            <td class="fw-bold text-danger"><i class="bi bi-person-x me-1"></i>{{ attempt.username|default:"Unknown" }}</td>
+            <td><code>{{ attempt.ip_address }}</code></td>
+            <td><span class="badge bg-danger">{{ attempt.failures_since_start }} failures</span></td>
+            <td class="small text-muted">{{ attempt.attempt_time|date:"d M Y, h:i A" }}</td>
+            <td class="text-end pe-3">
+              <form method="post" class="d-inline" onsubmit="return confirm('Clear lockout for {{ attempt.username }}?');">
+                {% csrf_token %}
+                <input type="hidden" name="reset_axes" value="1">
+                <input type="hidden" name="attempt_id" value="{{ attempt.pk }}">
+                <button type="submit" class="btn btn-sm btn-outline-success py-0 px-2" title="Unlock User Access">
+                  <i class="bi bi-unlock-fill me-1"></i>Unlock Access
+                </button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Main Filter Card -->
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-body py-2">
+    <form method="get" class="row g-2 align-items-center">
+      <div class="col-md-5">
+        <input type="text" name="q" value="{{ q }}" class="form-control form-control-sm" placeholder="Search by username, IP address, or browser/device...">
+      </div>
+      <div class="col-md-3">
+        <select name="status" class="form-select form-select-sm">
+          <option value="">All Statuses (Success & Failed)</option>
+          <option value="SUCCESS" {% if status_filter == 'SUCCESS' %}selected{% endif %}>Success Only</option>
+          <option value="FAILED" {% if status_filter == 'FAILED' %}selected{% endif %}>Failed Attempts Only</option>
+          <option value="BLOCKED" {% if status_filter == 'BLOCKED' %}selected{% endif %}>Blocked Accounts</option>
+        </select>
+      </div>
+      <div class="col-auto">
+        <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-funnel"></i> Filter</button>
+        <a href="{% url 'login_logs' %}" class="btn btn-outline-secondary btn-sm">Clear</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Login Attempt Audit Table -->
+<div class="card border-0 shadow-sm">
+  <div class="card-header bg-white py-3 fw-bold border-0">
+    <i class="bi bi-list-check me-2 text-primary"></i>Login Attempt Logs (Recent 200)
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="bg-light">
+          <tr>
+            <th>Date & Time</th>
+            <th>Attempted Username</th>
+            <th>Status</th>
+            <th>Failure Reason / Note</th>
+            <th>IP Address</th>
+            <th>Device & Browser</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for log in logs %}
+          <tr>
+            <td class="small text-muted" style="white-space:nowrap">{{ log.timestamp|date:"d M Y, h:i:s A" }}</td>
+            <td>
+              <span class="fw-bold">{{ log.username }}</span>
+              {% if log.user %}
+              <div class="small text-muted">{{ log.user.get_role_display }}</div>
+              {% endif %}
+            </td>
+            <td>
+              {% if log.status == 'SUCCESS' %}
+              <span class="badge bg-success-subtle text-success border border-success">
+                <i class="bi bi-check-circle-fill me-1"></i> Success
+              </span>
+              {% elif log.status == 'BLOCKED' %}
+              <span class="badge bg-dark text-white border border-dark">
+                <i class="bi bi-slash-circle-fill me-1"></i> Blocked
+              </span>
+              {% else %}
+              <span class="badge bg-danger-subtle text-danger border border-danger">
+                <i class="bi bi-x-circle-fill me-1"></i> Failed
+              </span>
+              {% endif %}
+            </td>
+            <td class="small">
+              {% if log.failure_reason %}
+              <span class="text-danger fw-500"><i class="bi bi-info-circle me-1"></i>{{ log.failure_reason }}</span>
+              {% else %}
+              <span class="text-success small">Successful Login</span>
+              {% endif %}
+            </td>
+            <td><code>{{ log.ip_address }}</code></td>
+            <td class="small text-muted" title="{{ log.user_agent_raw }}">{{ log.device_info }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="6" class="text-center text-muted py-4">No login attempt logs found matching criteria.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

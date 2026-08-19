@@ -5,7 +5,7 @@ from django.contrib import messages
 from accounts.decorators import admin_required, all_roles_required, superuser_required
 from django.utils import timezone
 from django.db.models import Sum, Count, Q
-from .models import User, Group, Section, AcademicYear, LoginSession, parse_user_agent, get_client_ip
+from .models import User, Group, Section, AcademicYear, LoginSession, LoginLog, parse_user_agent, get_client_ip
 from .forms import LoginForm, UserForm, GroupForm, SectionForm, AcademicYearForm
 from students.models import Student
 from fees.models import FeePayment, StudentFee
@@ -117,10 +117,17 @@ def login_view(request):
     form = LoginForm(request.POST or None)
 
     if request.method == 'POST':
-        username = request.POST.get('username', '')
+        username = request.POST.get('username', '').strip()
+        ip_addr = get_client_ip(request)
+        ua_raw = request.META.get('HTTP_USER_AGENT', '')
+        device_str = parse_user_agent(ua_raw)
 
         # Reject autofilled submissions (JS sets human_typed=true on real keystrokes)
         if request.POST.get('human_typed') != 'true':
+            LoginLog.objects.create(
+                username=username, status='FAILED', failure_reason='Autofill rejected (manual typing required)',
+                ip_address=ip_addr, device_info=device_str, user_agent_raw=ua_raw
+            )
             messages.error(request, 'Please type your credentials manually. Autofill is not allowed.')
             return render(request, 'accounts/login.html', {'form': LoginForm()})
 
@@ -133,6 +140,11 @@ def login_view(request):
                 msg = 'Your account has been blocked by admin. Contact admin for more details.'
                 if target_user.blocked_reason:
                     msg += f' Reason: {target_user.blocked_reason}'
+                LoginLog.objects.create(
+                    username=username, user=target_user, status='BLOCKED',
+                    failure_reason=f'Account blocked by admin ({target_user.blocked_reason or "No reason specified"})',
+                    ip_address=ip_addr, device_info=device_str, user_agent_raw=ua_raw
+                )
                 messages.error(request, msg)
                 return render(request, 'accounts/login.html', {'form': LoginForm()})
         except User.DoesNotExist:
@@ -142,6 +154,10 @@ def login_view(request):
         from axes.helpers import get_client_ip_address
         from axes.handlers.proxy import AxesProxyHandler
         if not is_admin_attempt and AxesProxyHandler.is_locked(request, credentials={'username': username}):
+            LoginLog.objects.create(
+                username=username, status='FAILED', failure_reason='Locked out due to repeated failed attempts',
+                ip_address=ip_addr, device_info=device_str, user_agent_raw=ua_raw
+            )
             messages.error(request, get_cooloff_message(request, username))
             return render(request, 'accounts/login.html', {'form': LoginForm()})
 
@@ -159,6 +175,10 @@ def login_view(request):
                     credentials={'username': username},
                     request=request,
                 )
+            LoginLog.objects.create(
+                username=username, status='FAILED', failure_reason='reCAPTCHA or form validation failed',
+                ip_address=ip_addr, device_info=device_str, user_agent_raw=ua_raw
+            )
             # Re-check lockout after this failure
             if not is_admin_attempt and AxesProxyHandler.is_locked(request, credentials={'username': username}):
                 messages.error(request, get_cooloff_message(request, username))
@@ -169,26 +189,67 @@ def login_view(request):
                                 password=form.cleaned_data['password'])
             if user:
                 login(request, user)
-                # --- Create LoginSession ---
-                ua_raw = request.META.get('HTTP_USER_AGENT', '')
+                # --- Create LoginSession & LoginLog ---
                 session_obj = LoginSession.objects.create(
                     user=user,
-                    ip_address=get_client_ip(request),
-                    device_info=parse_user_agent(ua_raw),
+                    ip_address=ip_addr,
+                    device_info=device_str,
                     user_agent_raw=ua_raw,
                     login_role=user.role,
+                )
+                LoginLog.objects.create(
+                    username=user.username, user=user, status='SUCCESS', failure_reason='',
+                    ip_address=ip_addr, device_info=device_str, user_agent_raw=ua_raw
                 )
                 request.session['login_session_id'] = session_obj.pk
                 if user.role == 'faculty':
                     return redirect('/attendance/')
                 return redirect('dashboard')
             else:
-                # authenticate() failed — axes already recorded the failure via signal
+                target_user = User.objects.filter(username=form.cleaned_data['username']).first()
+                reason = 'Invalid password' if target_user else 'Username does not exist'
+                LoginLog.objects.create(
+                    username=form.cleaned_data['username'], user=target_user, status='FAILED', failure_reason=reason,
+                    ip_address=ip_addr, device_info=device_str, user_agent_raw=ua_raw
+                )
                 if not is_admin_attempt and AxesProxyHandler.is_locked(request, credentials={'username': form.cleaned_data['username']}):
                     messages.error(request, get_cooloff_message(request, form.cleaned_data['username']))
                     return render(request, 'accounts/login.html', {'form': LoginForm()})
                 messages.error(request, 'Invalid username or password.')
     return render(request, 'accounts/login.html', {'form': form})
+
+
+@admin_required
+def login_logs_view(request):
+    """View to monitor successful and failed login attempts with search and filter."""
+    from axes.models import AccessAttempt
+
+    status_filter = request.GET.get('status', '').upper().strip()
+    q = request.GET.get('q', '').strip()
+
+    if request.method == 'POST' and 'reset_axes' in request.POST:
+        attempt_id = request.POST.get('attempt_id')
+        if attempt_id:
+            AccessAttempt.objects.filter(pk=attempt_id).delete()
+            messages.success(request, 'Lockout attempt cleared successfully.')
+            return redirect('login_logs')
+
+    logs = LoginLog.objects.select_related('user').all()
+    if status_filter:
+        logs = logs.filter(status=status_filter)
+    if q:
+        logs = logs.filter(
+            Q(username__icontains=q) | Q(ip_address__icontains=q) | Q(device_info__icontains=q)
+        )
+
+    locked_attempts = AccessAttempt.objects.all().order_by('-attempt_time')
+
+    return render(request, 'accounts/login_logs.html', {
+        'logs': logs[:200],
+        'status_filter': status_filter,
+        'q': q,
+        'locked_attempts': locked_attempts,
+    })
 
 
 def logout_view(request):
