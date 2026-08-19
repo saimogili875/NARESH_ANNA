@@ -281,6 +281,38 @@ class SubjectAllotmentTestCase(TestCase):
         self.assertTrue(lock2.is_locked)
         self.assertEqual(lock1.locked_by, self.admin_user)
 
+    def test_exam_edit_and_delete(self):
+        # Test editing exam date and max marks
+        edit_url = reverse('exam_edit', args=[self.exam.id])
+        res_edit = self.client.post(edit_url, {
+            'date': '2026-09-15',
+            f'subject_max_{self.subject1.name}': '100',
+            f'subject_max_{self.subject2.name}': '100',
+        })
+        self.assertEqual(res_edit.status_code, 302)
+        self.exam.refresh_from_db()
+        self.assertEqual(str(self.exam.date), '2026-09-15')
+
+        # Test deleting exam
+        delete_url = reverse('exam_delete', args=[self.exam.id])
+        res_del = self.client.get(delete_url)
+        self.assertEqual(res_del.status_code, 302)
+        self.assertFalse(Exam.objects.filter(pk=self.exam.id).exists())
+
+    def test_whatsapp_resend_allowed(self):
+        from accounts.models import Section
+        from marks.models import MarksWhatsAppSendLog
+        section = Section.objects.create(group=self.group, year="1", name="WA-1", academic_year=self.year)
+        
+        # Mark as sent initially
+        MarksWhatsAppSendLog.objects.create(exam=self.exam, section=section, sent_by=self.admin_user, student_count=1)
+
+        wa_url = reverse('marks_whatsapp_send', args=[self.exam.id])
+        res_get = self.client.get(wa_url)
+        self.assertEqual(res_get.status_code, 200)
+        self.assertContains(res_get, 'Sent (Click to Resend)')
+
+
 
 
 

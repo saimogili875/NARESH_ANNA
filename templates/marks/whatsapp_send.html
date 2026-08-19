@@ -44,7 +44,7 @@
       <span class="fw-bold">Section Progress Checklist</span>
       {% if ready_sections_count > 0 %}
       <button type="submit" class="btn btn-success btn-sm fw-semibold">
-        <i class="bi bi-send me-1"></i> Send Selected Sections on WhatsApp
+        <i class="bi bi-send me-1"></i> Send / Resend Selected Sections on WhatsApp
       </button>
       {% endif %}
     </div>
@@ -66,10 +66,10 @@
             {% for item in statuses %}
             <tr>
               <td class="text-center">
-                {% if item.is_complete and not item.is_sent %}
+                {% if item.is_complete %}
                 <input type="checkbox" name="selected_sections" value="{{ item.section.pk }}" class="form-check-input section-checkbox">
                 {% else %}
-                <input type="checkbox" class="form-check-input" disabled>
+                <input type="checkbox" class="form-check-input" disabled title="Complete marks entry to send WhatsApp">
                 {% endif %}
               </td>
               <td>
@@ -90,7 +90,7 @@
               <td>
                 {% if item.is_sent %}
                 <span class="badge bg-success-subtle text-success-emphasis border border-success">
-                  <i class="bi bi-check-circle-fill me-1"></i> Sent
+                  <i class="bi bi-check-circle-fill me-1"></i> Sent (Click to Resend)
                 </span>
                 {% elif item.is_complete %}
                 <span class="badge bg-primary-subtle text-primary-emphasis border border-primary">
@@ -125,7 +125,7 @@
     {% if ready_sections_count > 0 %}
     <div class="card-footer bg-white py-3 text-end">
       <button type="submit" class="btn btn-success">
-        <i class="bi bi-send me-1"></i> Send Selected Sections on WhatsApp
+        <i class="bi bi-send me-1"></i> Send / Resend Selected Sections on WhatsApp
       </button>
     </div>
     {% endif %}

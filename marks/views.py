@@ -171,6 +171,62 @@ def exam_add(request):
         'fixed_subject_max_marks': {str(c.id): {} for c in categories_qs if c.is_fixed_marks},
     })
 
+
+@admin_faculty_required
+def exam_edit(request, exam_id):
+    active_year = AcademicYear.objects.filter(is_active=True).first()
+    exam = get_object_or_404(Exam, pk=exam_id)
+    subjects = get_subjects_for_exam(exam)
+
+    if request.method == 'POST':
+        custom_name = request.POST.get('custom_name', '').strip()
+        exam_date = request.POST.get('date')
+
+        if exam.exam_type.name.lower() == 'custom' and custom_name:
+            exam.custom_name = custom_name
+        if exam_date:
+            exam.date = exam_date
+
+        if not exam.category.is_fixed_marks and subjects:
+            subject_max_inputs = {}
+            for subject in subjects:
+                val = request.POST.get(f'subject_max_{subject.name}', '').strip()
+                try:
+                    subject_max_inputs[subject] = int(val) if val else 100
+                except (TypeError, ValueError):
+                    subject_max_inputs[subject] = 100
+
+                ExamSubjectMaxMark.objects.update_or_create(
+                    exam=exam, subject=subject, defaults={'max_marks': subject_max_inputs[subject]}
+                )
+            exam.max_marks = sum(subject_max_inputs.values()) or 100
+
+        exam.save()
+        messages.success(request, f"Exam '{exam.display_name()}' updated successfully.")
+        return redirect('exam_list')
+
+    existing_max_marks = {
+        m.subject_id: m.max_marks
+        for m in ExamSubjectMaxMark.objects.filter(exam=exam)
+    }
+
+    return render(request, 'marks/exam_edit.html', {
+        'exam': exam,
+        'active_year': active_year,
+        'subjects': subjects,
+        'existing_max_marks': existing_max_marks,
+    })
+
+
+@admin_required
+def exam_delete(request, exam_id):
+    exam = get_object_or_404(Exam, pk=exam_id)
+    name = exam.display_name()
+    exam.delete()
+    messages.success(request, f"Exam '{name}' and all associated marks have been deleted.")
+    return redirect('exam_list')
+
+
 @admin_required
 def marks_entry_unlock(request, exam_id, section_id, subject_id):
     exam = get_object_or_404(Exam, pk=exam_id)
@@ -276,7 +332,7 @@ def marks_whatsapp_send(request, exam_id):
 
     total_sections = len(statuses)
     sent_sections_count = sum(1 for s in statuses if s['is_sent'])
-    ready_sections_count = sum(1 for s in statuses if s['is_complete'] and not s['is_sent'])
+    ready_sections_count = sum(1 for s in statuses if s['is_complete'])
     pending_marks_count = sum(1 for s in statuses if not s['is_complete'])
 
     if request.method == 'POST':
@@ -290,11 +346,11 @@ def marks_whatsapp_send(request, exam_id):
         target_statuses = []
         for sid in selected_section_ids:
             status = sec_map.get(str(sid))
-            if status and status['is_complete'] and not status['is_sent']:
+            if status and status['is_complete']:
                 target_statuses.append(status)
 
         if not target_statuses:
-            messages.warning(request, 'Selected section(s) are either incomplete or already sent.')
+            messages.warning(request, 'Selected section(s) are incomplete. Please complete marks entry first.')
             return redirect(f'/marks/exam/{exam_id}/whatsapp/send/')
 
         subjects = get_subjects_for_exam(exam)
@@ -378,11 +434,13 @@ def marks_whatsapp_send(request, exam_id):
                 sec_message_count += 1
                 total_queued_messages += 1
 
-            MarksWhatsAppSendLog.objects.create(
+            MarksWhatsAppSendLog.objects.update_or_create(
                 exam=exam,
                 section=sec,
-                sent_by=request.user,
-                student_count=sec_message_count,
+                defaults={
+                    'sent_by': request.user,
+                    'student_count': sec_message_count,
+                }
             )
             sent_section_names.append(str(sec))
 

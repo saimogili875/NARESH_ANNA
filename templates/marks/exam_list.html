@@ -60,13 +60,23 @@
               </div>
               <div class="d-flex gap-1 ms-2 flex-shrink-0">
                 <a href="{% url 'marks_entry' exam.pk %}"
-                   class="btn btn-sm btn-primary" title="Enter / Edit Marks">
-                  <i class="bi bi-pencil"></i>
+                   class="btn btn-sm btn-primary" title="Enter / Edit Student Marks">
+                  <i class="bi bi-pencil-square"></i>
+                </a>
+                <a href="{% url 'exam_edit' exam.pk %}"
+                   class="btn btn-sm btn-outline-secondary" title="Edit Exam Details">
+                  <i class="bi bi-gear"></i>
                 </a>
                 {% if request.user.role == 'admin' or request.user.is_superuser %}
                 <a href="{% url 'marks_whatsapp_send' exam.pk %}"
-                   class="btn btn-sm btn-outline-success" title="Send Marks on WhatsApp">
+                   class="btn btn-sm btn-outline-success" title="Send / Resend Marks on WhatsApp">
                   <i class="bi bi-whatsapp"></i>
+                </a>
+                <a href="{% url 'exam_delete' exam.pk %}"
+                   class="btn btn-sm btn-outline-danger"
+                   onclick="return confirm('Are you sure you want to delete exam {{ exam.display_name }}? All student marks for this exam will be permanently deleted.');"
+                   title="Delete Exam">
+                  <i class="bi bi-trash"></i>
                 </a>
                 {% endif %}
               </div>
