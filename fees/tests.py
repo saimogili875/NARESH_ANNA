@@ -109,3 +109,19 @@ class FeeManagementFeaturesTest(TestCase):
         response = self.client.get(reverse('fee_list') + '?status=paid')
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, self.student.name)
+
+    def test_receipt_pdf_generation(self):
+        sf = StudentFee.objects.create(student=self.student, academic_year=self.year, total_fee=10000)
+        p1 = FeePayment.objects.create(student_fee=sf, amount=5000, payment_date=timezone.localdate(), receipt_number='RCP1001')
+        
+        fee_type = FeeType.objects.create(name='Books Fee', academic_year=self.year)
+        charge = StudentFeeCharge.objects.create(student=self.student, fee_type=fee_type, amount_assigned=2000)
+        p2 = FeePayment.objects.create(fee_charge=charge, amount=2000, payment_date=timezone.localdate(), receipt_number='RCP1002')
+
+        res1 = self.client.get(reverse('receipt_download', args=[self.student.pk, p1.pk]))
+        self.assertEqual(res1.status_code, 200)
+        self.assertEqual(res1['Content-Type'], 'application/pdf')
+
+        res2 = self.client.get(reverse('receipt_download', args=[self.student.pk, p2.pk]))
+        self.assertEqual(res2.status_code, 200)
+        self.assertEqual(res2['Content-Type'], 'application/pdf')

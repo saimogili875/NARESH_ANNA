@@ -51,8 +51,18 @@ def generate_receipt_pdf(payment):
     Features modern horizontal layout (Student Information first), ending with a scissor cut line.
     Returns raw PDF bytes.
     """
-    student = payment.student_fee.student
-    student_fee = payment.student_fee
+    if payment.student_fee:
+        student = payment.student_fee.student
+        academic_year = str(payment.student_fee.academic_year)
+        fee_head_name = "Tuition Fee"
+    elif payment.fee_charge:
+        student = payment.fee_charge.student
+        academic_year = str(payment.fee_charge.fee_type.academic_year)
+        fee_head_name = payment.fee_charge.fee_type.name
+    else:
+        student = None
+        academic_year = "-"
+        fee_head_name = "Fee Payment"
 
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(
@@ -179,10 +189,10 @@ def generate_receipt_pdf(payment):
         sec_heading("Student Information", 94 * mm),
         Spacer(1, 1),
         key_val_table([
-            ("Student Name", f"<b>{student.name}</b>"),
-            ("Father's Name", student.father_name),
-            ("Admission No.", student.admission_number),
-            ("Section", str(student.section) if student.section else "-"),
+            ("Student Name", f"<b>{student.name if student else '-'}</b>"),
+            ("Father's Name", student.father_name if student else "-"),
+            ("Admission No.", student.admission_number if student else "-"),
+            ("Section", str(student.section) if student and student.section else "-"),
         ], 94 * mm),
         Spacer(1, 3),
         sec_heading("Receipt & Academic Details", 94 * mm),
@@ -190,7 +200,7 @@ def generate_receipt_pdf(payment):
         key_val_table([
             ("Receipt No.", f"<b>{payment.receipt_number}</b>"),
             ("Receipt Date", payment.payment_date.strftime('%d-%b-%Y')),
-            ("Academic Year", str(student_fee.academic_year)),
+            ("Academic Year", academic_year),
         ], 94 * mm),
     ]
 
@@ -199,6 +209,7 @@ def generate_receipt_pdf(payment):
         sec_heading("Payment Information", 94 * mm),
         Spacer(1, 1),
         key_val_table([
+            ("Fee Head", f"<b>{fee_head_name}</b>"),
             ("Amount Paid", f"<b>Rs. {payment.amount:,.2f}</b>"),
             ("Payment Mode", payment.get_payment_mode_display()),
         ], 94 * mm),
