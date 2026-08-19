@@ -536,7 +536,6 @@
 function dismissThemeBanner() {
   const banner = document.getElementById('darkModeNoticeBanner');
   if (banner) banner.style.display = 'none';
-  localStorage.setItem('srinri_theme_banner_dismissed', 'true');
 }
 
 function toggleDarkMode() {
@@ -574,14 +573,15 @@ function updateThemeUI(isDark) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
+  // Clear any past permanent dismissal key so banner always appears on refresh
+  localStorage.removeItem('srinri_theme_banner_dismissed');
+
   const isDark = document.documentElement.classList.contains('dark-mode');
   if (isDark) document.body.classList.add('dark-mode');
   updateThemeUI(isDark);
 
-  if (localStorage.getItem('srinri_theme_banner_dismissed') === 'true') {
-    const banner = document.getElementById('darkModeNoticeBanner');
-    if (banner) banner.style.display = 'none';
-  }
+  const banner = document.getElementById('darkModeNoticeBanner');
+  if (banner) banner.style.display = 'flex';
 });
 </script>
 </body>
