@@ -7,6 +7,15 @@
 <title>{% block title %}Sri NRI Junior College{% endblock %}</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+<script>
+  (function() {
+    const savedTheme = localStorage.getItem('srinri_theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    if (savedTheme === 'dark') {
+      document.documentElement.classList.add('dark-mode');
+      document.documentElement.setAttribute('data-bs-theme', 'dark');
+    }
+  })();
+</script>
 <style>
   :root {
     --sidebar-width: 240px;
@@ -19,7 +28,7 @@
     --sidebar-text: #334155;
     --sidebar-active: #FF6A1F;
   }
-  body { background: #F8FAFC; color: #0F172A; font-family: 'Inter', 'Segoe UI', sans-serif; }
+  body { background: #F8FAFC; color: #0F172A; font-family: 'Inter', 'Segoe UI', sans-serif; transition: background-color 0.2s, color 0.2s; }
 
   /* Sidebar */
   #sidebar {
@@ -30,7 +39,7 @@
     top: 0; left: 0;
     overflow-y: auto;
     z-index: 1000;
-    transition: width 0.2s;
+    transition: width 0.2s, background-color 0.2s, border-color 0.2s;
     border-right: 1px solid #E2E8F0;
     box-shadow: 2px 0 10px rgba(0,0,0,0.03);
   }
@@ -84,6 +93,7 @@
     padding: .75rem 1.5rem;
     display: flex; align-items: center; justify-content: space-between;
     position: sticky; top: 0; z-index: 100;
+    transition: background-color 0.2s, border-color 0.2s;
   }
   .page-content { padding: 1.5rem; }
 
@@ -115,6 +125,88 @@
 
   /* Alerts */
   .messages { position: fixed; top: 70px; right: 1rem; z-index: 9999; min-width: 300px; }
+
+  /* --- Dark Mode Styling Overrides --- */
+  body.dark-mode, html.dark-mode {
+    background-color: #0F172A !important;
+    color: #F8FAFC !important;
+  }
+  .dark-mode #sidebar {
+    background: #1E293B !important;
+    border-right-color: #334155 !important;
+  }
+  .dark-mode #sidebar .brand {
+    color: #F8FAFC !important;
+    border-bottom-color: #334155 !important;
+  }
+  .dark-mode #sidebar .nav-label {
+    color: #94A3B8 !important;
+  }
+  .dark-mode #sidebar .nav-link {
+    color: #CBD5E1 !important;
+  }
+  .dark-mode #sidebar .nav-link i {
+    color: #94A3B8 !important;
+  }
+  .dark-mode #sidebar .nav-link:hover {
+    background: #334155 !important;
+    color: #FFFFFF !important;
+  }
+  .dark-mode #sidebar .nav-link.active {
+    background: #FF6A1F !important;
+    color: #FFFFFF !important;
+  }
+  .dark-mode .topbar {
+    background: #1E293B !important;
+    border-bottom-color: #334155 !important;
+    color: #F8FAFC !important;
+  }
+  .dark-mode .card,
+  .dark-mode .summary-card,
+  .dark-mode .group-card {
+    background-color: #1E293B !important;
+    border-color: #334155 !important;
+    color: #F8FAFC !important;
+  }
+  .dark-mode .table {
+    color: #F8FAFC !important;
+    --bs-table-bg: #1E293B;
+    --bs-table-color: #F8FAFC;
+    border-color: #334155 !important;
+  }
+  .dark-mode .table th {
+    color: #38BDF8 !important;
+    background-color: #0F172A !important;
+    border-bottom-color: #334155 !important;
+  }
+  .dark-mode .table-hover tbody tr:hover {
+    background-color: #334155 !important;
+    color: #FFFFFF !important;
+  }
+  .dark-mode .form-control,
+  .dark-mode .form-select {
+    background-color: #0F172A !important;
+    color: #F8FAFC !important;
+    border-color: #475569 !important;
+  }
+  .dark-mode .form-control:focus,
+  .dark-mode .form-select:focus {
+    border-color: #FF6A1F !important;
+    box-shadow: 0 0 0 0.25rem rgba(255,106,31,0.25) !important;
+  }
+  .dark-mode .text-muted,
+  .dark-mode .text-secondary {
+    color: #94A3B8 !important;
+  }
+  .dark-mode .bg-light,
+  .dark-mode .bg-white {
+    background-color: #1E293B !important;
+  }
+  .dark-mode .modal-content {
+    background-color: #1E293B !important;
+    color: #F8FAFC !important;
+    border-color: #334155 !important;
+  }
 </style>
 </head>
 <body>
@@ -198,6 +290,11 @@
       <h6 class="mb-0 fw-600">{% block page_title %}Dashboard{% endblock %}</h6>
     </div>
     <div class="d-flex align-items-center gap-3">
+      <button type="button" id="themeToggleBtn" onclick="toggleDarkMode()"
+              class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1 py-1 px-2" title="Toggle Dark / Light Mode">
+        <i class="bi bi-moon-stars-fill" id="themeIcon"></i>
+        <span id="themeLabel" class="small fw-semibold">Dark Mode</span>
+      </button>
       <span class="text-muted small">{{ user.get_full_name|default:user.username }}</span>
       <span class="badge bg-primary">{{ user.get_role_display }}</span>
     </div>
@@ -227,6 +324,40 @@
   var btn = document.getElementById('backBtn');
   if(btn && window.history.length <= 1) btn.style.display='none';
 })();
+
+function toggleDarkMode() {
+  const isDark = document.documentElement.classList.toggle('dark-mode');
+  document.body.classList.toggle('dark-mode', isDark);
+  if (isDark) {
+    document.documentElement.setAttribute('data-bs-theme', 'dark');
+    localStorage.setItem('srinri_theme', 'dark');
+  } else {
+    document.documentElement.setAttribute('data-bs-theme', 'light');
+    localStorage.setItem('srinri_theme', 'light');
+  }
+  updateThemeUI(isDark);
+}
+
+function updateThemeUI(isDark) {
+  const icon = document.getElementById('themeIcon');
+  const label = document.getElementById('themeLabel');
+  if (icon && label) {
+    if (isDark) {
+      icon.className = 'bi bi-sun-fill text-warning';
+      label.textContent = 'Light Mode';
+    } else {
+      icon.className = 'bi bi-moon-stars-fill text-primary';
+      label.textContent = 'Dark Mode';
+    }
+  }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  const isDark = document.documentElement.classList.contains('dark-mode');
+  if (isDark) document.body.classList.add('dark-mode');
+  updateThemeUI(isDark);
+});
 </script>
 </body>
 </html>
+
