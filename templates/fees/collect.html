@@ -45,9 +45,11 @@
       <div class="mb-3">
         <label class="form-label fw-500">Fee Head <span class="text-danger">*</span></label>
         <select name="fee_head" id="feeHeadSelect" class="form-select form-select-lg" required onchange="updateMaxAmount()">
+          {% if student_fee.total_pending > 0 or not other_charges %}
           <option value="tuition" data-pending="{{ student_fee.total_pending|stringformat:'f' }}">
             Tuition Fee (Pending: ₹{{ student_fee.total_pending|floatformat:0 }})
           </option>
+          {% endif %}
           {% for charge in other_charges %}
           <option value="{{ charge.pk }}" data-pending="{{ charge.total_pending|stringformat:'f' }}">
             {{ charge.fee_type.name }} (Pending: ₹{{ charge.total_pending|floatformat:0 }})
@@ -59,7 +61,7 @@
         <label class="form-label fw-500">Amount (₹) <span class="text-danger">*</span></label>
         <input type="number" name="amount" id="amountInput" class="form-control form-control-lg"
           min="1" step="1" required
-          value="{{ student_fee.total_pending|floatformat:0 }}"
+          value="{% if student_fee.total_pending > 0 %}{{ student_fee.total_pending|floatformat:0 }}{% elif other_charges %}{{ other_charges.0.total_pending|floatformat:0 }}{% else %}0{% endif %}"
           placeholder="Enter amount">
       </div>
       <div class="row g-3 mb-3">

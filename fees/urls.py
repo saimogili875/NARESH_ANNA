@@ -11,6 +11,10 @@ urlpatterns = [
     path('student/<int:pk>/', views.fee_detail, name='fee_detail'),
     path('student/<int:pk>/set/', views.fee_set, name='fee_set'),
     path('student/<int:pk>/collect/', views.fee_collect, name='fee_collect'),
+    path('student/<int:pk>/adjust/', views.payment_adjust, name='payment_adjust'),
+    path('student/<int:pk>/charge/<int:charge_id>/set/', views.fee_charge_set, name='fee_charge_set'),
+    path('student/<int:pk>/payment/<int:payment_id>/edit/', views.payment_edit, name='payment_edit'),
+    path('student/<int:pk>/payment/<int:payment_id>/delete/', views.payment_delete, name='payment_delete'),
     path('student/<int:pk>/receipt/<int:payment_id>/', views.receipt_download, name='receipt_download'),
     path('student/<int:pk>/receipt/<int:payment_id>/send-whatsapp/', views.receipt_send_whatsapp, name='receipt_send_whatsapp'),
 ]

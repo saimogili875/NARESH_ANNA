@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block title %}Delete Payment — {{ student.name }}{% endblock %}
+{% block page_title %}Delete Payment Record{% endblock %}
+{% block content %}
+<div class="card border-0 shadow-sm" style="max-width:500px">
+  <div class="card-body p-4 text-center">
+    <div class="text-danger mb-3" style="font-size:3rem">
+      <i class="bi bi-exclamation-triangle-fill"></i>
+    </div>
+    <h5 class="fw-bold mb-2">Delete Receipt #{{ payment.receipt_number }}?</h5>
+    <p class="text-muted small mb-4">
+      Are you sure you want to delete the payment of <strong>₹{{ payment.amount|floatformat:0 }}</strong> collected on 
+      <strong>{{ payment.payment_date|date:"d M Y" }}</strong> for <strong>{{ student.name }}</strong>?
+      This action will revert the paid balance and increase the pending amount.
+    </p>
+
+    <form method="post" class="d-flex justify-content-center gap-2">
+      {% csrf_token %}
+      <a href="{% url 'fee_detail' student.pk %}" class="btn btn-light px-4">Cancel</a>
+      <button type="submit" class="btn btn-danger px-4">
+        <i class="bi bi-trash me-1"></i> Yes, Delete Payment
+      </button>
+    </form>
+  </div>
+</div>
+{% endblock %}

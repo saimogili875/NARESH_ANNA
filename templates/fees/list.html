@@ -42,10 +42,10 @@
       </div>
       <div class="col-md-3">
         <select name="status" class="form-select form-select-sm">
-          <option value="">All Status</option>
-          <option value="paid" {% if status_filter == 'paid' %}selected{% endif %}>Paid</option>
-          <option value="partial" {% if status_filter == 'partial' %}selected{% endif %}>Partial</option>
-          <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending</option>
+          <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending Fees (Outstanding)</option>
+          <option value="partial" {% if status_filter == 'partial' %}selected{% endif %}>Partial Paid</option>
+          <option value="paid" {% if status_filter == 'paid' %}selected{% endif %}>Fully Paid</option>
+          <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All Fees (Include Fully Paid)</option>
         </select>
       </div>
       <div class="col-auto">

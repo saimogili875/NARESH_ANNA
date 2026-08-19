@@ -1,0 +1,111 @@
+from django.test import TestCase, Client
+from django.urls import reverse
+from django.utils import timezone
+from accounts.models import User, AcademicYear, Group, Section
+from students.models import Student
+from fees.models import StudentFee, FeePayment, FeeType, StudentFeeCharge
+
+
+class FeeManagementFeaturesTest(TestCase):
+    def setUp(self):
+        self.year = AcademicYear.objects.create(
+            name='2026-2027', start_date='2026-06-01', end_date='2027-05-31', is_active=True
+        )
+        self.admin = User.objects.create_user(username='admin_user', password='password123', role='admin')
+        self.group = Group.objects.create(name='MPC', code='MPC', academic_year=self.year)
+        self.section = Section.objects.create(group=self.group, year='1', name='A', academic_year=self.year)
+        self.student = Student.objects.create(
+            name='Test Student',
+            admission_number='2026001',
+            section=self.section,
+            academic_year=self.year
+        )
+        self.client = Client()
+        self.client.force_login(self.admin)
+
+    def test_fee_set_and_adjustment(self):
+        # Set total tuition fee
+        response = self.client.post(reverse('fee_set', args=[self.student.pk]), {'total_fee': '50000'})
+        self.assertEqual(response.status_code, 302)
+        sf = StudentFee.objects.get(student=self.student, academic_year=self.year)
+        self.assertEqual(sf.total_fee, 50000)
+
+        # Collect initial payment
+        response = self.client.post(reverse('fee_collect', args=[self.student.pk]), {
+            'fee_head': 'tuition',
+            'amount': '10000',
+            'payment_mode': 'cash',
+            'remarks': 'First installment'
+        })
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(sf.total_paid, 10000)
+        self.assertEqual(sf.total_pending, 40000)
+
+        # Edit payment
+        payment = sf.payments.first()
+        response = self.client.post(reverse('payment_edit', args=[self.student.pk, payment.pk]), {
+            'amount': '15000',
+            'payment_mode': 'upi',
+            'remarks': 'Corrected payment amount'
+        })
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(sf.total_paid, 15000)
+
+        # Add payment adjustment
+        response = self.client.post(reverse('payment_adjust', args=[self.student.pk]), {
+            'fee_head': 'tuition',
+            'amount': '5000',
+            'remarks': 'Manual correction by admin'
+        })
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(sf.total_paid, 20000)
+
+        # Delete payment
+        response = self.client.post(reverse('payment_delete', args=[self.student.pk, payment.pk]))
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(sf.total_paid, 5000)
+
+    def test_fee_type_assign_individual_and_partial_payment(self):
+        fee_type = FeeType.objects.create(name='Bus Fee', academic_year=self.year)
+        response = self.client.post(reverse('fee_type_assign_individual', args=[fee_type.pk]), {
+            'student_ids': [self.student.pk],
+            f'amount_{self.student.pk}': '6000',
+            f'pay_{self.student.pk}': '2000'
+        })
+        self.assertEqual(response.status_code, 302)
+
+        charge = StudentFeeCharge.objects.get(student=self.student, fee_type=fee_type)
+        self.assertEqual(charge.amount_assigned, 6000)
+        self.assertEqual(charge.total_paid, 2000)
+        self.assertEqual(charge.total_pending, 4000)
+        self.assertEqual(charge.status, 'Partial')
+
+    def test_hide_fully_paid_fees_in_collect_and_list(self):
+        sf = StudentFee.objects.create(student=self.student, academic_year=self.year, total_fee=10000)
+        FeePayment.objects.create(student_fee=sf, amount=10000, payment_date=timezone.localdate(), receipt_number='RCPTEST1')
+
+        fee_type = FeeType.objects.create(name='Lab Fee', academic_year=self.year)
+        charge = StudentFeeCharge.objects.create(student=self.student, fee_type=fee_type, amount_assigned=3000)
+
+        # Check fee_collect hides fully paid tuition
+        response = self.client.get(reverse('fee_collect', args=[self.student.pk]))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Lab Fee')
+
+        # Check fee_list pending status filter
+        response = self.client.get(reverse('fee_list') + '?status=pending')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.student.name)
+
+        # Pay off Lab Fee fully
+        FeePayment.objects.create(fee_charge=charge, amount=3000, payment_date=timezone.localdate(), receipt_number='RCPTEST2')
+
+        # Now all fees are paid - student should be hidden from default pending list
+        response = self.client.get(reverse('fee_list') + '?status=pending')
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, self.student.name)
+
+        # But student should still show up when filtering status=paid or status=all
+        response = self.client.get(reverse('fee_list') + '?status=paid')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.student.name)

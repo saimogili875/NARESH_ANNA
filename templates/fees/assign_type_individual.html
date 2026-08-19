@@ -43,8 +43,8 @@
   <div class="card border-0 shadow-sm mb-3">
     <div class="card-body p-0">
       <p class="text-muted small p-3 mb-0">
-        Type the amount owed by each student for "<strong>{{ fee_type.name }}</strong>" and click
-        <strong>Save Amounts</strong>. Leave a box blank to skip that student &mdash; it will not be changed.
+        Set the assigned fee or record partial/installment payments for "<strong>{{ fee_type.name }}</strong>". 
+        Leave blank to keep existing values.
       </p>
       <div class="table-responsive">
         <table class="table table-hover align-middle mb-0">
@@ -52,30 +52,43 @@
             <tr>
               <th>Adm No</th>
               <th>Name</th>
-              <th>Group</th>
-              <th>Year</th>
               <th>Section</th>
-              <th style="min-width:160px">Amount (₹)</th>
+              <th style="min-width:140px">Assigned (₹)</th>
+              <th>Paid (₹)</th>
+              <th>Pending (₹)</th>
+              <th style="min-width:160px">Collect Payment (₹)</th>
             </tr>
           </thead>
           <tbody>
             {% for row in student_rows %}
             <tr>
               <td><span class="badge bg-light text-dark">{{ row.student.admission_number }}</span></td>
-              <td>{{ row.student.name }}</td>
-              <td>{{ row.student.section.group.name|default:'-' }}</td>
-              <td>{{ row.student.section.get_year_display|default:'-' }}</td>
-              <td>{{ row.student.section.name|default:'-' }}</td>
+              <td>
+                <div class="fw-500">{{ row.student.name }}</div>
+                <div class="small text-muted">{{ row.student.section.group.name|default:'-' }}</div>
+              </td>
+              <td>{{ row.student.section|default:'-' }}</td>
               <td>
                 <input type="hidden" name="student_ids" value="{{ row.student.pk }}">
                 <input type="number" step="0.01" min="0" class="form-control form-control-sm"
                        name="amount_{{ row.student.pk }}"
-                       value="{{ row.amount|default_if_none:'' }}"
-                       placeholder="e.g. 2500">
+                       value="{% if row.charge %}{{ row.charge.amount_assigned }}{% endif %}"
+                       placeholder="Assign fee">
+              </td>
+              <td class="text-success fw-bold">
+                ₹{% if row.charge %}{{ row.charge.total_paid|floatformat:0 }}{% else %}0{% endif %}
+              </td>
+              <td class="text-danger fw-bold">
+                ₹{% if row.charge %}{{ row.charge.total_pending|floatformat:0 }}{% else %}0{% endif %}
+              </td>
+              <td>
+                <input type="number" step="0.01" min="0" class="form-control form-control-sm"
+                       name="pay_{{ row.student.pk }}"
+                       placeholder="e.g. 500 (partial)">
               </td>
             </tr>
             {% empty %}
-            <tr><td colspan="6" class="text-center text-muted py-4">No students match this filter.</td></tr>
+            <tr><td colspan="7" class="text-center text-muted py-4">No students match this filter.</td></tr>
             {% endfor %}
           </tbody>
         </table>
@@ -84,7 +97,7 @@
   </div>
 
   <div class="d-flex gap-2">
-    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Save Amounts</button>
+    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Save Amounts & Payments</button>
     <a href="{% url 'fee_type_manage' %}" class="btn btn-outline-secondary">Cancel</a>
   </div>
 </form>
