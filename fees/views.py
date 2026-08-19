@@ -384,9 +384,19 @@ def fee_list(request):
                 elif status_filter == 'paid' and not is_all_paid:
                     continue
 
+            row_pending = sf.total_pending + sum(c.total_pending for c in ordered_charges if c)
+            row_paid = sf.total_paid + sum(c.total_paid for c in ordered_charges if c)
+            if row_pending <= 0:
+                overall_status = 'Paid'
+            elif row_paid > 0:
+                overall_status = 'Partial'
+            else:
+                overall_status = 'Pending'
+
             fee_data.append({
                 'student_fee': sf,
-                'charges': ordered_charges
+                'charges': ordered_charges,
+                'overall_status': overall_status,
             })
 
             total_collected_tuition += sf.total_paid
