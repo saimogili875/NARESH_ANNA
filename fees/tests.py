@@ -172,4 +172,23 @@ class FeeManagementFeaturesTest(TestCase):
         ft.refresh_from_db()
         self.assertEqual(ft.name, 'New Fee Name')
 
+    def test_fee_list_specific_fee_type_filter(self):
+        sf = StudentFee.objects.create(student=self.student, academic_year=self.year, total_fee=5000)
+        ft_books = FeeType.objects.create(name='Books Fee', academic_year=self.year)
+        charge_books = StudentFeeCharge.objects.create(student=self.student, fee_type=ft_books, amount_assigned=2000)
+
+        # Filter by Books Fee + status=pending -> Should contain student
+        res1 = self.client.get(reverse('fee_list') + f'?fee_type={ft_books.id}&status=pending')
+        self.assertEqual(res1.status_code, 200)
+        self.assertContains(res1, self.student.name)
+
+        # Pay off Books Fee fully
+        FeePayment.objects.create(fee_charge=charge_books, amount=2000, payment_date=timezone.localdate(), receipt_number='RCPBK001')
+
+        # Now filter by Books Fee + status=pending -> Should NOT contain student
+        res2 = self.client.get(reverse('fee_list') + f'?fee_type={ft_books.id}&status=pending')
+        self.assertEqual(res2.status_code, 200)
+        self.assertNotContains(res2, self.student.name)
+
+
 

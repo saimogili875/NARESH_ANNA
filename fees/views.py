@@ -298,6 +298,7 @@ def fee_type_delete(request, pk):
 def fee_list(request):
     q = request.GET.get('q', '')
     status_filter = request.GET.get('status', 'pending').lower().strip()
+    fee_type_filter = request.GET.get('fee_type', '').strip()
     active_year = AcademicYear.objects.filter(is_active=True).first()
 
     students = Student.objects.filter(is_active=True).select_related('section__group')
@@ -350,17 +351,34 @@ def fee_list(request):
             charges_dict = charges_by_student.get(student.pk, {})
             ordered_charges = [charges_dict.get(ft.id) for ft in fee_types]
 
-            # Filter logic: default 'pending' hides fully-paid fees/students
-            has_pending = (sf.total_pending > 0) or any(c and c.total_pending > 0 for c in ordered_charges if c)
-            has_partial = (sf.status == 'Partial') or any(c and c.status == 'Partial' for c in ordered_charges if c)
-            is_all_paid = (sf.status == 'Paid') and all((not c) or (c.status == 'Paid') for c in ordered_charges if c)
+            # Filter logic: specific fee type vs global status
+            if fee_type_filter == 'tuition':
+                if status_filter == 'pending' and sf.total_pending <= 0:
+                    continue
+                elif status_filter == 'partial' and sf.status != 'Partial':
+                    continue
+                elif status_filter == 'paid' and sf.status != 'Paid':
+                    continue
+            elif fee_type_filter.isdigit():
+                ft_id = int(fee_type_filter)
+                target_charge = charges_dict.get(ft_id)
+                if status_filter == 'pending' and (not target_charge or target_charge.total_pending <= 0):
+                    continue
+                elif status_filter == 'partial' and (not target_charge or target_charge.status != 'Partial'):
+                    continue
+                elif status_filter == 'paid' and (not target_charge or target_charge.status != 'Paid'):
+                    continue
+            else:
+                has_pending = (sf.total_pending > 0) or any(c and c.total_pending > 0 for c in ordered_charges if c)
+                has_partial = (sf.status == 'Partial') or any(c and c.status == 'Partial' for c in ordered_charges if c)
+                is_all_paid = (sf.status == 'Paid') and all((not c) or (c.status == 'Paid') for c in ordered_charges if c)
 
-            if status_filter == 'pending' and not has_pending:
-                continue
-            elif status_filter == 'partial' and not has_partial:
-                continue
-            elif status_filter == 'paid' and not is_all_paid:
-                continue
+                if status_filter == 'pending' and not has_pending:
+                    continue
+                elif status_filter == 'partial' and not has_partial:
+                    continue
+                elif status_filter == 'paid' and not is_all_paid:
+                    continue
 
             fee_data.append({
                 'student_fee': sf,
@@ -371,15 +389,29 @@ def fee_list(request):
             total_pending_tuition += sf.total_pending
             total_fees_tuition += sf.total_fee
 
-    from accounts.models import Section
-    sections = Section.objects.select_related('group').all()
+    total_charges_fees = sum(
+        c.amount_assigned for row in fee_data for c in row['charges'] if c
+    )
+    total_charges_paid = sum(
+        c.total_paid for row in fee_data for c in row['charges'] if c
+    )
+    total_charges_pending = sum(
+        c.total_pending for row in fee_data for c in row['charges'] if c
+    )
+
+    total_fees = total_fees_tuition + total_charges_fees
+    total_collected = total_collected_tuition + total_charges_paid
+    total_pending = total_pending_tuition + total_charges_pending
+
     return render(request, 'fees/list.html', {
-        'fee_data': fee_data, 'q': q, 'status_filter': status_filter,
-        'active_year': active_year, 'fee_types': fee_types,
-        'total_collected': total_collected_tuition,
-        'total_pending': total_pending_tuition,
-        'total_fees': total_fees_tuition,
-        'sections': sections,
+        'fee_data': fee_data,
+        'fee_types': fee_types,
+        'q': q,
+        'status_filter': status_filter,
+        'fee_type_filter': fee_type_filter,
+        'total_fees': total_fees,
+        'total_collected': total_collected,
+        'total_pending': total_pending,
     })
 
 

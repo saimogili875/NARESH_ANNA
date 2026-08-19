@@ -37,8 +37,17 @@
 <div class="card border-0 shadow-sm mb-3">
   <div class="card-body py-2">
     <form method="get" class="row g-2 align-items-center">
-      <div class="col-md-5">
-        <input type="text" name="q" value="{{ q }}" class="form-control form-control-sm" placeholder="Search student name or admission no...">
+      <div class="col-md-3">
+        <input type="text" name="q" value="{{ q }}" class="form-control form-control-sm" placeholder="Search student name or adm no...">
+      </div>
+      <div class="col-md-3">
+        <select name="fee_type" class="form-select form-select-sm">
+          <option value="">All Fee Types</option>
+          <option value="tuition" {% if fee_type_filter == 'tuition' %}selected{% endif %}>Tuition Fee (Core Fee)</option>
+          {% for ft in fee_types %}
+          <option value="{{ ft.id }}" {% if fee_type_filter == ft.id|stringformat:'s' %}selected{% endif %}>{{ ft.name }}</option>
+          {% endfor %}
+        </select>
       </div>
       <div class="col-md-3">
         <select name="status" class="form-select form-select-sm">
