@@ -236,9 +236,10 @@ ATTENDANCE_CUTOFF_HOUR = 10
 ATTENDANCE_CUTOFF_MINUTE = 30
 
 # --- Fixed-Duration Session Expiry ---
-# Not idle-based: session expires X minutes after login_time, regardless of activity.
-SESSION_EXPIRY_FACULTY_MINUTES = 30   # Faculty accounts
-SESSION_EXPIRY_OTHER_MINUTES = 60     # Admin / accounts / superuser
+# Session expires 120 minutes (2 hours) after login_time, regardless of activity.
+SESSION_EXPIRY_FACULTY_MINUTES = 120   # Faculty accounts (2 hours)
+SESSION_EXPIRY_OTHER_MINUTES = 120     # Admin / accounts / superuser (2 hours)
+SESSION_COOKIE_AGE = 7200              # 2 hours (7200 seconds)
 
 # --- WhatsApp Batch Sender ---
 WHATSAPP_BATCH_SIZE = config('WHATSAPP_BATCH_SIZE', default=50, cast=int)

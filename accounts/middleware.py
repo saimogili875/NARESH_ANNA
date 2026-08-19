@@ -48,8 +48,8 @@ class SessionExpiryMiddleware:
 
         # Determine limit from role at login time
         role_at_login = login_session.login_role or getattr(request.user, 'role', '')
-        faculty_limit = getattr(settings, 'SESSION_EXPIRY_FACULTY_MINUTES', 30)
-        other_limit = getattr(settings, 'SESSION_EXPIRY_OTHER_MINUTES', 60)
+        faculty_limit = getattr(settings, 'SESSION_EXPIRY_FACULTY_MINUTES', 120)
+        other_limit = getattr(settings, 'SESSION_EXPIRY_OTHER_MINUTES', 120)
         limit_minutes = faculty_limit if role_at_login == 'faculty' else other_limit
 
         elapsed = timezone.now() - login_session.login_time
