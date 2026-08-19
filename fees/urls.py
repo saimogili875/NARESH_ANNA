@@ -17,6 +17,8 @@ urlpatterns = [
     path('student/<int:pk>/payment/<int:payment_id>/delete/', views.payment_delete, name='payment_delete'),
     path('student/<int:pk>/receipt/<int:payment_id>/', views.receipt_download, name='receipt_download'),
     path('student/<int:pk>/receipt/<int:payment_id>/send-whatsapp/', views.receipt_send_whatsapp, name='receipt_send_whatsapp'),
+    path('types/<int:pk>/unassign-section/<int:section_id>/', views.fee_type_unassign_section, name='fee_type_unassign_section'),
+    path('types/<int:pk>/charge/<int:charge_id>/delete/', views.fee_charge_delete, name='fee_charge_delete'),
 ]
 
 urlpatterns += [

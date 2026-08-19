@@ -41,13 +41,40 @@
                                 <div class="row g-2 ms-3">
                                     {% for section in group.list %}
                                     <div class="col-md-6">
-                                        <div class="form-check">
-                                            <input class="form-check-input section-checkbox group-{{ group.grouper.id }}" 
-                                                   type="checkbox" name="sections" value="{{ section.id }}" 
-                                                   id="section_{{ section.id }}">
-                                            <label class="form-check-label" for="section_{{ section.id }}">
-                                                Yr{{ section.year }} - {{ section.name }}
-                                            </label>
+                                        <div class="p-2 border rounded {% if section.is_assigned %}bg-light opacity-75{% else %}bg-white{% endif %}" id="section_wrapper_{{ section.id }}">
+                                            <div class="d-flex align-items-center justify-content-between">
+                                                <div>
+                                                    <div class="form-check">
+                                                        <input class="form-check-input section-checkbox group-{{ group.grouper.id }}" 
+                                                               type="checkbox" name="sections" value="{{ section.id }}" 
+                                                               id="section_{{ section.id }}"
+                                                               {% if section.is_assigned %}disabled{% endif %}>
+                                                        <label class="form-check-label fw-500" for="section_{{ section.id }}">
+                                                            Yr{{ section.year }} - {{ section.name }}
+                                                        </label>
+                                                    </div>
+                                                    {% if section.is_assigned %}
+                                                    <div class="small ms-4 mt-1">
+                                                        <span class="badge bg-secondary-subtle text-secondary border">Already assigned ₹{{ section.assigned_amount|floatformat:0 }}</span>
+                                                    </div>
+                                                    {% endif %}
+                                                </div>
+                                                {% if section.is_assigned %}
+                                                <div class="d-flex align-items-center gap-1">
+                                                    <button type="button" class="btn btn-link btn-sm text-primary p-0 text-decoration-none" onclick="toggleEditSection({{ section.id }})" title="Unlock section to re-assign new amount">
+                                                        <i class="bi bi-pencil me-1"></i>Edit
+                                                    </button>
+                                                    <span class="text-muted small">|</span>
+                                                    <form method="post" action="{% url 'fee_type_unassign_section' fee_type.pk section.id %}" class="d-inline" onsubmit="return confirm('Are you sure you want to unassign {{ fee_type.name }} from section Yr{{ section.year }} - {{ section.name }}?');">
+                                                        {% csrf_token %}
+                                                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                                        <button type="submit" class="btn btn-link btn-sm text-danger p-0 text-decoration-none" title="Unassign / delete fee for this section">
+                                                            <i class="bi bi-trash"></i>
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                                {% endif %}
+                                            </div>
                                         </div>
                                     </div>
                                     {% endfor %}
@@ -70,14 +97,34 @@
 </div>
 
 <script>
-// Logic to handle group checkbox ticking all its sections
+function toggleEditSection(sectionId) {
+    const cb = document.getElementById('section_' + sectionId);
+    const wrapper = document.getElementById('section_wrapper_' + sectionId);
+    if (cb) {
+        cb.disabled = !cb.disabled;
+        if (!cb.disabled) {
+            cb.checked = true;
+            if (wrapper) {
+                wrapper.classList.remove('opacity-75');
+                wrapper.classList.add('border-primary');
+            }
+        } else {
+            cb.checked = false;
+            if (wrapper) {
+                wrapper.classList.add('opacity-75');
+                wrapper.classList.remove('border-primary');
+            }
+        }
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     const groupCheckboxes = document.querySelectorAll('.group-checkbox');
     
     groupCheckboxes.forEach(groupCb => {
         groupCb.addEventListener('change', function() {
             const groupId = this.id.split('_')[1];
-            const sectionCheckboxes = document.querySelectorAll('.group-' + groupId);
+            const sectionCheckboxes = document.querySelectorAll('.group-' + groupId + ':not([disabled])');
             
             sectionCheckboxes.forEach(sectionCb => {
                 sectionCb.checked = this.checked;
@@ -85,16 +132,15 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Optional: If a section is unchecked, uncheck the parent group
     const sectionCheckboxes = document.querySelectorAll('.section-checkbox');
     sectionCheckboxes.forEach(sectionCb => {
         sectionCb.addEventListener('change', function() {
             if (!this.checked) {
-                // Find parent group class
                 const groupClass = Array.from(this.classList).find(c => c.startsWith('group-'));
                 if (groupClass) {
                     const groupId = groupClass.split('-')[1];
-                    document.getElementById('group_' + groupId).checked = false;
+                    const groupCb = document.getElementById('group_' + groupId);
+                    if (groupCb) groupCb.checked = false;
                 }
             }
         });

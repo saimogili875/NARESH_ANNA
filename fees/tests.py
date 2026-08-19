@@ -125,3 +125,43 @@ class FeeManagementFeaturesTest(TestCase):
         res2 = self.client.get(reverse('receipt_download', args=[self.student.pk, p2.pk]))
         self.assertEqual(res2.status_code, 200)
         self.assertEqual(res2['Content-Type'], 'application/pdf')
+
+    def test_section_assignment_indication_and_unassign(self):
+        fee_type = FeeType.objects.create(name='Hostel Fee', academic_year=self.year)
+        StudentFeeCharge.objects.create(student=self.student, fee_type=fee_type, amount_assigned=15000)
+
+        # Check assign_type GET includes is_assigned=True and assigned_amount
+        res = self.client.get(reverse('fee_type_assign', args=[fee_type.pk]))
+        self.assertEqual(res.status_code, 200)
+        self.assertContains(res, 'Already assigned ₹15000')
+
+        # Test unassigning section
+        res_unassign = self.client.post(reverse('fee_type_unassign_section', args=[fee_type.pk, self.section.pk]))
+        self.assertEqual(res_unassign.status_code, 302)
+        self.assertFalse(StudentFeeCharge.objects.filter(student=self.student, fee_type=fee_type).exists())
+
+    def test_individual_charge_delete(self):
+        fee_type = FeeType.objects.create(name='Uniform Fee', academic_year=self.year)
+        charge = StudentFeeCharge.objects.create(student=self.student, fee_type=fee_type, amount_assigned=2500)
+
+        res_delete = self.client.get(reverse('fee_charge_delete', args=[fee_type.pk, charge.pk]))
+        self.assertEqual(res_delete.status_code, 302)
+        self.assertFalse(StudentFeeCharge.objects.filter(pk=charge.pk).exists())
+
+    def test_assign_individual_status_filter_and_switcher(self):
+        ft1 = FeeType.objects.create(name='Exam Fee', academic_year=self.year)
+        c1 = StudentFeeCharge.objects.create(student=self.student, fee_type=ft1, amount_assigned=1000)
+
+        res_all = self.client.get(reverse('fee_type_assign_individual', args=[ft1.pk]))
+        self.assertEqual(res_all.status_code, 200)
+        self.assertContains(res_all, self.student.name)
+        self.assertContains(res_all, 'Exam Fee')
+
+        res_pending = self.client.get(reverse('fee_type_assign_individual', args=[ft1.pk]) + '?status=pending')
+        self.assertEqual(res_pending.status_code, 200)
+        self.assertContains(res_pending, self.student.name)
+
+        res_paid = self.client.get(reverse('fee_type_assign_individual', args=[ft1.pk]) + '?status=paid')
+        self.assertEqual(res_paid.status_code, 200)
+        self.assertNotContains(res_paid, self.student.name)
+

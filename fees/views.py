@@ -60,7 +60,25 @@ def fee_type_assign(request, pk):
     fee_type = get_object_or_404(FeeType, pk=pk, academic_year=active_year)
 
     from accounts.models import Section
-    sections = Section.objects.select_related('group').all().order_by('group__name', 'year', 'name')
+    sections = list(Section.objects.select_related('group').all().order_by('group__name', 'year', 'name'))
+
+    charges = StudentFeeCharge.objects.filter(fee_type=fee_type, student__is_active=True).select_related('student')
+    section_charges = {}
+    for c in charges:
+        sec_id = c.student.section_id
+        if sec_id:
+            section_charges.setdefault(sec_id, []).append(c)
+
+    for s in sections:
+        c_list = section_charges.get(s.id, [])
+        if c_list:
+            s.is_assigned = True
+            s.assigned_amount = c_list[0].amount_assigned
+            s.assigned_count = len(c_list)
+        else:
+            s.is_assigned = False
+            s.assigned_amount = 0
+            s.assigned_count = 0
 
     if request.method == 'POST':
         section_ids = request.POST.getlist('sections')
@@ -86,7 +104,7 @@ def fee_type_assign(request, pk):
             charge.save()
             updated_count += 1
         
-        messages.success(request, f"Fee '{fee_type.name}' updated to ₹{amount} for {updated_count} students.")
+        messages.success(request, f"Fee '{fee_type.name}' updated to ₹{amount:.0f} for {updated_count} students.")
         return redirect('fee_type_manage')
 
     return render(request, 'fees/assign_type.html', {
@@ -94,7 +112,29 @@ def fee_type_assign(request, pk):
         'sections': sections,
     })
 
+
 @admin_accounts_required
+def fee_type_unassign_section(request, pk, section_id):
+    active_year = AcademicYear.objects.filter(is_active=True).first()
+    fee_type = get_object_or_404(FeeType, pk=pk, academic_year=active_year)
+    from accounts.models import Section
+    section = get_object_or_404(Section, pk=section_id)
+
+    charges = StudentFeeCharge.objects.filter(fee_type=fee_type, student__section=section).prefetch_related('payments')
+    paid_charges = [c for c in charges if c.total_paid > 0]
+
+    if paid_charges:
+        messages.error(request, f"Cannot unassign '{fee_type.name}' from {section} because payments have already been collected for {len(paid_charges)} student(s).")
+    else:
+        deleted_count, _ = charges.delete()
+        messages.success(request, f"Unassigned '{fee_type.name}' from {section} ({deleted_count} student record(s) removed).")
+
+    next_url = request.POST.get('next') or request.GET.get('next')
+    if next_url:
+        return redirect(next_url)
+    return redirect('fee_type_assign', pk=pk)
+
+
 @admin_accounts_required
 def fee_type_assign_individual(request, pk):
     """Assign a fee type to students with a DIFFERENT hand-typed amount per
@@ -108,6 +148,7 @@ def fee_type_assign_individual(request, pk):
     if request.method == 'POST':
         year_filter = request.POST.get('year_filter', '')
         section_filter = request.POST.get('section_filter', '')
+        status_filter = request.POST.get('status_filter', '')
         ids = request.POST.getlist('student_ids')
         updated = 0
         payments_collected = 0
@@ -159,10 +200,11 @@ def fee_type_assign_individual(request, pk):
         if payments_collected > 0:
             msg += f" Recorded {payments_collected} partial payment(s)."
         messages.success(request, msg)
-        return redirect(f"/fees/types/{pk}/assign-individual/?year={year_filter}&section={section_filter}")
+        return redirect(f"/fees/types/{pk}/assign-individual/?year={year_filter}&section={section_filter}&status={status_filter}")
 
     year_filter = request.GET.get('year', '')
     section_filter = request.GET.get('section', '')
+    status_filter = request.GET.get('status', '').lower().strip()
 
     students = Student.objects.filter(is_active=True, academic_year=active_year).select_related('section__group')
     if year_filter:
@@ -177,14 +219,44 @@ def fee_type_assign_individual(request, pk):
     }
     student_rows = [{'student': s, 'charge': existing_charges.get(s.pk)} for s in students]
 
+    if status_filter == 'pending':
+        student_rows = [r for r in student_rows if r['charge'] and r['charge'].status.lower() == 'pending']
+    elif status_filter == 'partial':
+        student_rows = [r for r in student_rows if r['charge'] and r['charge'].status.lower() == 'partial']
+    elif status_filter == 'paid':
+        student_rows = [r for r in student_rows if r['charge'] and r['charge'].status.lower() == 'paid']
+
+    all_fee_types = FeeType.objects.filter(academic_year=active_year).order_by('name')
     sections = Section.objects.select_related('group').all().order_by('group__name', 'year', 'name')
+
     return render(request, 'fees/assign_type_individual.html', {
         'fee_type': fee_type,
+        'all_fee_types': all_fee_types,
         'student_rows': student_rows,
         'sections': sections,
         'year_filter': year_filter,
         'section_filter': section_filter,
+        'status_filter': status_filter,
     })
+
+
+@admin_accounts_required
+def fee_charge_delete(request, pk, charge_id):
+    active_year = AcademicYear.objects.filter(is_active=True).first()
+    fee_type = get_object_or_404(FeeType, pk=pk, academic_year=active_year)
+    charge = get_object_or_404(StudentFeeCharge, pk=charge_id, fee_type=fee_type)
+
+    if charge.total_paid > 0:
+        messages.error(request, f"Cannot delete '{fee_type.name}' charge for {charge.student.name} because a payment of ₹{charge.total_paid:,.0f} has already been recorded.")
+    else:
+        student_name = charge.student.name
+        charge.delete()
+        messages.success(request, f"Removed '{fee_type.name}' charge for {student_name}.")
+
+    year_filter = request.GET.get('year', '')
+    section_filter = request.GET.get('section', '')
+    status_filter = request.GET.get('status', '')
+    return redirect(f"/fees/types/{pk}/assign-individual/?year={year_filter}&section={section_filter}&status={status_filter}")
 
 
 @admin_accounts_required

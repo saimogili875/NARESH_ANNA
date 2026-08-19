@@ -9,11 +9,19 @@
     </a>
 </div>
 
-<!-- Filter (GET) — just narrows down which students are shown below -->
+<!-- Filter (GET) — narrows down students and allows switching fee type -->
 <div class="card border-0 shadow-sm mb-3">
   <div class="card-body py-2">
-    <form method="get" class="row g-2 align-items-end">
+    <form method="get" id="filterForm" class="row g-2 align-items-end">
       <div class="col-md-3">
+        <label class="form-label small mb-1 fw-bold text-primary">Fee Type</label>
+        <select class="form-select form-select-sm fw-500" onchange="switchFeeType(this.value)">
+          {% for ft in all_fee_types %}
+          <option value="{{ ft.pk }}" {% if ft.pk == fee_type.pk %}selected{% endif %}>{{ ft.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
         <label class="form-label small mb-1">Year</label>
         <select name="year" class="form-select form-select-sm">
           <option value="">All Years</option>
@@ -21,11 +29,20 @@
           <option value="2" {% if year_filter == '2' %}selected{% endif %}>2nd Year</option>
         </select>
       </div>
-      <div class="col-md-4">
+      <div class="col-md-3">
         <label class="form-label small mb-1">Section</label>
         <select name="section" class="form-select form-select-sm">
           <option value="">All Sections</option>
           {% for s in sections %}<option value="{{ s.pk }}" {% if section_filter == s.pk|stringformat:'s' %}selected{% endif %}>{{ s.group.name }} - {{ s.get_year_display }} - {{ s.name }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small mb-1">Status</label>
+        <select name="status" class="form-select form-select-sm">
+          <option value="">All Statuses</option>
+          <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending</option>
+          <option value="partial" {% if status_filter == 'partial' %}selected{% endif %}>Partial</option>
+          <option value="paid" {% if status_filter == 'paid' %}selected{% endif %}>Paid</option>
         </select>
       </div>
       <div class="col-md-2">
@@ -39,6 +56,7 @@
   {% csrf_token %}
   <input type="hidden" name="year_filter" value="{{ year_filter }}">
   <input type="hidden" name="section_filter" value="{{ section_filter }}">
+  <input type="hidden" name="status_filter" value="{{ status_filter }}">
 
   <div class="card border-0 shadow-sm mb-3">
     <div class="card-body p-0">
@@ -57,6 +75,7 @@
               <th>Paid (₹)</th>
               <th>Pending (₹)</th>
               <th style="min-width:160px">Collect Payment (₹)</th>
+              <th class="text-end pe-3">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -86,9 +105,27 @@
                        name="pay_{{ row.student.pk }}"
                        placeholder="e.g. 500 (partial)">
               </td>
+              <td class="text-end pe-3">
+                {% if row.charge %}
+                {% if row.charge.total_paid > 0 %}
+                <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" disabled title="Cannot delete: payment of ₹{{ row.charge.total_paid|floatformat:0 }} already recorded">
+                  <i class="bi bi-lock-fill"></i>
+                </button>
+                {% else %}
+                <a href="{% url 'fee_charge_delete' fee_type.pk row.charge.pk %}?year={{ year_filter }}&section={{ section_filter }}&status={{ status_filter }}"
+                   class="btn btn-sm btn-outline-danger py-0 px-2"
+                   onclick="return confirm('Are you sure you want to remove {{ fee_type.name }} charge for {{ row.student.name }}?');"
+                   title="Remove / Unassign Charge">
+                  <i class="bi bi-trash"></i>
+                </a>
+                {% endif %}
+                {% else %}
+                <span class="text-muted small">-</span>
+                {% endif %}
+              </td>
             </tr>
             {% empty %}
-            <tr><td colspan="7" class="text-center text-muted py-4">No students match this filter.</td></tr>
+            <tr><td colspan="8" class="text-center text-muted py-4">No students match this filter.</td></tr>
             {% endfor %}
           </tbody>
         </table>
@@ -101,4 +138,11 @@
     <a href="{% url 'fee_type_manage' %}" class="btn btn-outline-secondary">Cancel</a>
   </div>
 </form>
+
+<script>
+function switchFeeType(newFeeTypeId) {
+  const urlParams = new URLSearchParams(window.location.search);
+  window.location.href = `/fees/types/${newFeeTypeId}/assign-individual/?` + urlParams.toString();
+}
+</script>
 {% endblock %}
