@@ -135,7 +135,7 @@
           {% for s in students %}
           <tr>
             <td class="select-col d-none"><input type="checkbox" class="form-check-input row-check" value="{{ s.pk }}"></td>
-            <td><span class="badge bg-light text-dark editable-cell" data-pk="{{ s.pk }}" data-field="admission_number" title="Tap to edit">{{ s.admission_number }}</span></td>
+            <td><span class="fw-bold font-monospace text-primary bg-primary-subtle border border-primary-subtle px-2 py-1 rounded editable-cell" data-pk="{{ s.pk }}" data-field="admission_number" title="Tap to edit">{{ s.admission_number|default:"—" }}</span></td>
             <td>
               <div class="d-flex align-items-center gap-2">
                 {% if s.photo %}
