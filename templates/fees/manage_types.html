@@ -20,8 +20,19 @@
                     {% csrf_token %}
                     <div class="mb-3">
                         <label class="form-label fw-bold">Fee Name <span class="text-danger">*</span></label>
-                        <input type="text" name="name" class="form-control" placeholder="e.g. Books Fee" required>
+                        <input type="text" name="name" id="feeNameInput" class="form-control" placeholder="e.g. Books Fee, Bus Fee, Lab Fee" required>
                         <div class="form-text">Will be created for academic year: <strong>{{ active_year }}</strong></div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="small fw-bold text-muted mb-2">Quick Suggestions:</div>
+                        <div class="d-flex flex-wrap gap-1">
+                            <button type="button" class="btn btn-sm btn-outline-secondary py-0" onclick="setFeeName('Books Fee')">+ Books Fee</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary py-0" onclick="setFeeName('Bus Fee')">+ Bus Fee</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary py-0" onclick="setFeeName('Lab Fee')">+ Lab Fee</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary py-0" onclick="setFeeName('Hostel Fee')">+ Hostel Fee</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary py-0" onclick="setFeeName('Exam Fee')">+ Exam Fee</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary py-0" onclick="setFeeName('Uniform Fee')">+ Uniform Fee</button>
+                        </div>
                     </div>
                     <button type="submit" class="btn btn-primary w-100">Create Fee Type</button>
                 </form>
@@ -46,6 +57,20 @@
                             </tr>
                         </thead>
                         <tbody>
+                            <!-- Core Tuition Fee Row -->
+                            <tr class="table-primary-subtle">
+                                <td class="fw-bold text-primary">
+                                    <i class="bi bi-star-fill text-warning me-1"></i> {{ tuition_stats.name }}
+                                </td>
+                                <td class="fw-bold">₹{{ tuition_stats.total_assigned|floatformat:0 }}</td>
+                                <td class="text-success fw-bold">₹{{ tuition_stats.total_paid|floatformat:0 }}</td>
+                                <td class="text-danger fw-bold">₹{{ tuition_stats.total_pending|floatformat:0 }}</td>
+                                <td class="text-nowrap">
+                                    <a href="{% url 'fee_set_bulk' %}" class="btn btn-sm btn-primary me-1" title="Bulk Assign Tuition Fee to Sections">
+                                        <i class="bi bi-people-fill"></i> Bulk Assign Tuition
+                                    </a>
+                                </td>
+                            </tr>
                             {% for ft in fee_types %}
                             <tr>
                                 <td class="fw-bold">{{ ft.name }}</td>
@@ -66,7 +91,7 @@
                             </tr>
                             {% empty %}
                             <tr>
-                                <td colspan="5" class="text-center py-4 text-muted">No temporary fee types created yet.</td>
+                                <td colspan="5" class="text-center py-3 text-muted small">No custom fee types created yet. Click suggestions above to add.</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -76,4 +101,11 @@
         </div>
     </div>
 </div>
+
+<script>
+function setFeeName(name) {
+    document.getElementById('feeNameInput').value = name;
+    document.getElementById('feeNameInput').focus();
+}
+</script>
 {% endblock %}

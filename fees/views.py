@@ -34,14 +34,24 @@ def fee_type_manage(request):
     
     # Calculate stats per fee type
     for ft in fee_types:
-        charges = StudentFeeCharge.objects.filter(fee_type=ft)
+        charges = StudentFeeCharge.objects.filter(fee_type=ft).prefetch_related('payments')
         ft.total_assigned = sum(c.amount_assigned for c in charges)
         ft.total_paid = sum(c.total_paid for c in charges)
         ft.total_pending = ft.total_assigned - ft.total_paid
 
+    # Calculate overall Tuition Fee stats for active academic year
+    tuition_fees = StudentFee.objects.filter(academic_year=active_year).prefetch_related('payments')
+    tuition_stats = {
+        'name': 'Tuition Fee (Core Fee)',
+        'total_assigned': sum(sf.total_fee for sf in tuition_fees),
+        'total_paid': sum(sf.total_paid for sf in tuition_fees),
+        'total_pending': sum(sf.total_pending for sf in tuition_fees),
+    }
+
     return render(request, 'fees/manage_types.html', {
         'active_year': active_year,
         'fee_types': fee_types,
+        'tuition_stats': tuition_stats,
     })
 
 @admin_accounts_required
