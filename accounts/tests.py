@@ -45,3 +45,10 @@ class LoginAuditLogsTestCase(TestCase):
         res = self.client.get(reverse('login_logs'))
         self.assertEqual(res.status_code, 200)
         self.assertContains(res, 'Login Audit Logs')
+
+    def test_group_list_view_renders_successfully(self):
+        self.client.force_login(self.admin)
+        res = self.client.get(reverse('group_list'))
+        self.assertEqual(res.status_code, 200)
+        self.assertContains(res, 'Academic Structure')
+
