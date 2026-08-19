@@ -54,6 +54,28 @@ def fee_type_manage(request):
         'tuition_stats': tuition_stats,
     })
 
+
+@admin_accounts_required
+def fee_type_edit(request, pk):
+    active_year = AcademicYear.objects.filter(is_active=True).first()
+    fee_type = get_object_or_404(FeeType, pk=pk, academic_year=active_year)
+
+    if request.method == 'POST':
+        new_name = request.POST.get('name', '').strip()
+        if new_name:
+            exists = FeeType.objects.filter(name__iexact=new_name, academic_year=active_year).exclude(pk=pk).exists()
+            if exists:
+                messages.error(request, f"A fee type named '{new_name}' already exists.")
+            else:
+                old_name = fee_type.name
+                fee_type.name = new_name
+                fee_type.save()
+                messages.success(request, f"Fee type '{old_name}' renamed to '{new_name}'.")
+        return redirect('fee_type_manage')
+
+    return redirect('fee_type_manage')
+
+
 @admin_accounts_required
 def fee_type_assign(request, pk):
     active_year = AcademicYear.objects.filter(is_active=True).first()

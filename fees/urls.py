@@ -5,6 +5,7 @@ urlpatterns = [
     path('', views.fee_list, name='fee_list'),
     path('bulk-tuition/', views.fee_set_bulk, name='fee_set_bulk'),
     path('types/', views.fee_type_manage, name='fee_type_manage'),
+    path('types/<int:pk>/edit/', views.fee_type_edit, name='fee_type_edit'),
     path('types/<int:pk>/assign/', views.fee_type_assign, name='fee_type_assign'),
     path('types/<int:pk>/assign-individual/', views.fee_type_assign_individual, name='fee_type_assign_individual'),
     path('types/<int:pk>/delete/', views.fee_type_delete, name='fee_type_delete'),

@@ -165,3 +165,11 @@ class FeeManagementFeaturesTest(TestCase):
         self.assertEqual(res_paid.status_code, 200)
         self.assertNotContains(res_paid, self.student.name)
 
+    def test_fee_type_edit(self):
+        ft = FeeType.objects.create(name='Old Fee Name', academic_year=self.year)
+        res = self.client.post(reverse('fee_type_edit', args=[ft.pk]), {'name': 'New Fee Name'})
+        self.assertEqual(res.status_code, 302)
+        ft.refresh_from_db()
+        self.assertEqual(ft.name, 'New Fee Name')
+
+

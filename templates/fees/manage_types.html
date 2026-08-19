@@ -78,15 +78,43 @@
                                 <td class="text-success">₹{{ ft.total_paid|floatformat:0 }}</td>
                                 <td class="text-danger">₹{{ ft.total_pending|floatformat:0 }}</td>
                                 <td class="text-nowrap">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary me-1" data-bs-toggle="modal" data-bs-target="#editModal{{ ft.pk }}" title="Edit / Rename Fee Type">
+                                        <i class="bi bi-pencil"></i> Edit Name
+                                    </button>
                                     <a href="{% url 'fee_type_assign' ft.pk %}" class="btn btn-sm btn-outline-primary me-1" title="Same amount for whole section(s)">
-                                        <i class="bi bi-people-fill"></i> Assign (Same Amount)
+                                        <i class="bi bi-people-fill"></i> Assign / Re-assign
                                     </a>
-                                    <a href="{% url 'fee_type_assign_individual' ft.pk %}" class="btn btn-sm btn-outline-primary me-1" title="Different amount typed by hand for each student">
-                                        <i class="bi bi-pencil-square"></i> Enter Individually
+                                    <a href="{% url 'fee_type_assign_individual' ft.pk %}" class="btn btn-sm btn-outline-info me-1" title="Different amount typed by hand for each student">
+                                        <i class="bi bi-pencil-square"></i> Student Level
                                     </a>
                                     <a href="{% url 'fee_type_delete' ft.pk %}" class="btn btn-sm btn-outline-danger" title="Delete Fee Type">
-                                        <i class="bi bi-trash"></i>
+                                        <i class="bi bi-trash"></i> Delete
                                     </a>
+
+                                    <!-- Edit Name Modal -->
+                                    <div class="modal fade text-start" id="editModal{{ ft.pk }}" tabindex="-1" aria-hidden="true">
+                                      <div class="modal-dialog">
+                                        <div class="modal-content">
+                                          <form method="post" action="{% url 'fee_type_edit' ft.pk %}">
+                                            {% csrf_token %}
+                                            <div class="modal-header">
+                                              <h5 class="modal-title"><i class="bi bi-pencil me-2"></i>Edit Fee Type Name</h5>
+                                              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                            </div>
+                                            <div class="modal-body text-normal">
+                                              <div class="mb-3">
+                                                <label class="form-label fw-bold">Fee Type Name <span class="text-danger">*</span></label>
+                                                <input type="text" name="name" class="form-control" value="{{ ft.name }}" required>
+                                              </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                              <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                                              <button type="submit" class="btn btn-primary">Save Changes</button>
+                                            </div>
+                                          </form>
+                                        </div>
+                                      </div>
+                                    </div>
                                 </td>
                             </tr>
                             {% empty %}
