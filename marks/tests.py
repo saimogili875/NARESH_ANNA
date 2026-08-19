@@ -12,7 +12,7 @@ class SubjectAllotmentTestCase(TestCase):
             name="2025-2026", is_active=True,
             start_date=date(2025, 6, 1), end_date=date(2026, 5, 31)
         )
-        self.group = Group.objects.create(name="MPC", code="MPC", academic_year=self.year)
+        self.group, _ = Group.objects.get_or_create(code="MPC", defaults={'name': "MPC", 'academic_year': self.year})
         self.category = ExamCategory.objects.create(name="IPE", is_fixed_marks=False)
         self.config = GroupCategoryConfig.objects.create(group=self.group, category=self.category)
         self.subject1 = Subject.objects.create(name="Physics")

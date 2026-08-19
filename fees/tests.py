@@ -12,8 +12,8 @@ class FeeManagementFeaturesTest(TestCase):
             name='2026-2027', start_date='2026-06-01', end_date='2027-05-31', is_active=True
         )
         self.admin = User.objects.create_user(username='admin_user', password='password123', role='admin')
-        self.group = Group.objects.create(name='MPC', code='MPC', academic_year=self.year)
-        self.section = Section.objects.create(group=self.group, year='1', name='A', academic_year=self.year)
+        self.group, _ = Group.objects.get_or_create(code='MPC', defaults={'name': 'MPC', 'academic_year': self.year})
+        self.section, _ = Section.objects.get_or_create(group=self.group, year='1', name='A', defaults={'academic_year': self.year})
         self.student = Student.objects.create(
             name='Test Student',
             admission_number='2026001',

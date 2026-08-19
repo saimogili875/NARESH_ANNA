@@ -331,7 +331,30 @@ def group_list(request):
     except ValueError:
         selected_date = today
 
-    groups = Group.objects.prefetch_related('sections').all()
+    active_year = AcademicYear.objects.filter(is_active=True).first()
+
+    # Ensure all 4 core academic streams exist in the database
+    DEFAULT_GROUPS = [
+        {'name': 'MPC', 'code': 'MPC', 'subjects_text': 'Maths, Physics, Chemistry'},
+        {'name': 'BiPC', 'code': 'BIPC', 'subjects_text': 'Biology, Physics, Chemistry'},
+        {'name': 'CEC', 'code': 'CEC', 'subjects_text': 'Civics, Economics, Commerce'},
+        {'name': 'MEC', 'code': 'MEC', 'subjects_text': 'Maths, Economics, Commerce'},
+    ]
+
+    for dg in DEFAULT_GROUPS:
+        grp, grp_created = Group.objects.get_or_create(
+            code=dg['code'],
+            defaults={
+                'name': dg['name'],
+                'subjects_text': dg['subjects_text'],
+                'academic_year': active_year
+            }
+        )
+        if grp_created or not grp.sections.exists():
+            Section.objects.get_or_create(group=grp, year='1', name='A', defaults={'academic_year': active_year})
+            Section.objects.get_or_create(group=grp, year='2', name='A', defaults={'academic_year': active_year})
+
+    groups = Group.objects.prefetch_related('sections').all().order_by('id')
     total_faculty = Faculty.objects.filter(is_active=True).count()
     total_sections = Section.objects.count()
     total_students = Student.objects.filter(is_active=True).count()
