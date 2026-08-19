@@ -5,28 +5,28 @@
 
 <div class="row g-3 mb-4">
   <div class="col-6 col-md-3">
-    <div class="stat-card" style="background:linear-gradient(135deg,#1a56db,#3b82f6)">
+    <div class="stat-card shadow-sm" style="background:linear-gradient(135deg,#4F46E5,#6366F1); border-radius: 16px;">
       <i class="bi bi-people-fill"></i>
       <div class="value">{{ total_students }}</div>
       <div class="label">Total Students</div>
     </div>
   </div>
   <div class="col-6 col-md-3">
-    <div class="stat-card" style="background:linear-gradient(135deg,#7c3aed,#a78bfa)">
+    <div class="stat-card shadow-sm" style="background:linear-gradient(135deg,#2563EB,#60A5FA); border-radius: 16px;">
       <i class="bi bi-1-circle-fill"></i>
       <div class="value">{{ year1_students }}</div>
       <div class="label">1st Year Students</div>
     </div>
   </div>
   <div class="col-6 col-md-3">
-    <div class="stat-card" style="background:linear-gradient(135deg,#0891b2,#67e8f9)">
+    <div class="stat-card shadow-sm" style="background:linear-gradient(135deg,#0891B2,#06B6D4); border-radius: 16px;">
       <i class="bi bi-2-circle-fill"></i>
       <div class="value">{{ year2_students }}</div>
       <div class="label">2nd Year Students</div>
     </div>
   </div>
   <div class="col-6 col-md-3">
-    <div class="stat-card" style="background:linear-gradient(135deg,#059669,#6ee7b7)">
+    <div class="stat-card shadow-sm" style="background:linear-gradient(135deg,#10B981,#34D399); border-radius: 16px;">
       <i class="bi bi-calendar-check-fill"></i>
       <div class="value">{{ today_present }}</div>
       <div class="label">Today Present</div>
@@ -36,28 +36,28 @@
 
 <div class="row g-3 mb-4">
   <div class="col-6 col-md-3">
-    <div class="stat-card" style="background:linear-gradient(135deg,#dc2626,#fca5a5)">
+    <div class="stat-card shadow-sm" style="background:linear-gradient(135deg,#EF4444,#F87171); border-radius: 16px;">
       <i class="bi bi-calendar-x-fill"></i>
       <div class="value">{{ today_absent }}</div>
       <div class="label">Today Absent</div>
     </div>
   </div>
   <div class="col-6 col-md-3">
-    <div class="stat-card" style="background:linear-gradient(135deg,#d97706,#fde68a)">
+    <div class="stat-card shadow-sm" style="background:linear-gradient(135deg,#F59E0B,#FBBF24); border-radius: 16px;">
       <i class="bi bi-cash-coin"></i>
       <div class="value">₹{{ today_fee_collection|floatformat:0 }}</div>
       <div class="label">Today Fee Collection</div>
     </div>
   </div>
   <div class="col-6 col-md-3">
-    <div class="stat-card" style="background:linear-gradient(135deg,#be123c,#fda4af)">
+    <div class="stat-card shadow-sm" style="background:linear-gradient(135deg,#8B5CF6,#C084FC); border-radius: 16px;">
       <i class="bi bi-exclamation-circle-fill"></i>
       <div class="value">₹{{ pending_fees|floatformat:0 }}</div>
       <div class="label">Pending Fees</div>
     </div>
   </div>
   <div class="col-6 col-md-3">
-    <div class="stat-card" style="background:linear-gradient(135deg,#0f766e,#5eead4)">
+    <div class="stat-card shadow-sm" style="background:linear-gradient(135deg,#0284C7,#38BDF8); border-radius: 16px;">
       <i class="bi bi-person-plus-fill"></i>
       <div class="value">{{ recent_students|length }}</div>
       <div class="label">Recent Admissions</div>

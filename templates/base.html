@@ -19,14 +19,14 @@
 <style>
   :root {
     --sidebar-width: 240px;
-    --primary: #FF6A1F; /* Warm Saffron Orange */
-    --primary-dark: #E05A00;
+    --primary: #4F46E5; /* Royal Indigo */
+    --primary-dark: #3730A3;
     --light-blue: #38BDF8;
     --light-blue-bg: #F0F9FF;
     --light-green: #10B981;
     --sidebar-bg: #FFFFFF; /* Clean White Sidebar */
     --sidebar-text: #334155;
-    --sidebar-active: #FF6A1F;
+    --sidebar-active: #4F46E5;
   }
   body { background: #F8FAFC; color: #0F172A; font-family: 'Inter', 'Segoe UI', sans-serif; transition: background-color 0.2s, color 0.2s; }
 
@@ -77,9 +77,9 @@
     color: #0F172A;
   }
   #sidebar .nav-link.active {
-    background: #FF6A1F;
+    background: linear-gradient(135deg, #4F46E5, #6366F1);
     color: #FFFFFF;
-    border-left: 4px solid #C2410C;
+    border-left: 4px solid #312E81;
   }
   #sidebar .nav-link i { width: 18px; text-align: center; font-size: 1rem; color: #475569; }
   #sidebar .nav-link:hover i { color: #0F172A; }
@@ -98,9 +98,9 @@
   .page-content { padding: 1.5rem; }
 
   /* Buttons & Badges */
-  .btn-primary { background: linear-gradient(135deg, #FF6A1F, #FF4500) !important; border-color: #FF6A1F !important; color: #fff !important; }
-  .btn-primary:hover { background: linear-gradient(135deg, #E05A00, #D03D00) !important; border-color: #E05A00 !important; }
-  .badge.bg-primary { background-color: #FF6A1F !important; }
+  .btn-primary { background: linear-gradient(135deg, #4F46E5, #3B82F6) !important; border-color: #4F46E5 !important; color: #fff !important; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25); }
+  .btn-primary:hover { background: linear-gradient(135deg, #3730A3, #2563EB) !important; border-color: #3730A3 !important; transform: translateY(-1px); }
+  .badge.bg-primary { background: linear-gradient(135deg, #4F46E5, #6366F1) !important; }
   .badge.bg-success { background-color: #10B981 !important; }
   .badge.bg-info { background-color: #38BDF8 !important; color: #0F172A !important; }
 
@@ -220,18 +220,18 @@
     border-radius: 24px;
     background: linear-gradient(
       135deg,
-      rgba(249, 115, 22, 0.94) 0%,
-      rgba(217, 119, 6, 0.88) 45%,
-      rgba(147, 51, 234, 0.85) 100%
+      rgba(79, 70, 229, 0.95) 0%,
+      rgba(99, 102, 241, 0.90) 50%,
+      rgba(139, 92, 246, 0.85) 100%
     );
     -webkit-backdrop-filter: blur(28px) saturate(200%);
     backdrop-filter: blur(28px) saturate(200%);
     border: 1px solid rgba(255, 255, 255, 0.45) !important;
     box-shadow: 
-      0 20px 50px -10px rgba(249, 115, 22, 0.35),
+      0 20px 50px -10px rgba(79, 70, 229, 0.35),
       inset 0 1.5px 0 0 rgba(255, 255, 255, 0.6),
       inset 0 -1.5px 0 0 rgba(0, 0, 0, 0.25),
-      0 0 25px rgba(251, 146, 60, 0.25);
+      0 0 25px rgba(99, 102, 241, 0.25);
     color: #ffffff;
     overflow: hidden;
   }
@@ -343,14 +343,14 @@
     background: #ffffff;
     transform: translateY(-3px) scale(1.02);
     box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3), 0 0 15px rgba(255, 255, 255, 0.4);
-    color: #ea580c;
+    color: #4F46E5;
   }
 
   .glass-action-btn .sparkle-icon {
     width: 17px;
     height: 17px;
-    color: #ea580c;
-    filter: drop-shadow(0 0 4px rgba(234, 88, 12, 0.5));
+    color: #4F46E5;
+    filter: drop-shadow(0 0 4px rgba(79, 70, 229, 0.5));
   }
 
   .glass-close-btn {
