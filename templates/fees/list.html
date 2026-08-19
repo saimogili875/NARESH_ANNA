@@ -40,6 +40,14 @@
       <div class="col-md-3">
         <input type="text" name="q" value="{{ q }}" class="form-control form-control-sm" placeholder="Search student name or adm no...">
       </div>
+      <div class="col-md-2">
+        <select name="section" class="form-select form-select-sm">
+          <option value="">All Sections</option>
+          {% for s in sections %}
+          <option value="{{ s.id }}" {% if section_filter == s.id|stringformat:'s' %}selected{% endif %}>{{ s.group.name }} - {{ s.get_year_display }} - {{ s.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
       <div class="col-md-3">
         <select name="fee_type" class="form-select form-select-sm">
           <option value="">All Fee Types</option>
@@ -49,12 +57,12 @@
           {% endfor %}
         </select>
       </div>
-      <div class="col-md-3">
+      <div class="col-md-2">
         <select name="status" class="form-select form-select-sm">
-          <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending Fees (Outstanding)</option>
+          <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending Fees</option>
           <option value="partial" {% if status_filter == 'partial' %}selected{% endif %}>Partial Paid</option>
           <option value="paid" {% if status_filter == 'paid' %}selected{% endif %}>Fully Paid</option>
-          <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All Fees (Include Fully Paid)</option>
+          <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All Fees</option>
         </select>
       </div>
       <div class="col-auto">
@@ -64,8 +72,8 @@
       <div class="col-auto ms-auto d-flex gap-2">
         <a href="{% url 'fee_set_bulk' %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-people-fill"></i> Bulk Assign Tuition</a>
         <a href="{% url 'fee_type_manage' %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-gear"></i> Manage Fee Types</a>
-        <a href="{% url 'fee_export' %}?fmt=pdf" class="btn btn-danger btn-sm"><i class="bi bi-file-earmark-pdf"></i> Export PDF</a>
-        <a href="{% url 'fee_export' %}?fmt=excel" class="btn btn-success btn-sm"><i class="bi bi-file-earmark-excel"></i> Export Excel</a>
+        <a href="{% url 'fee_export' %}?fmt=pdf&section={{ section_filter }}&fee_type={{ fee_type_filter }}&status={{ status_filter }}&q={{ q }}" class="btn btn-danger btn-sm"><i class="bi bi-file-earmark-pdf"></i> Export PDF</a>
+        <a href="{% url 'fee_export' %}?fmt=excel&section={{ section_filter }}&fee_type={{ fee_type_filter }}&status={{ status_filter }}&q={{ q }}" class="btn btn-success btn-sm"><i class="bi bi-file-earmark-excel"></i> Export Excel</a>
       </div>
     </form>
   </div>

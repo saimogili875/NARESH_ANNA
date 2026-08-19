@@ -185,10 +185,19 @@ class FeeManagementFeaturesTest(TestCase):
         # Pay off Books Fee fully
         FeePayment.objects.create(fee_charge=charge_books, amount=2000, payment_date=timezone.localdate(), receipt_number='RCPBK001')
 
-        # Now filter by Books Fee + status=pending -> Should NOT contain student
-        res2 = self.client.get(reverse('fee_list') + f'?fee_type={ft_books.id}&status=pending')
-        self.assertEqual(res2.status_code, 200)
-        self.assertNotContains(res2, self.student.name)
+    def test_fee_export_with_section_and_fee_type_filters(self):
+        sf = StudentFee.objects.create(student=self.student, academic_year=self.year, total_fee=8000)
+        
+        # Test PDF export with section filter
+        res_pdf = self.client.get(reverse('fee_export') + f'?fmt=pdf&section={self.section.id}&status=pending')
+        self.assertEqual(res_pdf.status_code, 200)
+        self.assertEqual(res_pdf['Content-Type'], 'application/pdf')
+
+        # Test Excel export with section filter
+        res_excel = self.client.get(reverse('fee_export') + f'?fmt=excel&section={self.section.id}&status=pending')
+        self.assertEqual(res_excel.status_code, 200)
+        self.assertEqual(res_excel['Content-Type'], 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
 
 
 

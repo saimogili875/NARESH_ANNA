@@ -294,14 +294,18 @@ def fee_type_delete(request, pk):
         
     return render(request, 'fees/delete_type_confirm.html', {'fee_type': fee_type})
 
+
 @all_roles_required
 def fee_list(request):
     q = request.GET.get('q', '')
     status_filter = request.GET.get('status', 'pending').lower().strip()
     fee_type_filter = request.GET.get('fee_type', '').strip()
+    section_filter = request.GET.get('section', '').strip()
     active_year = AcademicYear.objects.filter(is_active=True).first()
 
     students = Student.objects.filter(is_active=True).select_related('section__group')
+    if section_filter:
+        students = students.filter(section_id=section_filter)
     if q:
         students = students.filter(
             Q(name__icontains=q) | Q(admission_number__icontains=q)
@@ -403,16 +407,124 @@ def fee_list(request):
     total_collected = total_collected_tuition + total_charges_paid
     total_pending = total_pending_tuition + total_charges_pending
 
+    from accounts.models import Section
+    sections = Section.objects.select_related('group').all().order_by('group__name', 'year', 'name')
+
     return render(request, 'fees/list.html', {
         'fee_data': fee_data,
         'fee_types': fee_types,
+        'sections': sections,
         'q': q,
         'status_filter': status_filter,
         'fee_type_filter': fee_type_filter,
+        'section_filter': section_filter,
         'total_fees': total_fees,
         'total_collected': total_collected,
         'total_pending': total_pending,
     })
+
+
+@all_roles_required
+def fee_export(request):
+    """Export fees filtered by section, fee type, status, and search query to PDF or Excel."""
+    q = request.GET.get('q', '')
+    status_filter = request.GET.get('status', 'pending').lower().strip()
+    fee_type_filter = request.GET.get('fee_type', '').strip()
+    section_filter = request.GET.get('section', '').strip()
+    fmt = request.GET.get('fmt', 'excel')
+    active_year = AcademicYear.objects.filter(is_active=True).first()
+
+    students = Student.objects.filter(is_active=True).select_related('section__group')
+    if section_filter:
+        students = students.filter(section_id=section_filter)
+    if q:
+        students = students.filter(
+            Q(name__icontains=q) | Q(admission_number__icontains=q)
+        )
+    student_list = list(students)
+    student_ids = [s.pk for s in student_list]
+
+    fee_types = list(FeeType.objects.filter(academic_year=active_year).order_by('created_at'))
+
+    fee_rows = []
+    if active_year and student_ids:
+        existing_fees = {
+            sf.student_id: sf
+            for sf in StudentFee.objects.filter(
+                student_id__in=student_ids, academic_year=active_year
+            ).prefetch_related('payments')
+        }
+
+        charges_by_student = {}
+        if fee_types:
+            for c in StudentFeeCharge.objects.filter(
+                student_id__in=student_ids, fee_type__academic_year=active_year
+            ).select_related('fee_type').prefetch_related('payments'):
+                charges_by_student.setdefault(c.student_id, {})[c.fee_type_id] = c
+
+        for student in student_list:
+            sf = existing_fees.get(student.pk)
+            if not sf:
+                continue
+
+            charges_dict = charges_by_student.get(student.pk, {})
+            ordered_charges = [charges_dict.get(ft.id) for ft in fee_types]
+
+            if fee_type_filter == 'tuition':
+                if status_filter == 'pending' and sf.total_pending <= 0:
+                    continue
+                elif status_filter == 'partial' and sf.status != 'Partial':
+                    continue
+                elif status_filter == 'paid' and sf.status != 'Paid':
+                    continue
+            elif fee_type_filter.isdigit():
+                ft_id = int(fee_type_filter)
+                target_charge = charges_dict.get(ft_id)
+                if status_filter == 'pending' and (not target_charge or target_charge.total_pending <= 0):
+                    continue
+                elif status_filter == 'partial' and (not target_charge or target_charge.status != 'Partial'):
+                    continue
+                elif status_filter == 'paid' and (not target_charge or target_charge.status != 'Paid'):
+                    continue
+            else:
+                has_pending = (sf.total_pending > 0) or any(c and c.total_pending > 0 for c in ordered_charges if c)
+                has_partial = (sf.status == 'Partial') or any(c and c.status == 'Partial' for c in ordered_charges if c)
+                is_all_paid = (sf.status == 'Paid') and all((not c) or (c.status == 'Paid') for c in ordered_charges if c)
+
+                if status_filter == 'pending' and not has_pending:
+                    continue
+                elif status_filter == 'partial' and not has_partial:
+                    continue
+                elif status_filter == 'paid' and not is_all_paid:
+                    continue
+
+            if fee_type_filter == 'tuition':
+                row_total = float(sf.total_fee)
+                row_paid = float(sf.total_paid)
+                row_pending = float(sf.total_pending)
+            elif fee_type_filter.isdigit():
+                target_charge = charges_dict.get(int(fee_type_filter))
+                row_total = float(target_charge.amount_assigned) if target_charge else 0
+                row_paid = float(target_charge.total_paid) if target_charge else 0
+                row_pending = float(target_charge.total_pending) if target_charge else 0
+            else:
+                row_total = float(sf.total_fee) + sum(float(c.amount_assigned) for c in ordered_charges if c)
+                row_paid = float(sf.total_paid) + sum(float(c.total_paid) for c in ordered_charges if c)
+                row_pending = float(sf.total_pending) + sum(float(c.total_pending) for c in ordered_charges if c)
+
+            fee_rows.append({
+                'name':    student.name,
+                'section': str(student.section) if student.section else '—',
+                'year':    student.section.get_year_display() if student.section else '—',
+                'total':   row_total,
+                'paid':    row_paid,
+                'pending': row_pending,
+                'phone':   student.mobile or '—',
+            })
+
+    if fmt == 'pdf':
+        return _fee_export_pdf(fee_rows, active_year)
+    return _fee_export_excel(fee_rows, active_year)
 
 
 @admin_accounts_required
