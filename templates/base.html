@@ -202,7 +202,12 @@
   .dark-mode .bg-white {
     background-color: #1E293B !important;
   }
-  /* --- Glassmorphism Banner Styles --- */
+  /* --- Ultra-Premium Glassmorphism Banner Styles --- */
+  @keyframes floatGlow {
+    0% { transform: translateY(0px); box-shadow: 0 8px 20px rgba(0,0,0,0.4), 0 0 15px rgba(251, 191, 36, 0.3); }
+    100% { transform: translateY(-4px); box-shadow: 0 12px 25px rgba(0,0,0,0.45), 0 0 25px rgba(251, 191, 36, 0.6); }
+  }
+
   .glass-banner {
     position: relative;
     z-index: 1;
@@ -211,83 +216,102 @@
     align-items: center;
     justify-content: space-between;
     gap: 1.5rem;
-    padding: 1.1rem 1.6rem;
-    border-radius: 20px;
+    padding: 1.25rem 1.8rem;
+    border-radius: 24px;
     background: linear-gradient(
       135deg,
-      rgba(234, 88, 12, 0.88) 0%,
-      rgba(180, 83, 9, 0.80) 50%,
-      rgba(255, 255, 255, 0.15) 100%
+      rgba(249, 115, 22, 0.94) 0%,
+      rgba(217, 119, 6, 0.88) 45%,
+      rgba(147, 51, 234, 0.85) 100%
     );
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
-    backdrop-filter: blur(24px) saturate(180%);
-    border: 1.5px solid rgba(255, 255, 255, 0.35);
+    -webkit-backdrop-filter: blur(28px) saturate(200%);
+    backdrop-filter: blur(28px) saturate(200%);
+    border: 1px solid rgba(255, 255, 255, 0.45) !important;
     box-shadow: 
-      0 15px 35px -5px rgba(0, 0, 0, 0.25),
-      inset 0 1px 0 0 rgba(255, 255, 255, 0.4),
-      inset 0 -1px 0 0 rgba(0, 0, 0, 0.2);
+      0 20px 50px -10px rgba(249, 115, 22, 0.35),
+      inset 0 1.5px 0 0 rgba(255, 255, 255, 0.6),
+      inset 0 -1.5px 0 0 rgba(0, 0, 0, 0.25),
+      0 0 25px rgba(251, 146, 60, 0.25);
     color: #ffffff;
+    overflow: hidden;
+  }
+
+  /* Ambient Glass Glare Line */
+  .glass-banner::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.8), transparent);
+    pointer-events: none;
   }
 
   .banner-left {
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: 1.2rem;
+    position: relative;
+    z-index: 2;
   }
 
   .glass-icon-badge {
-    width: 46px;
-    height: 46px;
+    width: 52px;
+    height: 52px;
     border-radius: 50%;
-    background: rgba(15, 23, 42, 0.65);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.85), rgba(30, 41, 59, 0.90));
+    border: 1.5px solid rgba(251, 191, 36, 0.5);
     display: flex;
     align-items: center;
     justify-content: center;
     color: #fbbf24;
-    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.35);
+    animation: floatGlow 3s ease-in-out infinite alternate;
     flex-shrink: 0;
   }
 
   .moon-icon {
-    width: 22px;
-    height: 22px;
+    width: 24px;
+    height: 24px;
+    filter: drop-shadow(0 0 6px rgba(251, 191, 36, 0.7));
   }
 
   .banner-content {
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
+    gap: 0.3rem;
   }
 
   .banner-title-wrap {
     display: flex;
     align-items: center;
-    gap: 0.6rem;
+    gap: 0.75rem;
   }
 
   .glass-tag {
-    font-size: 0.65rem;
+    font-size: 0.7rem;
     font-weight: 800;
-    letter-spacing: 0.06em;
-    padding: 0.2rem 0.55rem;
+    letter-spacing: 0.08em;
+    padding: 0.25rem 0.65rem;
     border-radius: 999px;
-    background: rgba(0, 0, 0, 0.4);
-    color: #fdba74;
-    border: 1px solid rgba(251, 146, 60, 0.35);
+    background: rgba(15, 23, 42, 0.85);
+    color: #FCD34D;
+    border: 1px solid rgba(252, 211, 77, 0.6);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), 0 0 10px rgba(252, 211, 77, 0.25);
+    text-shadow: 0 0 6px rgba(252, 211, 77, 0.4);
   }
 
   .banner-title {
-    font-size: 1.05rem;
-    font-weight: 700;
+    font-size: 1.15rem;
+    font-weight: 800;
     letter-spacing: -0.01em;
     color: #ffffff;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
   }
 
   .banner-subtitle {
-    font-size: 0.85rem;
-    color: rgba(255, 255, 255, 0.92);
-    font-weight: 400;
+    font-size: 0.88rem;
+    color: rgba(255, 255, 255, 0.95);
+    font-weight: 500;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
   }
 
   .banner-right {
@@ -295,51 +319,61 @@
     align-items: center;
     gap: 1rem;
     flex-shrink: 0;
+    position: relative;
+    z-index: 2;
   }
 
   .glass-action-btn {
     display: inline-flex;
     align-items: center;
-    gap: 0.55rem;
-    padding: 0.6rem 1.25rem;
+    gap: 0.6rem;
+    padding: 0.65rem 1.4rem;
     border-radius: 999px;
-    border: 1px solid rgba(255, 255, 255, 0.7);
-    background: rgba(255, 255, 255, 0.92);
+    border: 1.5px solid rgba(255, 255, 255, 0.85);
+    background: #ffffff;
     color: #0f172a;
-    font-size: 0.875rem;
-    font-weight: 600;
+    font-size: 0.9rem;
+    font-weight: 700;
     cursor: pointer;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
-    transition: transform 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .glass-action-btn:hover {
     background: #ffffff;
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.25);
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3), 0 0 15px rgba(255, 255, 255, 0.4);
+    color: #ea580c;
   }
 
   .glass-action-btn .sparkle-icon {
-    width: 15px;
-    height: 15px;
-    color: #2563eb;
+    width: 17px;
+    height: 17px;
+    color: #ea580c;
+    filter: drop-shadow(0 0 4px rgba(234, 88, 12, 0.5));
   }
 
   .glass-close-btn {
-    background: transparent;
-    border: none;
-    color: rgba(255, 255, 255, 0.85);
-    font-size: 1.5rem;
+    background: rgba(15, 23, 42, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    color: rgba(255, 255, 255, 0.9);
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
     line-height: 1;
     cursor: pointer;
-    padding: 0.25rem;
     border-radius: 50%;
-    transition: color 0.2s ease, transform 0.2s ease;
+    transition: all 0.2s ease;
   }
 
   .glass-close-btn:hover {
+    background: rgba(239, 68, 68, 0.8);
     color: #ffffff;
-    transform: scale(1.15);
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: scale(1.1);
   }
 
   @media (max-width: 680px) {
