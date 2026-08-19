@@ -209,7 +209,7 @@ def generate_receipt_pdf(payment):
         sec_heading("Payment Information", 94 * mm),
         Spacer(1, 1),
         key_val_table([
-            ("Fee Head", f"<b>{fee_head_name}</b>"),
+            ("Fee Type", f"<b>{fee_head_name}</b>"),
             ("Amount Paid", f"<b>Rs. {payment.amount:,.2f}</b>"),
             ("Payment Mode", payment.get_payment_mode_display()),
         ], 94 * mm),

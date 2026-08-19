@@ -43,7 +43,7 @@
       <input type="hidden" name="next" value="{{ request.GET.next }}">
       
       <div class="mb-3">
-        <label class="form-label fw-500">Fee Head <span class="text-danger">*</span></label>
+        <label class="form-label fw-500">Fee Type <span class="text-danger">*</span></label>
         <select name="fee_head" id="feeHeadSelect" class="form-select form-select-lg" required onchange="updateMaxAmount()">
           {% if student_fee.total_pending > 0 or not other_charges %}
           <option value="tuition" data-pending="{{ student_fee.total_pending|stringformat:'f' }}">

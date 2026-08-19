@@ -26,7 +26,7 @@
     <form method="post">
       {% csrf_token %}
       <div class="mb-3">
-        <label class="form-label fw-500">Select Fee Head <span class="text-danger">*</span></label>
+        <label class="form-label fw-500">Select Fee Type <span class="text-danger">*</span></label>
         <select name="fee_head" class="form-select form-select-lg" required>
           <option value="tuition">Tuition Fee (Paid: ₹{{ student_fee.total_paid|floatformat:0 }})</option>
           {% for charge in other_charges %}
