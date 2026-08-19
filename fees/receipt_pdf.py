@@ -12,7 +12,7 @@ from reportlab.lib.enums import TA_CENTER, TA_LEFT
 
 COLLEGE_NAME = "Sri NRI Junior College"
 COLLEGE_SUBTITLE = "Fee Payment Receipt"
-COLLEGE_ADDRESS = "Behind Bharath Petrol Pump, Hyderabad - Nagarjuna Sagar Rd, B N Reddy Nagar, Hyderabad-500070, Telangana"
+COLLEGE_ADDRESS = "Behind Bharath Petrol Pump, B N Reddy Nagar, Hyderabad - 500079 | Ph: 9248078999, 9848426562"
 LOGO_PATH = os.path.join(settings.BASE_DIR, "static", "images", "sri_nri_logo.png")
 
 
