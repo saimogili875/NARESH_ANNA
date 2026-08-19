@@ -65,7 +65,7 @@ class Exam(models.Model):
     max_marks = models.IntegerField(default=100)
 
     def display_name(self):
-        if self.exam_type.name.lower() == 'custom' and self.custom_name:
+        if self.custom_name:
             return self.custom_name
         return self.exam_type.name
 

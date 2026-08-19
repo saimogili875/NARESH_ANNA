@@ -19,12 +19,11 @@
     <form method="post">
       {% csrf_token %}
 
-      {% if exam.exam_type.name|lower == 'custom' %}
       <div class="mb-3">
-        <label class="form-label fw-bold">Custom Exam Name <span class="text-danger">*</span></label>
-        <input type="text" name="custom_name" class="form-control" value="{{ exam.custom_name }}" required>
+        <label class="form-label fw-bold">Specific Exam Title / Number <span class="text-muted small">(Optional)</span></label>
+        <input type="text" name="custom_name" class="form-control" value="{{ exam.custom_name }}" placeholder="e.g. Weekly Test 1, Unit Test 2">
+        <div class="form-text">Enter a specific title or number for this exam. If left blank, defaults to {{ exam.exam_type.name }}.</div>
       </div>
-      {% endif %}
 
       <div class="mb-3">
         <label class="form-label fw-bold">Exam Date <span class="text-danger">*</span></label>

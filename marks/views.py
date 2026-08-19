@@ -142,7 +142,7 @@ def exam_add(request):
 
                     exam = Exam.objects.create(
                         exam_type=exam_type,
-                        custom_name=custom_name if exam_type.name.lower() == 'custom' else '',
+                        custom_name=custom_name,
                         academic_year=active_year,
                         group=group,
                         category=category,
@@ -182,7 +182,7 @@ def exam_edit(request, exam_id):
         custom_name = request.POST.get('custom_name', '').strip()
         exam_date = request.POST.get('date')
 
-        if exam.exam_type.name.lower() == 'custom' and custom_name:
+        if custom_name is not None:
             exam.custom_name = custom_name
         if exam_date:
             exam.date = exam_date

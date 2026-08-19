@@ -43,11 +43,12 @@
         <div class="form-text">Exam name will include the selected application name.</div>
       </div>
 
-      <!-- Custom name field -->
+      <!-- Custom / Specific Exam Name field -->
       <div class="mb-3" id="customNameDiv" style="display:none">
-        <label class="form-label fw-bold">Custom Exam Name <span class="text-danger">*</span></label>
+        <label class="form-label fw-bold">Specific Exam Name / Number <span id="customReqBadge" class="text-muted small">(Optional)</span></label>
         <input type="text" name="custom_name" id="customNameInput" class="form-control"
-               placeholder="e.g. Surprise Test">
+               placeholder="e.g. Weekly Test 1, Unit Test 2, or Cumulative Test 3">
+        <div class="form-text" id="customNameHelpText">Enter a specific title or number (e.g. Weekly Test 1, Weekly Test 2). If left blank, defaults to selected type.</div>
       </div>
 
       <!-- STEP 4: Date -->
@@ -210,13 +211,29 @@ function onCategorySelect(cat, groupCode) {
 
 function onExamTypeChange() {
   const sel = document.getElementById('examTypeSelect');
-  const selectedText = sel.options[sel.selectedIndex] ? sel.options[sel.selectedIndex].textContent.trim().toLowerCase() : '';
   const cd  = document.getElementById('customNameDiv');
   const ci  = document.getElementById('customNameInput');
-  if (selectedText.startsWith('custom')) {
-    cd.style.display = 'block'; ci.required = true;
+  const reqBadge = document.getElementById('customReqBadge');
+  const helpText = document.getElementById('customNameHelpText');
+
+  if (!sel || !sel.options.length || sel.selectedIndex < 0) return;
+
+  const selectedText = sel.options[sel.selectedIndex].textContent.trim();
+  const baseName = selectedText.split(' — ')[0];
+  const isCustom = selectedText.toLowerCase().startsWith('custom');
+
+  cd.style.display = 'block';
+
+  if (isCustom) {
+    ci.required = true;
+    ci.placeholder = 'e.g. Special Grand Test 1, Midterm Exam';
+    if (reqBadge) reqBadge.innerHTML = '<span class="text-danger">*</span>';
+    if (helpText) helpText.textContent = 'Please enter a custom exam name.';
   } else {
-    cd.style.display = 'none'; ci.required = false;
+    ci.required = false;
+    ci.placeholder = `e.g. ${baseName} 1, ${baseName} 2, or ${baseName} - Aug 20`;
+    if (reqBadge) reqBadge.innerHTML = '<span class="text-muted small">(Optional)</span>';
+    if (helpText) helpText.textContent = `Enter a specific name or number (e.g. ${baseName} 1, ${baseName} 2). If left blank, defaults to "${baseName}".`;
   }
 }
 
