@@ -314,25 +314,31 @@
   {% endif %}
 
   <div class="page-content">
-    <!-- Big Orange Dark Mode Feature Notification Box -->
-    <div id="darkModeNoticeBanner" class="card border-0 text-white shadow-sm mb-4" 
-         style="background: linear-gradient(135deg, #FF6A1F 0%, #FF4500 100%); border-radius: 14px; position: relative; overflow: hidden;">
+    <!-- Glassmorphism Dark Mode Feature Notification Box -->
+    <div id="darkModeNoticeBanner" class="card text-white mb-4" 
+         style="background: linear-gradient(135deg, rgba(255, 106, 31, 0.92) 0%, rgba(224, 90, 0, 0.95) 100%); 
+                border: 2px solid #BAE6FD !important; 
+                border-radius: 16px; 
+                backdrop-filter: blur(12px) saturate(180%); 
+                -webkit-backdrop-filter: blur(12px); 
+                box-shadow: 0 8px 32px rgba(2, 132, 199, 0.22); 
+                position: relative; overflow: hidden;">
       <div class="card-body p-3 p-md-4 d-flex flex-column flex-md-row align-items-center justify-content-between gap-3">
         <div class="d-flex align-items-center gap-3">
-          <div class="rounded-circle bg-white text-primary p-3 d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm" style="width: 52px; height: 52px;">
+          <div class="rounded-circle bg-white text-primary p-3 d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm" style="width: 54px; height: 54px; border: 2px solid #E0F2FE;">
             <i class="bi bi-moon-stars-fill text-warning fs-3"></i>
           </div>
           <div>
             <div class="d-flex align-items-center gap-2">
-              <span class="badge bg-white text-dark fw-bold px-2 py-1" style="font-size: 0.75rem; letter-spacing: 0.05em; color: #E05A00 !important;">USE ME!</span>
-              <h5 class="mb-0 fw-bold text-white">Dark Mode Feature</h5>
+              <span class="badge bg-white text-dark fw-bold px-2 py-1 shadow-sm" style="font-size: 0.78rem; letter-spacing: 0.06em; color: #D94600 !important; border: 1px solid #BAE6FD;">USE ME!</span>
+              <h5 class="mb-0 fw-bold text-white fs-5" style="letter-spacing: -0.01em;">Dark Mode Feature</h5>
             </div>
-            <p class="mb-0 small text-white mt-1 fw-semibold">Turn ON / Turn OFF for a better experience!</p>
+            <p class="mb-0 small text-white mt-1 fw-semibold" style="opacity: 0.95;">Turn ON / Turn OFF for a better experience!</p>
           </div>
         </div>
         <div class="d-flex align-items-center gap-2 flex-shrink-0">
-          <button type="button" onclick="toggleDarkMode()" class="btn btn-light text-dark fw-bold px-3 py-2 shadow-sm rounded-pill d-flex align-items-center gap-2">
-            <i class="bi bi-moon-stars-fill text-primary"></i>
+          <button type="button" onclick="toggleDarkMode()" class="btn btn-light text-dark fw-bold px-3 py-2 shadow rounded-pill d-flex align-items-center gap-2" style="border: 1.5px solid #BAE6FD;">
+            <i class="bi bi-moon-stars-fill text-primary fs-6"></i>
             <span>Toggle Theme Now</span>
           </button>
           <button type="button" onclick="dismissThemeBanner()" class="btn btn-sm btn-link text-white text-decoration-none p-1 ms-1" title="Dismiss Notification">
