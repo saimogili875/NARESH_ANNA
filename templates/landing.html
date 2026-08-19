@@ -112,6 +112,10 @@
     padding:90px 0 60px; position:relative; overflow:hidden;
     background:linear-gradient(180deg, #FF6A1F 0%, #FF8A3D 18%, #E0F2FE 55%, #FFFFFF 100%);
   }
+  .hero-bg-video{
+    position:absolute; inset:0; width:100%; height:100%; object-fit:cover;
+    opacity:0.28; z-index:0; pointer-events:none; filter:contrast(1.05) brightness(1.02);
+  }
   .hero::before{
     content:""; position:absolute; inset:0; z-index:0; pointer-events:none;
     background:
@@ -578,6 +582,11 @@
 
 <!-- HOME / HERO -->
 <section class="hero" id="home">
+  <video class="hero-bg-video" autoplay loop muted playsinline preload="auto">
+    <source src="{% static 'videos/video2.mp4' %}" type="video/mp4">
+    <source src="{% static 'video2.mp4' %}" type="video/mp4">
+    <source src="/static/video2.mp4" type="video/mp4">
+  </video>
   <div class="wrap hero-inner">
     <div class="hero-top reveal in">
       <span class="eyebrow">Admissions open — 2026–28 batch</span>
