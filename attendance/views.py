@@ -193,6 +193,11 @@ def attendance_mark(request):
                 for a in Attendance.objects.filter(section=section, date=selected_date)
             }
 
+            # Track which students were ALREADY marked absent before this save
+            already_absent_ids = {
+                s_id for s_id, row in existing.items() if row.status == 'A'
+            }
+
             to_create = []
             to_update = []
             for student, status, remarks in student_data:
@@ -212,7 +217,55 @@ def attendance_mark(request):
             if to_update:
                 Attendance.objects.bulk_update(to_update, ['status', 'remarks'])
 
-        messages.success(request, f'Attendance saved for {section} on {selected_date}.')
+        # --- Send WhatsApp alerts for newly absent students synchronously post-commit ---
+        import logging
+        from whatsapp.services import send_absence_alert
+        logger = logging.getLogger('whatsapp_sender')
+
+        sent_count = 0
+        failed_count = 0
+        no_phone_count = 0
+
+        for student, status, remarks in student_data:
+            if status == 'A':
+                # Skip if student was already marked 'A' in an earlier save today
+                if student.pk in already_absent_ids:
+                    continue
+
+                parent_phone = (student.mobile or student.second_mobile or '').strip()
+                if not parent_phone:
+                    no_phone_count += 1
+                    continue
+
+                try:
+                    result = send_absence_alert(
+                        student_name=student.name,
+                        parent_phone=parent_phone,
+                        date_str=selected_date.strftime('%d-%m-%Y'),
+                        section=str(section),
+                        reason=remarks or "Absent",
+                    )
+                    if result.get('success'):
+                        sent_count += 1
+                    else:
+                        failed_count += 1
+                        logger.error(f"Failed to send absence alert to {student.name} ({parent_phone}): {result.get('error')}")
+                except Exception as e:
+                    failed_count += 1
+                    logger.exception(f"Exception sending absence alert for {student.name} ({parent_phone}): {e}")
+
+        # Construct user success message
+        msg = f'Attendance saved for {section} on {selected_date}.'
+        new_absent_count = sent_count + failed_count + no_phone_count
+        if new_absent_count > 0:
+            msg += f' WhatsApp sent to {sent_count} parent(s)'
+            if failed_count > 0:
+                msg += f', {failed_count} failed'
+            if no_phone_count > 0:
+                msg += f', {no_phone_count} had no phone number'
+            msg += '.'
+
+        messages.success(request, msg)
         base_url = reverse('attendance_list')
         query_string = urlencode({'date': selected_date.isoformat(), 'section': section_id})
         return redirect(f"{base_url}?{query_string}")
