@@ -430,9 +430,7 @@ def marks_whatsapp_send(request, exam_id):
                     f"Total Obtained: {total_obtained:g} / {total_max} ({pct}%)"
                 )
 
-                subject_summary = "\n".join(
-                    line for line in mark_lines
-                )
+                subject_summary = "\n".join(mark_lines)
 
                 template_params = [
                     student.name,
@@ -440,8 +438,9 @@ def marks_whatsapp_send(request, exam_id):
                     str(total_max),
                     f"{exam.display_name()} ({pct}%)",
                     exam.date.strftime('%d-%m-%Y'),
-                    subject_summary,
                 ]
+                if getattr(settings, 'MARKS_TEMPLATE_HAS_SUBJECTS', False):
+                    template_params.append(subject_summary)
 
                 PendingMessage.objects.create(
                     student=student,

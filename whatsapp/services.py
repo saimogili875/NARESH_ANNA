@@ -269,15 +269,8 @@ def dispatch_pending_messages(batch_size: int = 50) -> dict:
                 language=language,
                 components=components
             )
-            gen_template = getattr(settings, 'META_TEMPLATE_GENERAL', 'general_notification')
-            if not result["success"] and template_name != gen_template:
-                gen_components = build_template_components([msg.message])
-                result = send_whatsapp_template(
-                    to_number=phone,
-                    template_name=gen_template,
-                    language=language,
-                    components=gen_components
-                )
+            if not result["success"]:
+                logger.error(f"PendingMessage {msg.pk} template '{template_name}' failed: {result.get('error')}")
         else:
             result = send_whatsapp_text(to_number=phone, message=msg.message)
 
