@@ -26,7 +26,7 @@ INSTALLED_APPS = [
     'students',
     'attendance',
     'marks',
-    'fees',
+    'fees.apps.FeesConfig',
     'faculty',
     'reports',
     'whatsapp',

@@ -42,7 +42,7 @@ def student_list(request):
     return render(request, 'students/list.html', context)
 
 
-@admin_required
+@admin_accounts_required
 def student_add(request):
     form = StudentForm(request.POST or None, request.FILES or None)
     if form.is_valid():
@@ -52,7 +52,7 @@ def student_add(request):
     return render(request, 'students/form.html', {'form': form, 'title': 'Add Student'})
 
 
-@admin_required
+@admin_accounts_required
 def student_edit(request, pk):
     obj = get_object_or_404(Student, pk=pk)
     form = StudentForm(request.POST or None, request.FILES or None, instance=obj)
@@ -63,7 +63,7 @@ def student_edit(request, pk):
     return render(request, 'students/form.html', {'form': form, 'title': 'Edit Student', 'student': obj})
 
 
-@admin_required
+@admin_accounts_required
 def student_delete(request, pk):
     obj = get_object_or_404(Student, pk=pk)
     obj.delete()
@@ -89,8 +89,11 @@ def student_bulk_transfer(request):
         messages.error(request, 'Please choose a Group/Year/Section to move students into.')
         return redirect('student_list')
     section = get_object_or_404(Section, pk=section_id)
-    updated = Student.objects.filter(pk__in=ids).update(section=section)
-    messages.success(request, f'{updated} student(s) moved to {section}.')
+    transferred_students = list(Student.objects.filter(pk__in=ids))
+    for s in transferred_students:
+        s.section = section
+        s.save()
+    messages.success(request, f'{len(transferred_students)} student(s) moved to {section}.')
     return redirect('student_list')
 
 

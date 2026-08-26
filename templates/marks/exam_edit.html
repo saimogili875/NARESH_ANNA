@@ -38,30 +38,28 @@
         </div>
         <div class="p-2 border rounded bg-light">
           {% for sub in subjects %}
-          {% with is_excluded=sub.id in excluded_subject_ids %}
-          <div class="row align-items-center mb-2 p-2 rounded border bg-white subject-edit-row {% if is_excluded %}subject-excluded{% endif %}" id="edit_sub_row_{{ sub.id }}">
+          <div class="row align-items-center mb-2 p-2 rounded border bg-white subject-edit-row {% if sub.id in excluded_subject_ids %}subject-excluded{% endif %}" id="edit_sub_row_{{ sub.id }}">
             <div class="col-6">
               <div class="fw-bold sub-name-title">{{ sub.name }}</div>
-              <span class="badge bg-danger-subtle text-danger border border-danger ex-badge" style="{% if not is_excluded %}display:none;{% endif %} font-size:0.7rem;">Not Conducted This Exam</span>
+              <span class="badge bg-danger-subtle text-danger border border-danger ex-badge" style="{% if sub.id not in excluded_subject_ids %}display:none;{% endif %} font-size:0.7rem;">Not Conducted This Exam</span>
             </div>
             <div class="col-4">
               <input type="number" name="subject_max_{{ sub.name }}" class="form-control form-control-sm subject-max-input"
                      value="{% for s_id, val in existing_max_marks.items %}{% if s_id == sub.id %}{{ val }}{% endif %}{% endfor %}"
-                     placeholder="100" min="1" {% if is_excluded %}disabled{% endif %}>
+                     placeholder="100" min="1" {% if sub.id in excluded_subject_ids %}disabled{% endif %}>
             </div>
             <div class="col-2 text-end">
-              <button type="button" class="btn btn-sm {% if is_excluded %}btn-outline-success{% else %}btn-outline-danger{% endif %} py-0 px-2 btn-toggle-omit"
+              <button type="button" class="btn btn-sm {% if sub.id in excluded_subject_ids %}btn-outline-success{% else %}btn-outline-danger{% endif %} py-0 px-2 btn-toggle-omit"
                       onclick="toggleEditSubjectExclude(this, '{{ sub.id }}')">
-                {% if is_excluded %}
+                {% if sub.id in excluded_subject_ids %}
                 <i class="bi bi-plus-circle me-1"></i>+ Include
                 {% else %}
                 <i class="bi bi-dash-circle me-1"></i>- Omit
                 {% endif %}
               </button>
-              <input type="checkbox" name="excluded_subjects" value="{{ sub.id }}" id="chk_ex_{{ sub.id }}" style="display:none;" {% if is_excluded %}checked{% endif %}>
+              <input type="checkbox" name="excluded_subjects" value="{{ sub.id }}" id="chk_ex_{{ sub.id }}" style="display:none;" {% if sub.id in excluded_subject_ids %}checked{% endif %}>
             </div>
           </div>
-          {% endwith %}
           {% endfor %}
         </div>
       </div>
