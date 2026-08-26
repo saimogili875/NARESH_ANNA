@@ -1,4 +1,6 @@
 import logging
+import threading
+import time
 import requests
 from django.conf import settings
 
@@ -7,6 +9,23 @@ from .gemini_service import translate_text, translate_template_params
 logger = logging.getLogger('whatsapp_sender')
 
 META_API_URL = "https://graph.facebook.com/v21.0"
+
+# Global in-process rate limiter lock & last sent timestamp.
+# Intentionally throttles requests to max 1 message every 6 seconds to:
+# (a) Stay safely under Meta Cloud API rate limits.
+# (b) Smooth out traffic bursts when multiple faculty members save attendance near peak cutoff hours.
+_rate_limit_lock = threading.Lock()
+_last_sent_at = 0.0
+
+
+def _apply_rate_limit():
+    global _last_sent_at
+    with _rate_limit_lock:
+        now = time.monotonic()
+        elapsed = now - _last_sent_at
+        if elapsed < 6.0:
+            time.sleep(6.0 - elapsed)
+        _last_sent_at = time.monotonic()
 
 
 def _get_headers():
@@ -85,6 +104,7 @@ def send_whatsapp_template(to_number: str, template_name: str, language: str = "
     if components:
         payload["template"]["components"] = components
 
+    _apply_rate_limit()
     try:
         resp = requests.post(url, json=payload, headers=_get_headers(), timeout=30)
         data = resp.json()
@@ -120,6 +140,7 @@ def send_whatsapp_text(to_number: str, message: str) -> dict:
         "text": {"body": message},
     }
 
+    _apply_rate_limit()
     try:
         resp = requests.post(url, json=payload, headers=_get_headers(), timeout=30)
         data = resp.json()
@@ -172,6 +193,7 @@ def send_whatsapp_media(to_number: str, media_url: str, caption: str = "") -> di
         },
     }
 
+    _apply_rate_limit()
     try:
         resp = requests.post(url, json=payload, headers=_get_headers(), timeout=30)
         data = resp.json()
