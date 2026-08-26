@@ -53,8 +53,7 @@ def _sanitize_param(val) -> str:
     s = str(val).strip()
     if not s:
         return "-"
-    # Replace newlines with spaces as required by Meta Cloud API template parameter rules
-    s = s.replace("\r\n", " ").replace("\n", " ").replace("\r", " ")
+    s = s.replace("\r\n", "\n").replace("\r", "\n")
     return s[:1000]
 
 

@@ -430,8 +430,8 @@ def marks_whatsapp_send(request, exam_id):
                     f"Total Obtained: {total_obtained:g} / {total_max} ({pct}%)"
                 )
 
-                subject_summary = " | ".join(
-                    line.replace("• ", "") for line in mark_lines
+                subject_summary = "\n".join(
+                    line for line in mark_lines
                 )
 
                 template_params = [
