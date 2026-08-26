@@ -137,15 +137,8 @@ def trigger_batch_webhook(request):
                 language=language,
                 components=components
             )
-            gen_template = getattr(settings, 'META_TEMPLATE_GENERAL', 'general_notification')
-            if not result["success"] and template_name != gen_template:
-                gen_components = build_template_components([msg.message])
-                result = send_whatsapp_template(
-                    to_number=phone,
-                    template_name=gen_template,
-                    language=language,
-                    components=gen_components
-                )
+            if not result["success"]:
+                logger.error(f"PendingMessage {msg.pk} template '{template_name}' failed: {result.get('error')}")
         else:
             result = send_whatsapp_text(to_number=phone, message=msg.message)
 
@@ -165,4 +158,26 @@ def trigger_batch_webhook(request):
         "message": f"Dispatched: {sent} sent, {failed} failed out of {len(pending)}.",
         "sent": sent,
         "failed": failed,
+    })
+
+
+@csrf_exempt
+def retry_failed_messages(request):
+    from whatsapp.models import PendingMessage
+    from .services import dispatch_pending_messages
+
+    reset_count = PendingMessage.objects.filter(
+        status=PendingMessage.STATUS_FAILED
+    ).update(status=PendingMessage.STATUS_PENDING, error_message='')
+
+    if reset_count == 0:
+        return JsonResponse({"success": True, "message": "No failed messages to retry.", "reset": 0})
+
+    result = dispatch_pending_messages(batch_size=reset_count)
+    return JsonResponse({
+        "success": True,
+        "message": f"Reset {reset_count} failed messages. Sent: {result['sent']}, Failed: {result['failed']}.",
+        "reset": reset_count,
+        "sent": result["sent"],
+        "failed": result["failed"],
     })
