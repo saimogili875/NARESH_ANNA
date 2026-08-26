@@ -138,9 +138,10 @@ def attendance_mark(request):
             cutoff_m = getattr(conf, 'ATTENDANCE_CUTOFF_MINUTE', 0)
             cutoff = now.replace(hour=cutoff_h, minute=cutoff_m, second=0, microsecond=0)
             if now > cutoff:
+                time_str = cutoff.strftime('%I:%M %p').lstrip('0')
                 messages.error(
                     request,
-                    f'Attendance marking is locked after {cutoff_h}:{cutoff_m:02d} AM. Please contact admin.'
+                    f'Attendance marking is locked after {time_str}. Please contact admin.'
                 )
                 return redirect('attendance_list')
 
