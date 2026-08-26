@@ -210,15 +210,12 @@ def send_whatsapp_media(to_number: str, media_url: str, caption: str = "") -> di
         return {"success": False, "error": str(e)}
 
 
-def send_exam_marks(parent_phone: str, student_name: str, marks: str, total_marks: str, subject: str, date_str: str, language: str = "en") -> dict:
+def send_exam_marks(parent_phone: str, student_name: str, marks: str, total_marks: str, subject: str, date_str: str, subject_marks: str = "", language: str = "en") -> dict:
     template_name = settings.META_TEMPLATE_EXAM_MARKS
-    components = build_template_components([
-        student_name,
-        str(marks),
-        str(total_marks),
-        subject,
-        date_str,
-    ])
+    params = [student_name, str(marks), str(total_marks), subject, date_str]
+    if subject_marks:
+        params.append(subject_marks)
+    components = build_template_components(params)
     return send_whatsapp_template(parent_phone, template_name, language="en", components=components)
 
 
