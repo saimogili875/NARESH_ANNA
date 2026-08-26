@@ -439,8 +439,7 @@ def marks_whatsapp_send(request, exam_id):
                     f"{exam.display_name()} ({pct}%)",
                     exam.date.strftime('%d-%m-%Y'),
                 ]
-                if getattr(settings, 'MARKS_TEMPLATE_HAS_SUBJECTS', False):
-                    template_params.append(subject_summary)
+                template_params.append(subject_summary)
 
                 PendingMessage.objects.create(
                     student=student,
