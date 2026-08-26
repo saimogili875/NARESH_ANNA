@@ -164,20 +164,24 @@ def trigger_batch_webhook(request):
 @csrf_exempt
 def retry_failed_messages(request):
     from whatsapp.models import PendingMessage
-    from .services import dispatch_pending_messages
+    from .services import dispatch_pending_messages_async
 
-    reset_count = PendingMessage.objects.filter(
-        status=PendingMessage.STATUS_FAILED
-    ).update(status=PendingMessage.STATUS_PENDING, error_message='')
+    failed_msgs = list(PendingMessage.objects.filter(status=PendingMessage.STATUS_FAILED))
+    reset_count = len(failed_msgs)
 
     if reset_count == 0:
         return JsonResponse({"success": True, "message": "No failed messages to retry.", "reset": 0})
 
-    result = dispatch_pending_messages(batch_size=reset_count)
+    for msg in failed_msgs:
+        if msg.template_name == 'marks_template' and msg.template_params and len(msg.template_params) > 5:
+            msg.template_params = msg.template_params[:5]
+        msg.status = PendingMessage.STATUS_PENDING
+        msg.error_message = ''
+        msg.save()
+
+    dispatch_pending_messages_async(batch_size=50)
     return JsonResponse({
         "success": True,
-        "message": f"Reset {reset_count} failed messages. Sent: {result['sent']}, Failed: {result['failed']}.",
+        "message": f"Reset {reset_count} failed messages. Dispatching in background.",
         "reset": reset_count,
-        "sent": result["sent"],
-        "failed": result["failed"],
     })
