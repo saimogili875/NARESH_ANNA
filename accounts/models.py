@@ -25,7 +25,7 @@ class User(AbstractUser):
     blocked_at = models.DateTimeField(null=True, blank=True)
 
     def is_admin(self):
-        return self.role == self.ROLE_ADMIN
+        return self.role in [self.ROLE_ADMIN, self.ROLE_ACCOUNTS] or self.is_superuser
 
     def is_faculty(self):
         return self.role == self.ROLE_FACULTY

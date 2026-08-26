@@ -15,7 +15,7 @@ def role_required(*roles):
         return wrapper
     return decorator
 
-admin_required = role_required('admin')
+admin_required = role_required('admin', 'accounts')
 admin_accounts_required = role_required('admin', 'accounts')
 admin_faculty_required = role_required('admin', 'faculty')
 all_roles_required = role_required('admin', 'faculty', 'accounts')
