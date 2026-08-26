@@ -103,6 +103,12 @@ def send_whatsapp_template(to_number: str, template_name: str, language: str = "
     if components:
         payload["template"]["components"] = components
 
+    param_count = 0
+    if components:
+        for comp in components:
+            param_count += len(comp.get("parameters", []))
+    logger.info(f"Sending template '{template_name}' to {phone} with {param_count} params, lang={meta_lang_code}")
+
     _apply_rate_limit()
     try:
         resp = requests.post(url, json=payload, headers=_get_headers(), timeout=30)
