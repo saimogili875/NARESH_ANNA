@@ -53,7 +53,7 @@ def _sanitize_param(val) -> str:
     s = str(val).strip()
     if not s:
         return "-"
-    s = s.replace("\r\n", "\n").replace("\r", "\n")
+    s = s.replace("\r\n", " ").replace("\n", " ").replace("\r", " ")
     return s[:1000]
 
 
