@@ -256,8 +256,10 @@ def student_profile(request, pk):
             m = entry['marks'].get(sub)
             max_val = subject_max_marks.get(sub, exam.max_marks)
             total_max += max_val
-            if m and not m.is_absent and m.marks_obtained is not None:
-                total_obtained += float(m.marks_obtained)
+            if m:
+                is_abs = m.is_absent or (m.marks_obtained is not None and float(m.marks_obtained) == 0)
+                if not is_abs and m.marks_obtained is not None:
+                    total_obtained += float(m.marks_obtained)
             row_marks.append({'subject': sub, 'mark': m, 'max': max_val})
         exam_rows.append({
             'exam': exam, 'subject_marks': row_marks,

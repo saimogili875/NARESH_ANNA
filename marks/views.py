@@ -302,9 +302,15 @@ def marks_entry(request, exam_id):
 
                 val = request.POST.get(f'mark_{student.pk}_{subject.name}', '').strip()
                 if val:
+                    try:
+                        num_val = float(val)
+                        is_absent_val = (num_val == 0)
+                    except (ValueError, TypeError):
+                        is_absent_val = False
+
                     Mark.objects.update_or_create(
                         student=student, exam=exam, subject=subject,
-                        defaults={'marks_obtained': val, 'is_absent': False}
+                        defaults={'marks_obtained': val, 'is_absent': is_absent_val}
                     )
                     saved_subjects_set.add(subject)
 
@@ -402,13 +408,16 @@ def marks_whatsapp_send(request, exam_id):
                 mark_lines = []
                 total_obtained = 0.0
                 total_max = 0
+                has_absent = False
 
                 for sub in subjects:
                     m = s_marks.get(sub.id)
                     s_max = subject_max_marks.get(sub, exam.max_marks)
                     total_max += s_max
                     if m:
-                        if m.is_absent:
+                        is_abs = m.is_absent or (m.marks_obtained is not None and float(m.marks_obtained) == 0)
+                        if is_abs:
+                            has_absent = True
                             mark_lines.append(f"• {sub.name}: AB / {s_max}")
                         elif m.marks_obtained is not None:
                             val = float(m.marks_obtained)
@@ -417,9 +426,19 @@ def marks_whatsapp_send(request, exam_id):
                         else:
                             mark_lines.append(f"• {sub.name}: - / {s_max}")
                     else:
-                        mark_lines.append(f"• {sub.name}: - / {s_max}")
+                        has_absent = True
+                        mark_lines.append(f"• {sub.name}: AB / {s_max}")
 
                 pct = round(total_obtained / total_max * 100, 1) if total_max else 0
+
+                if has_absent:
+                    obtained_str = "ABSENT"
+                    exam_status_str = f"{exam.display_name()} (ABSENT)"
+                    total_obtained_msg = f"Total Obtained: ABSENT / {total_max}"
+                else:
+                    obtained_str = f"{total_obtained:g}"
+                    exam_status_str = f"{exam.display_name()} ({pct}%)"
+                    total_obtained_msg = f"Total Obtained: {total_obtained:g} / {total_max} ({pct}%)"
 
                 msg_text = (
                     f"Sri NRI Junior College — Marks Report\n"
@@ -427,16 +446,16 @@ def marks_whatsapp_send(request, exam_id):
                     f"Exam: {exam.display_name()} ({exam.category.name})\n"
                     f"Date: {exam.date.strftime('%d-%m-%Y')}\n\n"
                     f"Subject-wise Marks:\n" + "\n".join(mark_lines) + "\n\n"
-                    f"Total Obtained: {total_obtained:g} / {total_max} ({pct}%)"
+                    f"{total_obtained_msg}"
                 )
 
                 subject_summary = "\n".join(mark_lines)
 
                 template_params = [
                     student.name,
-                    f"{total_obtained:g}",
+                    obtained_str,
                     str(total_max),
-                    f"{exam.display_name()} ({pct}%)",
+                    exam_status_str,
                     exam.date.strftime('%d-%m-%Y'),
                 ]
                 if getattr(settings, 'MARKS_TEMPLATE_HAS_SUBJECTS', False):
@@ -545,7 +564,8 @@ def marks_report(request):
             all_marks = Mark.objects.filter(exam__in=all_exams_list, student__in=students)
             exam_total_map = {}
             for m in all_marks:
-                if m.marks_obtained and not m.is_absent:
+                is_abs = m.is_absent or (m.marks_obtained is not None and float(m.marks_obtained) == 0)
+                if m.marks_obtained and not is_abs:
                     exam_total_map.setdefault(m.student_id, {})
                     exam_total_map[m.student_id][m.exam_id] = (
                         exam_total_map[m.student_id].get(m.exam_id, 0) + float(m.marks_obtained)
@@ -575,7 +595,7 @@ def marks_report(request):
                 s_marks = marks_map.get(student.pk, {})
                 mark_list = [s_marks.get(sub.id) for sub in subjects]
                 total = sum(float(m.marks_obtained) for m in s_marks.values()
-                           if m.marks_obtained and not m.is_absent)
+                           if m.marks_obtained and not m.is_absent and float(m.marks_obtained) != 0)
                 pct = round(total / total_max * 100, 1) if total_max else 0
                 report_data.append({'student': student, 'mark_list': mark_list, 'total': total, 'pct': pct})
 
@@ -626,7 +646,7 @@ def marks_report_export_excel(request):
     for student in students:
         s_marks = marks_map.get(student.pk, {})
         total = sum(float(m.marks_obtained) for m in s_marks.values()
-                   if m.marks_obtained and not m.is_absent)
+                   if m.marks_obtained and not m.is_absent and float(m.marks_obtained) != 0)
         rows.append({'student': student, 's_marks': s_marks, 'total': total})
 
     reverse = (sort_order == 'desc')
@@ -647,7 +667,8 @@ def marks_report_export_excel(request):
         for j, sub in enumerate(subjects):
             m = row['s_marks'].get(sub.id)
             if m:
-                ws.cell(idx + 1, 4 + j, 'AB' if m.is_absent else float(m.marks_obtained or 0))
+                is_abs = m.is_absent or (m.marks_obtained is not None and float(m.marks_obtained) == 0)
+                ws.cell(idx + 1, 4 + j, 'AB' if is_abs else float(m.marks_obtained or 0))
             else:
                 ws.cell(idx + 1, 4 + j, '-')
         col_total = 4 + len(subjects)

@@ -109,8 +109,11 @@
                       {% for sm in entry.subject_marks %}
                       <td>
                         {% if sm.mark %}
-                          {% if sm.mark.is_absent %}<span class="badge bg-secondary">AB</span>
-                          {% else %}{{ sm.mark.marks_obtained }}/{{ sm.max }}{% endif %}
+                          {% if sm.mark.is_absent or sm.mark.marks_obtained == 0 or sm.mark.marks_obtained == '0' or sm.mark.marks_obtained == '0.0' or sm.mark.marks_obtained == '0.00' %}
+                            <span class="badge bg-secondary">AB</span>
+                          {% else %}
+                            {{ sm.mark.marks_obtained }}/{{ sm.max }}
+                          {% endif %}
                         {% else %}—{% endif %}
                       </td>
                       {% endfor %}

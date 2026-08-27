@@ -55,7 +55,8 @@ def generate_marks_report_pdf(exam, section, subjects, subject_max_marks, rows):
         for sub in subjects:
             m = row['s_marks'].get(sub)
             if m:
-                line.append('AB' if m.is_absent else str(m.marks_obtained))
+                is_abs = m.is_absent or (m.marks_obtained is not None and float(m.marks_obtained) == 0)
+                line.append('AB' if is_abs else str(m.marks_obtained))
             else:
                 line.append('-')
         line.append(str(row['total']))
@@ -138,7 +139,8 @@ def generate_student_marks_pdf(student, exam_rows):
             for sm in entry['subject_marks']:
                 m = sm['mark']
                 if m:
-                    if m.is_absent:
+                    is_abs = m.is_absent or (m.marks_obtained is not None and float(m.marks_obtained) == 0)
+                    if is_abs:
                         marks_row.append('AB')
                     else:
                         marks_row.append(str(m.marks_obtained))

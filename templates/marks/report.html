@@ -181,8 +181,11 @@
           {% for mark in row.mark_list %}
           <td class="text-center">
             {% if mark %}
-              {% if mark.is_absent %}<span class="badge bg-danger">AB</span>
-              {% else %}{{ mark.marks_obtained|floatformat:1 }}{% endif %}
+              {% if mark.is_absent or mark.marks_obtained == 0 or mark.marks_obtained == '0' or mark.marks_obtained == '0.0' or mark.marks_obtained == '0.00' %}
+                <span class="badge bg-danger">AB</span>
+              {% else %}
+                {{ mark.marks_obtained|floatformat:1 }}
+              {% endif %}
             {% else %}—{% endif %}
           </td>
           {% endfor %}

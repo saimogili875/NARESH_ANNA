@@ -88,7 +88,13 @@
               {% for subject, mark_val in row.marks %}
               <td class="text-center p-1 align-middle">
                 {% if locked_map|get_item:subject.id and request.user.role == 'faculty' and not request.user.is_superuser %}
-                <span class="fw-bold text-dark" style="font-size:0.9rem">{{ mark_val|default:"—" }}</span>
+                <span class="fw-bold text-dark" style="font-size:0.9rem">
+                  {% if mark_val == 0 or mark_val == '0' or mark_val == '0.0' or mark_val == '0.00' %}
+                    <span class="badge bg-danger">AB</span>
+                  {% else %}
+                    {{ mark_val|default:"—" }}
+                  {% endif %}
+                </span>
                 {% else %}
                 <input type="number"
                   name="mark_{{ row.student.pk }}_{{ subject.name }}"
