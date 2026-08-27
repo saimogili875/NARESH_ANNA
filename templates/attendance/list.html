@@ -98,16 +98,17 @@
     </div>
   </div>
 
-  <!-- Reason selection + WhatsApp -->
+  <!-- Lightweight Absence Reason Selector (Optional Record-Keeping) -->
   {% if stats.absent > 0 %}
   <div class="card border-0 shadow-sm mt-3">
-    <div class="card-header bg-white py-3">
-      <strong><i class="bi bi-whatsapp text-success me-2"></i>Absent Students — Select Reason &amp; Send WhatsApp</strong>
+    <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center">
+      <span class="fw-bold text-secondary small"><i class="bi bi-pencil-square me-2"></i>Absence Reasons (Optional Record-Keeping)</span>
+      <span class="badge bg-light text-dark border">{{ stats.absent }} absent student{{ stats.absent|pluralize }}</span>
     </div>
     <div class="card-body p-0">
       <form id="reasonForm">
         {% csrf_token %}
-        <table class="table table-hover mb-0 align-middle">
+        <table class="table table-hover table-sm mb-0 align-middle">
           <thead class="bg-light">
             <tr>
               <th>Student</th>
@@ -119,7 +120,7 @@
             {% for student in absent_students %}
             {% with cur_reason=absent_reason_map|get_item:student.pk %}
             <tr>
-              <td class="fw-500">{{ student.name }}</td>
+              <td class="fw-500 small">{{ student.name }}</td>
               <td>
                 <div class="d-flex flex-wrap gap-1">
                   {% if student.mobile %}<a href="tel:{{ student.mobile }}" class="badge bg-dark text-decoration-none"><i class="bi bi-telephone-fill me-1"></i>{{ student.mobile }}</a>{% endif %}
@@ -152,24 +153,15 @@
             {% endfor %}
           </tbody>
         </table>
-        <div class="p-3 border-top">
-          {% if request.user.is_admin %}
-          <button type="button" class="btn btn-success btn-lg" id="waBtn" onclick="saveAndSendWA()">
-            <i class="bi bi-whatsapp"></i> Save Reasons &amp; Send WhatsApp ({{ stats.absent }} student{{ stats.absent|pluralize }})
+        <div class="p-2 px-3 border-top bg-light d-flex align-items-center gap-3">
+          <button type="button" class="btn btn-primary btn-sm" id="waBtn" onclick="saveReasonsOnly()">
+            <i class="bi bi-save me-1"></i> Save Reason
           </button>
-          {% else %}
-          <button type="button" class="btn btn-primary btn-lg" id="waBtn" onclick="saveReasonsOnly()">
-            <i class="bi bi-save"></i> Save Reasons ({{ stats.absent }} student{{ stats.absent|pluralize }})
-          </button>
-          {% endif %}
-          <div id="waResult" class="mt-3"></div>
+          <span class="text-muted small">Save reason for record-keeping without sending WhatsApp.</span>
+          <div id="waResult" class="ms-auto"></div>
         </div>
       </form>
     </div>
-  </div>
-  {% else %}
-  <div class="alert alert-success mt-3">
-    <i class="bi bi-check-circle-fill"></i> All students are present — no WhatsApp messages needed.
   </div>
   {% endif %}
 
