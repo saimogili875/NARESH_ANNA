@@ -201,23 +201,29 @@ def student_inline_bulk_save(request):
     except Exception:
         return JsonResponse({'ok': False, 'error': 'Invalid request.'}, status=400)
 
-    pks = {e.get('pk') for e in edits if e.get('pk')}
+    valid_pks = set()
+    for e in edits:
+        raw_pk = e.get('pk')
+        if raw_pk and str(raw_pk).isdigit():
+            valid_pks.add(int(raw_pk))
+
     students_map = {
-        s.pk: s for s in Student.objects.select_related('section', 'academic_year').filter(pk__in=pks)
+        s.pk: s for s in Student.objects.select_related('section', 'academic_year').filter(pk__in=valid_pks)
     }
 
     results = []
     with transaction.atomic():
         for edit in edits:
-            pk = edit.get('pk')
+            pk_raw = edit.get('pk')
+            pk_int = int(pk_raw) if (pk_raw and str(pk_raw).isdigit()) else None
             field = edit.get('field')
             value = str(edit.get('value', '')).strip()
-            key = f'{pk}_{field}'
+            key = f'{pk_raw}_{field}'
 
             if field not in INLINE_EDITABLE_FIELDS:
                 results.append({'key': key, 'ok': False, 'error': 'That field cannot be edited inline.'})
                 continue
-            student = students_map.get(pk)
+            student = students_map.get(pk_int) if pk_int else None
             if not student:
                 results.append({'key': key, 'ok': False, 'error': 'Student not found.'})
                 continue
