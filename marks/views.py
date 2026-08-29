@@ -89,7 +89,7 @@ def exam_list(request):
         'active_year': active_year,
     })
 
-@admin_required
+@all_roles_required
 def exam_add(request):
     active_year = AcademicYear.objects.filter(is_active=True).first()
     groups = Group.objects.all().order_by('name')
