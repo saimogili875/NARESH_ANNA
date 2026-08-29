@@ -195,35 +195,42 @@ def student_inline_bulk_save(request):
     """Save a batch of staged table-cell edits at once (the 'Save Changes'
     button that appears once you've tapped one or more cells)."""
     import json
+    from django.db import transaction
     try:
         edits = json.loads(request.body.decode('utf-8'))
     except Exception:
         return JsonResponse({'ok': False, 'error': 'Invalid request.'}, status=400)
 
-    results = []
-    for edit in edits:
-        pk = edit.get('pk')
-        field = edit.get('field')
-        value = str(edit.get('value', '')).strip()
-        key = f'{pk}_{field}'
+    pks = {e.get('pk') for e in edits if e.get('pk')}
+    students_map = {
+        s.pk: s for s in Student.objects.select_related('section', 'academic_year').filter(pk__in=pks)
+    }
 
-        if field not in INLINE_EDITABLE_FIELDS:
-            results.append({'key': key, 'ok': False, 'error': 'That field cannot be edited inline.'})
-            continue
-        student = Student.objects.filter(pk=pk).first()
-        if not student:
-            results.append({'key': key, 'ok': False, 'error': 'Student not found.'})
-            continue
-        error = _validate_inline_field(student, field, value)
-        if error:
-            results.append({'key': key, 'ok': False, 'error': error})
-            continue
-        setattr(student, field, value)
-        try:
-            student.save(update_fields=[field])
-            results.append({'key': key, 'ok': True, 'value': value})
-        except Exception as e:
-            results.append({'key': key, 'ok': False, 'error': str(e)})
+    results = []
+    with transaction.atomic():
+        for edit in edits:
+            pk = edit.get('pk')
+            field = edit.get('field')
+            value = str(edit.get('value', '')).strip()
+            key = f'{pk}_{field}'
+
+            if field not in INLINE_EDITABLE_FIELDS:
+                results.append({'key': key, 'ok': False, 'error': 'That field cannot be edited inline.'})
+                continue
+            student = students_map.get(pk)
+            if not student:
+                results.append({'key': key, 'ok': False, 'error': 'Student not found.'})
+                continue
+            error = _validate_inline_field(student, field, value)
+            if error:
+                results.append({'key': key, 'ok': False, 'error': error})
+                continue
+            setattr(student, field, value)
+            try:
+                student.save(update_fields=[field])
+                results.append({'key': key, 'ok': True, 'value': value})
+            except Exception as e:
+                results.append({'key': key, 'ok': False, 'error': str(e)})
 
     return JsonResponse({'results': results})
 
