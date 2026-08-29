@@ -1,11 +1,15 @@
 import json
 import logging
+import hmac
+import hashlib
 from django.http import JsonResponse, HttpResponse
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
+from django.contrib.auth.decorators import login_required
 from django.conf import settings
 
+from accounts.decorators import admin_required
 from .services import send_whatsapp_text, send_whatsapp_template
 
 logger = logging.getLogger('whatsapp_sender')
@@ -24,6 +28,13 @@ def meta_webhook(request):
         return HttpResponse("Forbidden", status=403)
 
     if request.method == "POST":
+        signature = request.META.get('HTTP_X_HUB_SIGNATURE_256', '')
+        app_secret = getattr(settings, 'META_APP_SECRET', '')
+        if app_secret:
+            expected = 'sha256=' + hmac.new(app_secret.encode(), request.body, hashlib.sha256).hexdigest()
+            if not hmac.compare_digest(expected, signature):
+                return HttpResponse("Forbidden", status=403)
+
         try:
             data = json.loads(request.body)
             entries = data.get("entry", [])
@@ -58,6 +69,8 @@ def meta_webhook(request):
     return HttpResponse("Method not allowed", status=405)
 
 
+@method_decorator(login_required, name="dispatch")
+@method_decorator(admin_required, name="dispatch")
 @method_decorator(csrf_exempt, name="dispatch")
 class SendMessageView(View):
     def post(self, request):
@@ -77,6 +90,8 @@ class SendMessageView(View):
             return JsonResponse({"error": "Invalid JSON body"}, status=400)
 
 
+@method_decorator(login_required, name="dispatch")
+@method_decorator(admin_required, name="dispatch")
 @method_decorator(csrf_exempt, name="dispatch")
 class SendTemplateView(View):
     def post(self, request):
@@ -103,6 +118,10 @@ class SendTemplateView(View):
 
 @csrf_exempt
 def trigger_batch_webhook(request):
+    token = request.GET.get('token', '')
+    if token != getattr(settings, 'WHATSAPP_CRON_SECRET', None) or not settings.WHATSAPP_CRON_SECRET:
+        return JsonResponse({"success": False, "error": "Unauthorized"}, status=403)
+
     from whatsapp.models import PendingMessage
     from .services import send_whatsapp_text, send_whatsapp_template, build_template_components
 
@@ -163,6 +182,10 @@ def trigger_batch_webhook(request):
 
 @csrf_exempt
 def retry_failed_messages(request):
+    token = request.GET.get('token', '')
+    if token != getattr(settings, 'WHATSAPP_CRON_SECRET', None) or not settings.WHATSAPP_CRON_SECRET:
+        return JsonResponse({"success": False, "error": "Unauthorized"}, status=403)
+
     from whatsapp.models import PendingMessage
     from .services import dispatch_pending_messages_async
 

@@ -8,9 +8,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Load environment variables from .env file into os.environ
 load_dotenv(BASE_DIR / '.env')
 
-SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-this')
-DEBUG = config('DEBUG', default=True, cast=bool)
-ALLOWED_HOSTS = ['*']
+SECRET_KEY = config('SECRET_KEY')
+DEBUG = config('DEBUG', default=False, cast=bool)
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='srinri.in,www.srinri.in').split(',') + ['.onrender.com']
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -184,6 +184,8 @@ LOGGING = {
 META_WHATSAPP_TOKEN = config('META_WHATSAPP_TOKEN', default='')
 META_WHATSAPP_PHONE_ID = config('META_WHATSAPP_PHONE_ID', default='')
 META_WEBHOOK_VERIFY_TOKEN = config('META_WEBHOOK_VERIFY_TOKEN', default='')
+META_APP_SECRET = config('META_APP_SECRET', default='')
+WHATSAPP_CRON_SECRET = config('WHATSAPP_CRON_SECRET', default='')
 META_TEMPLATE_ABSENCE = config('META_TEMPLATE_ABSENCE', default='absence_alert')
 META_TEMPLATE_EXAM_MARKS = config('META_TEMPLATE_EXAM_MARKS', default='marks_template')
 MARKS_TEMPLATE_HAS_SUBJECTS = config('MARKS_TEMPLATE_HAS_SUBJECTS', default=False, cast=bool)
