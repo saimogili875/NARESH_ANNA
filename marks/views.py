@@ -89,7 +89,7 @@ def exam_list(request):
         'active_year': active_year,
     })
 
-@admin_faculty_required
+@admin_required
 def exam_add(request):
     active_year = AcademicYear.objects.filter(is_active=True).first()
     groups = Group.objects.all().order_by('name')
@@ -181,7 +181,7 @@ def exam_add(request):
     })
 
 
-@admin_faculty_required
+@admin_required
 def exam_edit(request, exam_id):
     active_year = AcademicYear.objects.filter(is_active=True).first()
     exam = get_object_or_404(Exam, pk=exam_id)

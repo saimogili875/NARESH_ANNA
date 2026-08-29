@@ -13,9 +13,11 @@
     <a href="{% url 'marks_report' %}" class="btn btn-outline-primary btn-sm px-3 fw-bold rounded-pill">
       <i class="bi bi-bar-chart-line me-1"></i>View Reports
     </a>
+    {% if request.user.role|lower == 'admin' or request.user.role|lower == 'accounts' or request.user.is_staff or request.user.is_superuser %}
     <a href="{% url 'exam_add' %}" class="btn btn-primary btn-sm px-3 fw-bold rounded-pill">
       <i class="bi bi-plus-lg me-1"></i>Add New Exam
     </a>
+    {% endif %}
   </div>
 </div>
 
@@ -72,11 +74,11 @@
                    class="btn btn-sm btn-primary px-3 rounded-pill fw-semibold" title="Enter Student Marks">
                   <i class="bi bi-pencil-square me-1"></i>Marks
                 </a>
+                {% if request.user.role|lower == 'admin' or request.user.role|lower == 'accounts' or request.user.is_staff or request.user.is_superuser %}
                 <a href="{% url 'exam_edit' exam.pk %}"
                    class="btn btn-sm btn-outline-secondary px-2 rounded-pill" title="Edit Exam Details">
                   <i class="bi bi-gear"></i>
                 </a>
-                {% if request.user.role|lower == 'admin' or request.user.is_staff or request.user.is_superuser %}
                 <a href="{% url 'marks_whatsapp_send' exam.pk %}"
                    class="btn btn-sm btn-outline-success px-3 rounded-pill fw-semibold" title="Send Marks on WhatsApp">
                   <i class="bi bi-whatsapp me-1"></i>Send
@@ -97,9 +99,11 @@
         <div class="text-center text-muted py-5 px-3">
           <i class="bi bi-inbox fs-2 d-block mb-2 opacity-50"></i>
           <span class="fw-semibold">No {{ box.label }} exams created yet</span>
+          {% if request.user.role|lower == 'admin' or request.user.role|lower == 'accounts' or request.user.is_staff or request.user.is_superuser %}
           <div class="mt-2">
             <a href="{% url 'exam_add' %}" class="btn btn-sm btn-outline-primary rounded-pill px-3">Create {{ box.label }}</a>
           </div>
+          {% endif %}
         </div>
         {% endif %}
       </div>
