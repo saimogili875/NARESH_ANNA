@@ -218,14 +218,10 @@ def attendance_mark(request):
             if to_update:
                 Attendance.objects.bulk_update(to_update, ['status', 'remarks'])
 
-        # --- Send WhatsApp alerts for newly absent students synchronously post-commit ---
-        import logging
-        from whatsapp.services import send_absence_alert
-        logger = logging.getLogger('whatsapp_sender')
+        # --- Queue WhatsApp alerts for newly absent students ---
+        from django.conf import settings as conf
 
-        sent_count = 0
-        failed_count = 0
-        no_phone_count = 0
+        queued_count = 0
 
         for student, status, remarks in student_data:
             if status == 'A':
@@ -235,36 +231,23 @@ def attendance_mark(request):
 
                 parent_phone = (student.mobile or student.second_mobile or '').strip()
                 if not parent_phone:
-                    no_phone_count += 1
                     continue
 
-                try:
-                    result = send_absence_alert(
-                        student_name=student.name,
-                        parent_phone=parent_phone,
-                        date_str=selected_date.strftime('%d-%m-%Y'),
-                        section=str(section),
-                        reason=remarks or "Absent",
-                    )
-                    if result.get('success'):
-                        sent_count += 1
-                    else:
-                        failed_count += 1
-                        logger.error(f"Failed to send absence alert to {student.name} ({parent_phone}): {result.get('error')}")
-                except Exception as e:
-                    failed_count += 1
-                    logger.exception(f"Exception sending absence alert for {student.name} ({parent_phone}): {e}")
+                PendingMessage.objects.create(
+                    student=student,
+                    phone=parent_phone,
+                    message_type=PendingMessage.TYPE_TEMPLATE,
+                    template_name=getattr(conf, 'META_TEMPLATE_ABSENCE', 'absence_alert'),
+                    template_params=[student.name, selected_date.strftime('%d-%m-%Y'), remarks or "Absent"],
+                    language='en',
+                    status=PendingMessage.STATUS_PENDING,
+                )
+                queued_count += 1
 
         # Construct user success message
         msg = f'Attendance saved for {section} on {selected_date}.'
-        new_absent_count = sent_count + failed_count + no_phone_count
-        if new_absent_count > 0:
-            msg += f' WhatsApp sent to {sent_count} parent(s)'
-            if failed_count > 0:
-                msg += f', {failed_count} failed'
-            if no_phone_count > 0:
-                msg += f', {no_phone_count} had no phone number'
-            msg += '.'
+        if queued_count > 0:
+            msg += f' {queued_count} WhatsApp alert(s) queued for sending.'
 
         messages.success(request, msg)
         base_url = reverse('attendance_list')
