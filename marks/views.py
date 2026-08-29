@@ -2,6 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.http import HttpResponse
 from django.conf import settings
+from django.db import transaction
 from .models import Exam, Mark, ExamSubjectMaxMark, ExamCategory, ExamType, GroupCategoryConfig, Subject, MarksEntryLock, MarksWhatsAppSendLog
 from students.models import Student
 from accounts.models import Section, AcademicYear, Group
@@ -295,6 +296,14 @@ def marks_entry(request, exam_id):
         is_faculty = (getattr(request.user, 'role', None) == 'faculty' and not request.user.is_superuser)
         saved_subjects_set = set()
 
+        existing_marks = {
+            (m.student_id, m.subject_id): m
+            for m in Mark.objects.filter(exam=exam, student__section=sec)
+        }
+
+        to_create = []
+        to_update = []
+
         for student in Student.objects.filter(section=sec, is_active=True):
             for subject in subjects:
                 if is_faculty and subject.id in locked_subject_ids:
@@ -308,11 +317,23 @@ def marks_entry(request, exam_id):
                     except (ValueError, TypeError):
                         is_absent_val = False
 
-                    Mark.objects.update_or_create(
-                        student=student, exam=exam, subject=subject,
-                        defaults={'marks_obtained': val, 'is_absent': is_absent_val}
-                    )
+                    existing_mark = existing_marks.get((student.pk, subject.id))
+                    if existing_mark:
+                        existing_mark.marks_obtained = val
+                        existing_mark.is_absent = is_absent_val
+                        to_update.append(existing_mark)
+                    else:
+                        to_create.append(Mark(
+                            student=student, exam=exam, subject=subject,
+                            marks_obtained=val, is_absent=is_absent_val
+                        ))
                     saved_subjects_set.add(subject)
+
+        with transaction.atomic():
+            if to_create:
+                Mark.objects.bulk_create(to_create)
+            if to_update:
+                Mark.objects.bulk_update(to_update, ['marks_obtained', 'is_absent'])
 
         # Lock saved subjects for both Admin and Faculty
         for subject in saved_subjects_set:
