@@ -23,8 +23,8 @@ def _apply_rate_limit():
     with _rate_limit_lock:
         now = time.monotonic()
         elapsed = now - _last_sent_at
-        if elapsed < 6.0:
-            time.sleep(6.0 - elapsed)
+        if elapsed < 2.0:
+            time.sleep(2.0 - elapsed)
         _last_sent_at = time.monotonic()
 
 
