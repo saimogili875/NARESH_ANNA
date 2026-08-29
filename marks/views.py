@@ -331,9 +331,9 @@ def marks_entry(request, exam_id):
 
         with transaction.atomic():
             if to_create:
-                Mark.objects.bulk_create(to_create)
+                Mark.objects.bulk_create(to_create, batch_size=200)
             if to_update:
-                Mark.objects.bulk_update(to_update, ['marks_obtained', 'is_absent'])
+                Mark.objects.bulk_update(to_update, ['marks_obtained', 'is_absent'], batch_size=200)
 
         # Lock saved subjects for both Admin and Faculty
         for subject in saved_subjects_set:
