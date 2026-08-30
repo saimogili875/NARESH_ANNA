@@ -5,10 +5,14 @@ from students.models import Student
 class PendingMessage(models.Model):
     STATUS_PENDING = 'pending'
     STATUS_SENT = 'sent'
+    STATUS_DELIVERED = 'delivered'
+    STATUS_READ = 'read'
     STATUS_FAILED = 'failed'
     STATUS_CHOICES = [
         (STATUS_PENDING, 'Pending'),
         (STATUS_SENT, 'Sent'),
+        (STATUS_DELIVERED, 'Delivered'),
+        (STATUS_READ, 'Read'),
         (STATUS_FAILED, 'Failed'),
     ]
 
@@ -19,6 +23,7 @@ class PendingMessage(models.Model):
         (TYPE_TEXT, 'Text'),
     ]
 
+    wamid = models.CharField(max_length=100, blank=True, default='', db_index=True)
     student = models.ForeignKey(Student, on_delete=models.CASCADE, null=True, blank=True, related_name='whatsapp_messages')
     faculty = models.ForeignKey('faculty.Faculty', on_delete=models.SET_NULL, null=True, blank=True, related_name='whatsapp_messages')
     phone = models.CharField(max_length=20)

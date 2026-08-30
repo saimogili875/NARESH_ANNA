@@ -79,6 +79,7 @@ class Command(BaseCommand):
 
             if result["success"]:
                 msg.status = PendingMessage.STATUS_SENT
+                msg.wamid = result.get("wamid") or result.get("message_id") or ""
                 msg.error_message = ""
                 msg.save()
                 self.stdout.write(self.style.SUCCESS(f"  SENT: {recipient} ({phone}) via {getattr(msg, 'message_type', 'template')}"))

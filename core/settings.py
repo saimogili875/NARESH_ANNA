@@ -8,9 +8,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Load environment variables from .env file into os.environ
 load_dotenv(BASE_DIR / '.env')
 
-SECRET_KEY = config('SECRET_KEY')
+SECRET_KEY = config('SECRET_KEY', default='k3n9x7v2m8q1w4r6t0y5u2p9s3d7f1g8h4j6k0l2z5x9c3v7b1n4m8q6w2e5r9t3y')
 DEBUG = config('DEBUG', default=False, cast=bool)
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='srinri.in,www.srinri.in').split(',') + ['.onrender.com']
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='srinri.in,www.srinri.in,localhost,127.0.0.1').split(',') + ['.onrender.com', 'localhost', '127.0.0.1']
 
 INSTALLED_APPS = [
     'django.contrib.admin',

@@ -1,5 +1,6 @@
 import json
 import logging
+from django.shortcuts import render
 from django.http import JsonResponse, HttpResponse
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
@@ -35,15 +36,33 @@ def meta_webhook(request):
                     statuses = value.get("statuses", [])
                     for status in statuses:
                         status_val = status.get('status')
+                        wamid_id = status.get('id')
+                        error_detail = ""
                         if status_val == 'failed':
                             errors = status.get('errors', [])
                             error_detail = "; ".join(
                                 f"code={e.get('code')} title={e.get('title')} detail={e.get('error_data', {}).get('details', e.get('message', ''))}"
                                 for e in errors
                             )
-                            logger.error(f"Message {status.get('id')} FAILED: {error_detail} | recipient={status.get('recipient_id')}")
+                            logger.error(f"Message {wamid_id} FAILED: {error_detail} | recipient={status.get('recipient_id')}")
                         else:
-                            logger.info(f"Message {status.get('id')} status: {status_val}")
+                            logger.info(f"Message {wamid_id} status: {status_val}")
+
+                        if wamid_id:
+                            from .models import PendingMessage
+                            pending_msg = PendingMessage.objects.filter(wamid=wamid_id).first()
+                            if pending_msg:
+                                if status_val == 'delivered':
+                                    pending_msg.status = PendingMessage.STATUS_DELIVERED
+                                    pending_msg.save()
+                                elif status_val == 'read':
+                                    pending_msg.status = PendingMessage.STATUS_READ
+                                    pending_msg.save()
+                                elif status_val == 'failed':
+                                    pending_msg.status = PendingMessage.STATUS_FAILED
+                                    if error_detail:
+                                        pending_msg.error_message = error_detail
+                                    pending_msg.save()
 
                     incoming = value.get("messages", [])
                     for msg in incoming:
@@ -148,6 +167,7 @@ def trigger_batch_webhook(request):
 
         if result["success"]:
             msg.status = PendingMessage.STATUS_SENT
+            msg.wamid = result.get('wamid') or result.get('message_id') or ''
             msg.error_message = ""
             msg.save()
             sent += 1
@@ -189,3 +209,11 @@ def retry_failed_messages(request):
         "message": f"Reset {reset_count} failed messages. Dispatching in background.",
         "reset": reset_count,
     })
+
+
+@login_required
+def message_status_list(request):
+    from .models import PendingMessage
+    messages_qs = PendingMessage.objects.select_related('student').order_by('-created_at')[:200]
+    return render(request, 'whatsapp/message_status.html', {'messages_list': messages_qs})
+

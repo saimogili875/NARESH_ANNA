@@ -69,4 +69,68 @@ class WhatsAppMultilingualTestCase(TestCase):
 
         msg.refresh_from_db()
         self.assertEqual(msg.status, PendingMessage.STATUS_SENT)
+        self.assertEqual(msg.wamid, "wamid.HBgL123")
         self.assertTrue(mock_post.called)
+
+    def test_message_status_list_view(self):
+        from accounts.models import User
+        user = User.objects.create_user(username="testuser", password="password")
+        self.client.force_login(user)
+
+        PendingMessage.objects.create(
+            phone="9876543210",
+            status=PendingMessage.STATUS_SENT,
+            message="Test message"
+        )
+
+        response = self.client.get('/whatsapp/status/')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "WhatsApp Status")
+        self.assertContains(response, "9876543210")
+        self.assertContains(response, "Sent")
+
+    def test_webhook_delivery_and_read_status_updates(self):
+        msg = PendingMessage.objects.create(
+            phone="9876543210",
+            status=PendingMessage.STATUS_SENT,
+            wamid="wamid.TEST12345",
+            message="Test tracking"
+        )
+
+        # Test 'delivered' webhook payload
+        payload_delivered = {
+            "entry": [{
+                "changes": [{
+                    "value": {
+                        "statuses": [{
+                            "id": "wamid.TEST12345",
+                            "status": "delivered"
+                        }]
+                    }
+                }]
+            }]
+        }
+        resp = self.client.post('/whatsapp/webhook/', data=payload_delivered, content_type='application/json')
+        self.assertEqual(resp.status_code, 200)
+        msg.refresh_from_db()
+        self.assertEqual(msg.status, PendingMessage.STATUS_DELIVERED)
+
+        # Test 'read' webhook payload
+        payload_read = {
+            "entry": [{
+                "changes": [{
+                    "value": {
+                        "statuses": [{
+                            "id": "wamid.TEST12345",
+                            "status": "read"
+                        }]
+                    }
+                }]
+            }]
+        }
+        resp = self.client.post('/whatsapp/webhook/', data=payload_read, content_type='application/json')
+        self.assertEqual(resp.status_code, 200)
+        msg.refresh_from_db()
+        self.assertEqual(msg.status, PendingMessage.STATUS_READ)
+
+

@@ -422,6 +422,9 @@
   <a href="{% url 'exam_list' %}" class="nav-link {% if 'mark' in request.resolver_match.url_name or 'exam' in request.resolver_match.url_name %}active{% endif %}">
     <i class="bi bi-journal-text"></i> Marks
   </a>
+  <a href="{% url 'whatsapp-status' %}" class="nav-link {% if 'whatsapp' in request.resolver_match.url_name %}active{% endif %}">
+    <i class="bi bi-whatsapp"></i> WhatsApp Status
+  </a>
 
   {% if not user.is_faculty %}
   <div class="nav-label">Finance</div>

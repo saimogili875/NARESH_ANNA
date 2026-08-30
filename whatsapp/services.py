@@ -116,7 +116,7 @@ def send_whatsapp_template(to_number: str, template_name: str, language: str = "
         if resp.status_code in (200, 201):
             msg_id = data.get("messages", [{}])[0].get("id", "")
             logger.info(f"Template '{template_name}' ({meta_lang_code}) sent to {phone}: {msg_id}")
-            return {"success": True, "message_id": msg_id, "to": phone}
+            return {"success": True, "message_id": msg_id, "wamid": msg_id, "to": phone}
         else:
             error = data.get("error", {}).get("message", resp.text)
             logger.error(f"Template '{template_name}' send failed to {phone}: {error}")
@@ -152,7 +152,7 @@ def send_whatsapp_text(to_number: str, message: str) -> dict:
         if resp.status_code in (200, 201):
             msg_id = data.get("messages", [{}])[0].get("id", "")
             logger.info(f"Text sent to {phone}: {msg_id}")
-            return {"success": True, "message_id": msg_id, "to": phone}
+            return {"success": True, "message_id": msg_id, "wamid": msg_id, "to": phone}
         else:
             error = data.get("error", {}).get("message", resp.text)
             logger.error(f"Text send failed to {phone}: {error}")
@@ -205,7 +205,7 @@ def send_whatsapp_media(to_number: str, media_url: str, caption: str = "") -> di
         if resp.status_code in (200, 201):
             msg_id = data.get("messages", [{}])[0].get("id", "")
             logger.info(f"Media sent to {phone}: {msg_id}")
-            return {"success": True, "message_id": msg_id, "to": phone}
+            return {"success": True, "message_id": msg_id, "wamid": msg_id, "to": phone}
         else:
             error = data.get("error", {}).get("message", resp.text)
             logger.error(f"Media send failed to {phone}: {error}")
@@ -282,6 +282,7 @@ def dispatch_pending_messages(batch_size: int = 50) -> dict:
 
         if result["success"]:
             msg.status = PendingMessage.STATUS_SENT
+            msg.wamid = result.get("wamid") or result.get("message_id") or ""
             msg.error_message = ""
             msg.save()
             sent += 1
