@@ -5,56 +5,60 @@
 {% block content %}
 <!-- Search & Actions Bar -->
 <div class="card border-0 shadow-sm mb-3">
-  <div class="card-body py-2">
+  <div class="card-body py-2 px-3">
     <form method="get" class="row g-2 align-items-end">
-      <div class="col-md-4">
-        <input type="text" name="q" value="{{ request.GET.q }}" class="form-control" placeholder="Search name, admission no, mobile, aadhaar...">
+      <div class="col-12 col-md-4">
+        <label class="form-label small text-muted mb-1 d-md-none fw-semibold">Search</label>
+        <input type="text" name="q" value="{{ request.GET.q }}" class="form-control form-control-sm" placeholder="Search name, admission no, mobile, aadhaar...">
       </div>
-      <div class="col-md-2">
-        <select name="group" class="form-select">
+      <div class="col-6 col-md-2">
+        <label class="form-label small text-muted mb-1 d-md-none fw-semibold">Group</label>
+        <select name="group" class="form-select form-select-sm">
           <option value="">All Groups</option>
           {% for g in groups %}<option value="{{ g.pk }}" {% if request.GET.group == g.pk|stringformat:'s' %}selected{% endif %}>{{ g.name }}</option>{% endfor %}
         </select>
       </div>
-      <div class="col-md-2">
-        <select name="year" class="form-select">
+      <div class="col-6 col-md-2">
+        <label class="form-label small text-muted mb-1 d-md-none fw-semibold">Year</label>
+        <select name="year" class="form-select form-select-sm">
           <option value="">All Years</option>
           <option value="1" {% if request.GET.year == '1' %}selected{% endif %}>1st Year</option>
           <option value="2" {% if request.GET.year == '2' %}selected{% endif %}>2nd Year</option>
         </select>
       </div>
-      <div class="col-md-2">
-        <select name="section" class="form-select">
+      <div class="col-6 col-md-2">
+        <label class="form-label small text-muted mb-1 d-md-none fw-semibold">Section</label>
+        <select name="section" class="form-select form-select-sm">
           <option value="">All Sections</option>
           {% for s in sections %}<option value="{{ s.pk }}" {% if request.GET.section == s.pk|stringformat:'s' %}selected{% endif %}>{{ s }}</option>{% endfor %}
         </select>
       </div>
-      <div class="col-md-2 d-flex gap-2">
-        <button type="submit" class="btn btn-primary flex-fill"><i class="bi bi-search"></i></button>
-        <a href="{% url 'student_list' %}" class="btn btn-outline-secondary"><i class="bi bi-x"></i></a>
+      <div class="col-6 col-md-2 d-flex gap-2">
+        <button type="submit" class="btn btn-primary btn-sm flex-fill"><i class="bi bi-search me-1"></i>Search</button>
+        <a href="{% url 'student_list' %}" class="btn btn-outline-secondary btn-sm" title="Clear Filter"><i class="bi bi-x-lg"></i></a>
       </div>
     </form>
   </div>
 </div>
 
 <!-- Action Buttons -->
-<div class="d-flex justify-content-between align-items-center mb-3">
-  <span class="text-muted small">{{ total }} student{{ total|pluralize }} found</span>
-  <div class="d-flex gap-2">
+<div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 mb-3">
+  <span class="text-muted small fw-semibold"><i class="bi bi-people-fill text-primary me-1"></i>{{ total }} student{{ total|pluralize }} found</span>
+  <div class="d-flex flex-wrap gap-2">
     <button type="button" id="selectModeBtn" class="btn btn-outline-primary btn-sm">
       <i class="bi bi-check2-square me-1"></i>Select Students
     </button>
     <a href="{% url 'student_import' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-upload me-1"></i>Import Excel</a>
-    <a href="{% url 'student_export' %}" class="btn btn-outline-success btn-sm"><i class="bi bi-download me-1"></i>Export Excel</a>
+    <a href="{% url 'student_export' %}?group={{ request.GET.group }}&year={{ request.GET.year }}&section={{ request.GET.section }}&q={{ request.GET.q }}" class="btn btn-outline-success btn-sm"><i class="bi bi-download me-1"></i>Export Excel</a>
     <a href="{% url 'student_add' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg me-1"></i>Add Student</a>
   </div>
 </div>
 
 <!-- Bulk Action Bar (shown once at least one row is checked) -->
 <div id="bulkBar" class="card border-0 shadow-sm mb-3 d-none">
-  <div class="card-body py-2 d-flex justify-content-between align-items-center">
+  <div class="card-body py-2 px-3 d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2">
     <span class="small fw-500"><span id="bulkCount">0</span> student(s) selected</span>
-    <div class="d-flex gap-2">
+    <div class="d-flex flex-wrap gap-2">
       <button type="button" class="btn btn-outline-primary btn-sm" id="bulkEditBtn">
         <i class="bi bi-pencil-square me-1"></i>Change Details
       </button>
@@ -117,7 +121,7 @@
 <div class="card border-0 shadow-sm">
   <div class="card-body p-0">
     <div class="table-responsive">
-      <table class="table table-hover mb-0">
+      <table class="table table-hover align-middle mb-0">
         <thead class="bg-light">
           <tr>
             <th style="width:36px" class="select-col d-none"><input type="checkbox" id="selectAll" class="form-check-input"></th>
@@ -128,7 +132,7 @@
             <th>Group</th>
             <th>Year</th>
             <th>Section</th>
-            <th>Actions</th>
+            <th class="text-end pe-3">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -139,22 +143,22 @@
             <td>
               <div class="d-flex align-items-center gap-2">
                 {% if s.photo %}
-                <img src="{{ s.photo.url }}" width="32" height="32" style="border-radius:50%;object-fit:cover">
+                <img src="{{ s.photo.url }}" width="32" height="32" style="border-radius:50%;object-fit:cover;flex-shrink:0;">
                 {% else %}
-                <div style="width:32px;height:32px;border-radius:50%;background:#e2e8f0;display:flex;align-items:center;justify-content:center">
+                <div style="width:32px;height:32px;border-radius:50%;background:#e2e8f0;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
                   <i class="bi bi-person text-muted"></i>
                 </div>
                 {% endif %}
-                <span class="fw-500 editable-cell" data-pk="{{ s.pk }}" data-field="name" title="Tap to edit">{{ s.name }}</span>
+                <span class="fw-500 editable-cell text-wrap" data-pk="{{ s.pk }}" data-field="name" title="Tap to edit">{{ s.name }}</span>
               </div>
             </td>
-            <td class="text-muted small editable-cell" data-pk="{{ s.pk }}" data-field="father_name" title="Tap to edit">{{ s.father_name }}</td>
+            <td class="text-muted small editable-cell text-wrap" data-pk="{{ s.pk }}" data-field="father_name" title="Tap to edit">{{ s.father_name }}</td>
             <td class="editable-cell" data-pk="{{ s.pk }}" data-field="mobile" title="Tap to edit">{{ s.mobile }}</td>
             <td>{{ s.section.group.name|default:'-' }}</td>
             <td>{{ s.section.get_year_display|default:'-' }}</td>
             <td>{{ s.section.name|default:'-' }}</td>
-            <td>
-              <div class="d-flex gap-1">
+            <td class="text-end pe-3">
+              <div class="d-inline-flex gap-1">
                 <a href="{% url 'student_profile' s.pk %}" class="btn btn-xs btn-light" title="View"><i class="bi bi-eye"></i></a>
                 <a href="{% url 'student_edit' s.pk %}" class="btn btn-xs btn-light" title="Edit"><i class="bi bi-pencil"></i></a>
                 <a href="{% url 'student_transfer' s.pk %}" class="btn btn-xs btn-light" title="Transfer"><i class="bi bi-arrow-left-right"></i></a>
@@ -173,7 +177,7 @@
 </div>
 
 <style>
-  .editable-cell { cursor: text; border-radius: 4px; padding: 2px 4px; }
+  .editable-cell { cursor: pointer; border-radius: 4px; padding: 2px 4px; transition: background 0.15s; }
   .editable-cell:hover { background: #eef2ff; outline: 1px dashed #93a3d1; }
   .editable-cell input { border: 1px solid #1a56db; border-radius: 4px; padding: 1px 4px; font-size: inherit; width: 100%; }
   .editable-cell.pending-edit { background: #fef9c3; outline: 1px solid #d4a72c; }
@@ -185,12 +189,22 @@
     transform: translateX(-50%);
     background: #fff;
     border: 1px solid #e2e8f0;
-    border-radius: 10px;
-    padding: 0.6rem 1rem;
+    border-radius: 12px;
+    padding: 0.6rem 1.2rem;
     display: flex;
     align-items: center;
     gap: 1rem;
     z-index: 1050;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+    max-width: 90vw;
+  }
+
+  @media (max-width: 768px) {
+    .table-responsive { border-radius: 8px; }
+    .table th, .table td { white-space: nowrap; font-size: 0.825rem; padding: 0.5rem 0.6rem; }
+    .editable-cell { padding: 4px 6px; display: inline-block; }
+    .pending-edit-bar { width: 92%; justify-content: space-between; padding: 0.5rem 0.85rem; }
+    .btn-xs { padding: 0.35rem 0.55rem; font-size: 0.775rem; }
   }
 </style>
 

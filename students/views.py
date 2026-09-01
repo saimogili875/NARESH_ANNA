@@ -325,6 +325,23 @@ def student_promote(request, pk):
 def student_export_excel(request):
     from openpyxl.styles import Font, PatternFill, Alignment
     students = Student.objects.filter(is_active=True).select_related('section__group')
+    group = request.GET.get('group')
+    year = request.GET.get('year')
+    section = request.GET.get('section')
+    q = request.GET.get('q')
+
+    if group:
+        students = students.filter(section__group_id=group)
+    if year:
+        students = students.filter(section__year=year)
+    if section:
+        students = students.filter(section_id=section)
+    if q:
+        students = students.filter(
+            Q(name__icontains=q) | Q(admission_number__icontains=q) |
+            Q(hall_ticket_number__icontains=q) | Q(mobile__icontains=q) |
+            Q(aadhaar__icontains=q)
+        )
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "Students"
