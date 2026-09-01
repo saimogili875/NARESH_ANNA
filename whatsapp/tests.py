@@ -88,6 +88,35 @@ class WhatsAppMultilingualTestCase(TestCase):
         self.assertContains(response, "WhatsApp Status")
         self.assertContains(response, "9876543210")
         self.assertContains(response, "Sent")
+        self.assertContains(response, "Showing last 20 messages")
+
+    def test_message_status_list_search(self):
+        from accounts.models import User
+        from students.models import Student
+        user = User.objects.create_user(username="searchuser", password="password")
+        self.client.force_login(user)
+
+        student = Student.objects.create(admission_number="ADM001", name="Raju Kumar", mobile="9988776655")
+        PendingMessage.objects.create(
+            student=student,
+            phone="9988776655",
+            status=PendingMessage.STATUS_SENT,
+            message="Test message 1"
+        )
+        PendingMessage.objects.create(
+            phone="1122334455",
+            status=PendingMessage.STATUS_SENT,
+            message="Test message 2"
+        )
+
+        response = self.client.get('/whatsapp/status/?q=Raju')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Raju Kumar")
+        self.assertContains(response, "Showing 1 result(s) for 'Raju'")
+
+        response_empty = self.client.get('/whatsapp/status/?q=NonExistent')
+        self.assertEqual(response_empty.status_code, 200)
+        self.assertContains(response_empty, "No messages found for 'NonExistent'")
 
     def test_webhook_delivery_and_read_status_updates(self):
         msg = PendingMessage.objects.create(

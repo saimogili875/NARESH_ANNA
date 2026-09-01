@@ -214,6 +214,21 @@ def retry_failed_messages(request):
 @login_required
 def message_status_list(request):
     from .models import PendingMessage
-    messages_qs = PendingMessage.objects.select_related('student').order_by('-created_at')[:200]
-    return render(request, 'whatsapp/message_status.html', {'messages_list': messages_qs})
+    from django.db.models import Q
+
+    q = request.GET.get('q', '').strip()
+    messages_qs = PendingMessage.objects.select_related('student').order_by('-created_at')
+
+    if q:
+        messages_qs = messages_qs.filter(
+            Q(student__name__icontains=q) |
+            Q(phone__icontains=q)
+        )
+    else:
+        messages_qs = messages_qs[:20]
+
+    return render(request, 'whatsapp/message_status.html', {
+        'messages_list': messages_qs,
+        'search_query': q,
+    })
 
