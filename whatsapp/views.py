@@ -227,8 +227,13 @@ def message_status_list(request):
     else:
         messages_qs = messages_qs[:20]
 
-    return render(request, 'whatsapp/message_status.html', {
+    context = {
         'messages_list': messages_qs,
         'search_query': q,
-    })
+    }
+    is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
+    if is_ajax:
+        return render(request, 'whatsapp/_status_table.html', context)
+
+    return render(request, 'whatsapp/message_status.html', context)
 

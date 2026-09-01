@@ -50,6 +50,13 @@
     </div>
   </div>
   <div class="col-6 col-md-3">
+    <div class="stat-card shadow-sm" style="background:linear-gradient(135deg,#059669,#10B981); border-radius: 16px;">
+      <i class="bi bi-cash-stack"></i>
+      <div class="value">₹{{ total_paid|floatformat:0 }}</div>
+      <div class="label">Total Fees Collected</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
     <div class="stat-card shadow-sm" style="background:linear-gradient(135deg,#8B5CF6,#C084FC); border-radius: 16px;">
       <i class="bi bi-exclamation-circle-fill"></i>
       <div class="value">₹{{ pending_fees|floatformat:0 }}</div>

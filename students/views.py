@@ -39,6 +39,9 @@ def student_list(request):
         'sections': Section.objects.all(),
         'total': students.count(),
     }
+    is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
+    if is_ajax:
+        return render(request, 'students/_list_table.html', context)
     return render(request, 'students/list.html', context)
 
 

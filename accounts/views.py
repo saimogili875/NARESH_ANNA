@@ -309,6 +309,7 @@ def dashboard(request):
         'today_present': today_present,
         'today_absent': today_absent,
         'today_fee_collection': today_fee_collection,
+        'total_paid': total_paid,
         'pending_fees': pending_fees,
         'selected_day_payments': selected_day_payments,
         'selected_day_total': selected_day_total,
