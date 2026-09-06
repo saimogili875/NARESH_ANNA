@@ -431,108 +431,6 @@ def fee_list(request):
     })
 
 
-@all_roles_required
-def fee_export(request):
-    """Export fees filtered by section, fee type, status, and search query to PDF or Excel."""
-    q = request.GET.get('q', '')
-    status_filter = request.GET.get('status', 'pending').lower().strip()
-    fee_type_filter = request.GET.get('fee_type', '').strip()
-    section_filter = request.GET.get('section', '').strip()
-    fmt = request.GET.get('fmt', 'excel')
-    active_year = AcademicYear.objects.filter(is_active=True).first()
-
-    students = Student.objects.filter(is_active=True).select_related('section__group')
-    if section_filter:
-        students = students.filter(section_id=section_filter)
-    if q:
-        students = students.filter(
-            Q(name__icontains=q) | Q(admission_number__icontains=q)
-        )
-    student_list = list(students)
-    student_ids = [s.pk for s in student_list]
-
-    fee_types = list(FeeType.objects.filter(academic_year=active_year).order_by('created_at'))
-
-    fee_rows = []
-    if active_year and student_ids:
-        existing_fees = {
-            sf.student_id: sf
-            for sf in StudentFee.objects.filter(
-                student_id__in=student_ids, academic_year=active_year
-            ).prefetch_related('payments')
-        }
-
-        charges_by_student = {}
-        if fee_types:
-            for c in StudentFeeCharge.objects.filter(
-                student_id__in=student_ids, fee_type__academic_year=active_year
-            ).select_related('fee_type').prefetch_related('payments'):
-                charges_by_student.setdefault(c.student_id, {})[c.fee_type_id] = c
-
-        for student in student_list:
-            sf = existing_fees.get(student.pk)
-            if not sf:
-                continue
-
-            charges_dict = charges_by_student.get(student.pk, {})
-            ordered_charges = [charges_dict.get(ft.id) for ft in fee_types]
-
-            if fee_type_filter == 'tuition':
-                if status_filter == 'pending' and sf.total_pending <= 0:
-                    continue
-                elif status_filter == 'partial' and sf.status != 'Partial':
-                    continue
-                elif status_filter == 'paid' and sf.status != 'Paid':
-                    continue
-            elif fee_type_filter.isdigit():
-                ft_id = int(fee_type_filter)
-                target_charge = charges_dict.get(ft_id)
-                if status_filter == 'pending' and (not target_charge or target_charge.total_pending <= 0):
-                    continue
-                elif status_filter == 'partial' and (not target_charge or target_charge.status != 'Partial'):
-                    continue
-                elif status_filter == 'paid' and (not target_charge or target_charge.status != 'Paid'):
-                    continue
-            else:
-                has_pending = (sf.total_pending > 0) or any(c and c.total_pending > 0 for c in ordered_charges if c)
-                has_partial = (sf.status == 'Partial') or any(c and c.status == 'Partial' for c in ordered_charges if c)
-                is_all_paid = (sf.status == 'Paid') and all((not c) or (c.status == 'Paid') for c in ordered_charges if c)
-
-                if status_filter == 'pending' and not has_pending:
-                    continue
-                elif status_filter == 'partial' and not has_partial:
-                    continue
-                elif status_filter == 'paid' and not is_all_paid:
-                    continue
-
-            if fee_type_filter == 'tuition':
-                row_total = float(sf.total_fee)
-                row_paid = float(sf.total_paid)
-                row_pending = float(sf.total_pending)
-            elif fee_type_filter.isdigit():
-                target_charge = charges_dict.get(int(fee_type_filter))
-                row_total = float(target_charge.amount_assigned) if target_charge else 0
-                row_paid = float(target_charge.total_paid) if target_charge else 0
-                row_pending = float(target_charge.total_pending) if target_charge else 0
-            else:
-                row_total = float(sf.total_fee) + sum(float(c.amount_assigned) for c in ordered_charges if c)
-                row_paid = float(sf.total_paid) + sum(float(c.total_paid) for c in ordered_charges if c)
-                row_pending = float(sf.total_pending) + sum(float(c.total_pending) for c in ordered_charges if c)
-
-            fee_rows.append({
-                'name':    student.name,
-                'section': str(student.section) if student.section else '—',
-                'year':    student.section.get_year_display() if student.section else '—',
-                'total':   row_total,
-                'paid':    row_paid,
-                'pending': row_pending,
-                'phone':   student.mobile or '—',
-            })
-
-    if fmt == 'pdf':
-        return _fee_export_pdf(fee_rows, active_year)
-    return _fee_export_excel(fee_rows, active_year)
-
 
 @admin_accounts_required
 def fee_set(request, pk):
@@ -918,10 +816,7 @@ def fee_export(request):
     """Export fees filtered by section and year to PDF or Excel.
     Columns: Name, Section, Year, Total, Paid, Pending, Parent Phone
     """
-    from accounts.models import Section as Sec, Group
-    import openpyxl
-    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
-
+    from accounts.models import Section
     section_id = request.GET.get('section', '')
     year_filter = request.GET.get('year', '')
     fmt = request.GET.get('fmt', 'excel')
@@ -933,25 +828,43 @@ def fee_export(request):
     if year_filter:
         students = students.filter(section__year=year_filter)
 
+    student_ids = list(students.values_list('pk', flat=True))
+    fees_by_student = {
+        sf.student_id: sf
+        for sf in StudentFee.objects.filter(student_id__in=student_ids, academic_year=active_year).prefetch_related('payments')
+    }
+
     fee_rows = []
     for student in students:
-        sf = StudentFee.objects.filter(student=student, academic_year=active_year).first()
+        sf = fees_by_student.get(student.pk)
         fee_rows.append({
             'name':    student.name,
             'section': str(student.section) if student.section else '—',
             'year':    student.section.get_year_display() if student.section else '—',
-            'total':   float(sf.total_fee) if sf else 0,
-            'paid':    float(sf.total_paid) if sf else 0,
-            'pending': float(sf.total_pending) if sf else 0,
+            'total':   float(sf.total_fee) if sf else 0.0,
+            'paid':    float(sf.total_paid) if sf else 0.0,
+            'pending': float(sf.total_pending) if sf else 0.0,
             'phone':   student.mobile or '—',
         })
 
+    section_name = 'All Sections'
+    if section_id:
+        sec_obj = Section.objects.filter(pk=section_id).select_related('group').first()
+        if sec_obj:
+            section_name = str(sec_obj)
+
+    year_label = 'All Years'
+    if year_filter == '1':
+        year_label = '1st Year'
+    elif year_filter == '2':
+        year_label = '2nd Year'
+
     if fmt == 'pdf':
-        return _fee_export_pdf(fee_rows, active_year)
-    return _fee_export_excel(fee_rows, active_year)
+        return _fee_export_pdf(fee_rows, active_year, section_name=section_name, year_label=year_label)
+    return _fee_export_excel(fee_rows, active_year, section_name=section_name, year_label=year_label)
 
 
-def _fee_export_excel(fee_rows, active_year):
+def _fee_export_excel(fee_rows, active_year, section_name='All Sections', year_label='All Years'):
     import openpyxl
     from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
@@ -959,31 +872,57 @@ def _fee_export_excel(fee_rows, active_year):
     ws = wb.active
     ws.title = "Fee Report"
 
-    BLUE  = PatternFill("solid", fgColor="1A47A8")
-    GREEN = PatternFill("solid", fgColor="DCFCE7")
-    RED   = PatternFill("solid", fgColor="FEE2E2")
-    LGREY = PatternFill("solid", fgColor="EAF1FB")
-    thin  = Border(left=Side(style='thin'), right=Side(style='thin'),
-                   top=Side(style='thin'), bottom=Side(style='thin'))
+    BLUE   = PatternFill("solid", fgColor="1A47A8")
+    GREEN  = PatternFill("solid", fgColor="DCFCE7")
+    RED    = PatternFill("solid", fgColor="FEE2E2")
+    LGREY  = PatternFill("solid", fgColor="EAF1FB")
+    YELLOW = PatternFill("solid", fgColor="FEF08A")
+    thin   = Border(left=Side(style='thin'), right=Side(style='thin'),
+                    top=Side(style='thin'), bottom=Side(style='thin'))
 
     # Title
-    ws.merge_cells('A1:G1')
+    ws.merge_cells('A1:H1')
     ws['A1'] = f"Sri NRI Junior College — Fee Report ({active_year})"
     ws['A1'].font = Font(bold=True, size=13, color="1A47A8")
     ws['A1'].alignment = Alignment(horizontal='center')
 
+    # Applied Filter Scope
+    ws.merge_cells('A2:H2')
+    ws['A2'] = f"Section: {section_name} | Year: {year_label}"
+    ws['A2'].font = Font(italic=True, size=10, color="555555")
+    ws['A2'].alignment = Alignment(horizontal='center')
+
+    # TOTAL Row directly under title/scope (Row 3)
+    tot_assigned = sum(x['total'] for x in fee_rows)
+    tot_paid     = sum(x['paid'] for x in fee_rows)
+    tot_pending  = sum(x['pending'] for x in fee_rows)
+
+    ws.cell(3, 1, 'TOTAL').alignment = Alignment(horizontal='center')
+    ws.cell(3, 2, f"{len(fee_rows)} Students").alignment = Alignment(horizontal='left')
+    ws.cell(3, 5, tot_assigned).alignment = Alignment(horizontal='center')
+    ws.cell(3, 6, tot_paid).alignment = Alignment(horizontal='center')
+    ws.cell(3, 7, tot_pending).alignment = Alignment(horizontal='center')
+
+    for col in range(1, 9):
+        c = ws.cell(3, col)
+        c.fill = YELLOW
+        c.font = Font(bold=True)
+        c.border = thin
+
+    # Column Headers (Row 4)
     headers = ['S.No', 'Student Name', 'Section', 'Year', 'Total Fee', 'Paid', 'Pending', 'Parent Phone']
     col_widths = [6, 30, 20, 10, 14, 14, 14, 18]
     for i, (h, w) in enumerate(zip(headers, col_widths), 1):
-        c = ws.cell(2, i, h)
+        c = ws.cell(4, i, h)
         c.fill = BLUE
         c.font = Font(bold=True, color="FFFFFF")
         c.alignment = Alignment(horizontal='center')
         c.border = thin
         ws.column_dimensions[c.column_letter].width = w
 
+    # Data Rows (Row 5 onwards)
     for idx, row in enumerate(fee_rows, 1):
-        r = idx + 2
+        r = idx + 4
         bg = LGREY if idx % 2 == 0 else PatternFill("solid", fgColor="FFFFFF")
         vals = [idx, row['name'], row['section'], row['year'],
                 row['total'], row['paid'], row['pending'], row['phone']]
@@ -995,13 +934,6 @@ def _fee_export_excel(fee_rows, active_year):
             elif col == 7: c.fill = RED
             else:          c.fill = bg
 
-    # Totals row
-    r = len(fee_rows) + 3
-    ws.cell(r, 1, 'TOTAL').font = Font(bold=True)
-    ws.cell(r, 5, sum(x['total'] for x in fee_rows)).font = Font(bold=True)
-    ws.cell(r, 6, sum(x['paid'] for x in fee_rows)).font = Font(bold=True)
-    ws.cell(r, 7, sum(x['pending'] for x in fee_rows)).font = Font(bold=True)
-
     from django.http import HttpResponse
     response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     response['Content-Disposition'] = 'attachment; filename=fee_report.xlsx'
@@ -1009,7 +941,7 @@ def _fee_export_excel(fee_rows, active_year):
     return response
 
 
-def _fee_export_pdf(fee_rows, active_year):
+def _fee_export_pdf(fee_rows, active_year, section_name='All Sections', year_label='All Years'):
     from reportlab.lib.pagesizes import A4
     from reportlab.lib import colors
     from reportlab.lib.units import mm
@@ -1026,27 +958,36 @@ def _fee_export_pdf(fee_rows, active_year):
     GREEN     = colors.HexColor("#DCFCE7")
     RED       = colors.HexColor("#FEE2E2")
     LGREY     = colors.HexColor("#EAF1FB")
+    YELLOW    = colors.HexColor("#FEF08A")
 
     story = []
     story.append(Paragraph(
         f"Sri NRI Junior College — Fee Report ({active_year})",
         ParagraphStyle('t', fontSize=13, fontName='Helvetica-Bold',
-                       textColor=DARK_BLUE, alignment=1, spaceAfter=8)
+                       textColor=DARK_BLUE, alignment=1, spaceAfter=2)
+    ))
+    story.append(Paragraph(
+        f"Section: {section_name} | Year: {year_label}",
+        ParagraphStyle('sub', fontSize=9, fontName='Helvetica-Oblique',
+                       textColor=colors.HexColor("#4B5563"), alignment=1, spaceAfter=8)
     ))
 
+    tot_assigned = sum(x['total'] for x in fee_rows)
+    tot_paid     = sum(x['paid'] for x in fee_rows)
+    tot_pending  = sum(x['pending'] for x in fee_rows)
+
     headers = ['#', 'Name', 'Section', 'Yr', 'Total', 'Paid', 'Pending', 'Phone']
-    data = [headers]
+    totals_row = ['TOTAL', f"{len(fee_rows)} Students", '', '',
+                  f"₹{tot_assigned:,.0f}", f"₹{tot_paid:,.0f}",
+                  f"₹{tot_pending:,.0f}", '']
+
+    data = [headers, totals_row]
     for i, row in enumerate(fee_rows, 1):
         data.append([
             str(i), row['name'], row['section'], row['year'],
             f"₹{row['total']:,.0f}", f"₹{row['paid']:,.0f}",
             f"₹{row['pending']:,.0f}", row['phone'],
         ])
-    # Totals
-    data.append(['', 'TOTAL', '', '',
-                 f"₹{sum(x['total'] for x in fee_rows):,.0f}",
-                 f"₹{sum(x['paid'] for x in fee_rows):,.0f}",
-                 f"₹{sum(x['pending'] for x in fee_rows):,.0f}", ''])
 
     col_w = [8*mm, 45*mm, 28*mm, 12*mm, 22*mm, 22*mm, 22*mm, 28*mm]
     t = Table(data, colWidths=col_w, repeatRows=1)
@@ -1056,11 +997,11 @@ def _fee_export_pdf(fee_rows, active_year):
         ('TEXTCOLOR',  (0,0), (-1,0), colors.white),
         ('FONTNAME',   (0,0), (-1,0), 'Helvetica-Bold'),
         ('FONTSIZE',   (0,0), (-1,-1), 7.5),
-        ('ROWBACKGROUNDS', (0,1), (-1,n), [colors.white, LGREY]),
-        ('BACKGROUND', (5,1), (5,n), GREEN),
-        ('BACKGROUND', (6,1), (6,n), RED),
-        ('BACKGROUND', (0,n+1), (-1,n+1), colors.HexColor("#EAF1FB")),
-        ('FONTNAME',   (0,n+1), (-1,n+1), 'Helvetica-Bold'),
+        ('BACKGROUND', (0,1), (-1,1), YELLOW),
+        ('FONTNAME',   (0,1), (-1,1), 'Helvetica-Bold'),
+        ('ROWBACKGROUNDS', (0,2), (-1,n+1), [colors.white, LGREY]),
+        ('BACKGROUND', (5,2), (5,n+1), GREEN),
+        ('BACKGROUND', (6,2), (6,n+1), RED),
         ('ALIGN',      (0,0), (-1,-1), 'CENTER'),
         ('ALIGN',      (1,0), (1,-1), 'LEFT'),
         ('GRID',       (0,0), (-1,-1), 0.3, colors.HexColor("#D1D5DB")),
