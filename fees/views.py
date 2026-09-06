@@ -724,6 +724,13 @@ def payment_edit(request, pk, payment_id):
         payment_date_str = request.POST.get('payment_date', '')
         remarks = request.POST.get('remarks', '')
 
+        new_receipt_number = request.POST.get('receipt_number', '').strip()
+        if new_receipt_number and new_receipt_number != payment.receipt_number:
+            if FeePayment.objects.filter(receipt_number=new_receipt_number).exclude(pk=payment.pk).exists():
+                messages.error(request, f'Receipt number "{new_receipt_number}" is already used by another payment.')
+                return redirect('payment_edit', pk=pk, payment_id=payment_id)
+            payment.receipt_number = new_receipt_number
+
         try:
             amount = float(raw_amount)
             payment.amount = amount

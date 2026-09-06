@@ -21,6 +21,11 @@
     <form method="post">
       {% csrf_token %}
       <div class="mb-3">
+        <label class="form-label fw-500">Receipt Number <span class="text-danger">*</span></label>
+        <input type="text" name="receipt_number" class="form-control" value="{{ payment.receipt_number }}" required>
+      </div>
+
+      <div class="mb-3">
         <label class="form-label fw-500">Amount (₹) <span class="text-danger">*</span></label>
         <input type="number" name="amount" class="form-control form-control-lg" step="0.01" value="{{ payment.amount }}" required>
         <div class="form-text">Correcting the paid amount will update the student's pending balance.</div>

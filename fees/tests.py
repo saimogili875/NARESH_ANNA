@@ -46,10 +46,25 @@ class FeeManagementFeaturesTest(TestCase):
         response = self.client.post(reverse('payment_edit', args=[self.student.pk, payment.pk]), {
             'amount': '15000',
             'payment_mode': 'upi',
+            'receipt_number': 'RCPNEW123',
             'remarks': 'Corrected payment amount'
         })
         self.assertEqual(response.status_code, 302)
         self.assertEqual(sf.total_paid, 15000)
+        payment.refresh_from_db()
+        self.assertEqual(payment.receipt_number, 'RCPNEW123')
+
+        # Test duplicate receipt number check
+        payment2 = FeePayment.objects.create(student_fee=sf, amount=1000, payment_date=timezone.localdate(), receipt_number='RCPOTHER999')
+        res_dup = self.client.post(reverse('payment_edit', args=[self.student.pk, payment2.pk]), {
+            'amount': '1000',
+            'payment_mode': 'cash',
+            'receipt_number': 'RCPNEW123'
+        })
+        self.assertEqual(res_dup.status_code, 302)
+        payment2.refresh_from_db()
+        self.assertEqual(payment2.receipt_number, 'RCPOTHER999')
+        payment2.delete()
 
         # Add payment adjustment
         response = self.client.post(reverse('payment_adjust', args=[self.student.pk]), {

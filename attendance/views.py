@@ -836,7 +836,7 @@ def tap_attendance_view(request, section_id):
 
     section = get_object_or_404(Section, pk=section_id)
 
-    students = Student.objects.filter(section=section, is_active=True).order_by('admission_number', 'name')
+    students = Student.objects.filter(section=section, is_active=True).order_by('name')
     existing_attendance = Attendance.objects.filter(section=section, date=selected_date)
     attendance_map = {a.student_id: a.status for a in existing_attendance}
 
@@ -960,7 +960,7 @@ def attendance_review(request):
             messages.error(request, 'You do not have access to that section.')
             return redirect('attendance_review')
         selected_section = get_object_or_404(Section, pk=section_id)
-        students = Student.objects.filter(section=selected_section, is_active=True).order_by('admission_number', 'name')
+        students = Student.objects.filter(section=selected_section, is_active=True).order_by('name')
 
         att_map = {a.student_id: a for a in Attendance.objects.filter(section=selected_section, date=selected_date)}
 
