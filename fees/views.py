@@ -320,6 +320,15 @@ def fee_list(request):
     total_pending_tuition = 0
     total_fees_tuition = 0
 
+    def classify_status(total_fee_or_assigned, total_paid, total_pending):
+        if total_fee_or_assigned <= 0:
+            return 'not_started' if total_paid <= 0 else 'partial'
+        if total_paid <= 0:
+            return 'not_started'
+        if total_pending <= 0:
+            return 'paid'
+        return 'partial'
+
     if active_year and student_ids:
         existing_fees = {
             sf.student_id: sf
@@ -355,48 +364,36 @@ def fee_list(request):
             charges_dict = charges_by_student.get(student.pk, {})
             ordered_charges = [charges_dict.get(ft.id) for ft in fee_types]
 
-            # Filter logic: specific fee type vs global status
+            # Compute scoped status
             if fee_type_filter == 'tuition':
-                if status_filter == 'pending' and sf.total_pending <= 0:
-                    continue
-                elif status_filter == 'partial' and sf.status != 'Partial':
-                    continue
-                elif status_filter == 'paid' and sf.status != 'Paid':
-                    continue
+                row_status = classify_status(sf.total_fee, sf.total_paid, sf.total_pending)
             elif fee_type_filter.isdigit():
                 ft_id = int(fee_type_filter)
                 target_charge = charges_dict.get(ft_id)
-                if status_filter == 'pending' and (not target_charge or target_charge.total_pending <= 0):
-                    continue
-                elif status_filter == 'partial' and (not target_charge or target_charge.status != 'Partial'):
-                    continue
-                elif status_filter == 'paid' and (not target_charge or target_charge.status != 'Paid'):
-                    continue
+                if target_charge:
+                    row_status = classify_status(target_charge.amount_assigned, target_charge.total_paid, target_charge.total_pending)
+                else:
+                    row_status = classify_status(0, 0, 0)
             else:
-                has_pending = (sf.total_pending > 0) or any(c and c.total_pending > 0 for c in ordered_charges if c)
-                has_partial = (sf.status == 'Partial') or any(c and c.status == 'Partial' for c in ordered_charges if c)
-                is_all_paid = (sf.status == 'Paid') and all((not c) or (c.status == 'Paid') for c in ordered_charges if c)
+                combined_assigned = sf.total_fee + sum(c.amount_assigned for c in ordered_charges if c)
+                combined_paid = sf.total_paid + sum(c.total_paid for c in ordered_charges if c)
+                combined_pending = sf.total_pending + sum(c.total_pending for c in ordered_charges if c)
+                row_status = classify_status(combined_assigned, combined_paid, combined_pending)
 
-                if status_filter == 'pending' and not has_pending:
-                    continue
-                elif status_filter == 'partial' and not has_partial:
-                    continue
-                elif status_filter == 'paid' and not is_all_paid:
-                    continue
-
-            row_pending = sf.total_pending + sum(c.total_pending for c in ordered_charges if c)
-            row_paid = sf.total_paid + sum(c.total_paid for c in ordered_charges if c)
-            if row_pending <= 0:
-                overall_status = 'Paid'
-            elif row_paid > 0:
-                overall_status = 'Partial'
-            else:
-                overall_status = 'Pending'
+            # Filter against status_filter
+            if status_filter == 'not_started' and row_status != 'not_started':
+                continue
+            elif status_filter == 'pending' and row_status not in ('partial', 'not_started'):
+                continue
+            elif status_filter == 'partial' and row_status != 'partial':
+                continue
+            elif status_filter == 'paid' and row_status != 'paid':
+                continue
 
             fee_data.append({
                 'student_fee': sf,
                 'charges': ordered_charges,
-                'overall_status': overall_status,
+                'overall_status': row_status,
             })
 
             total_collected_tuition += sf.total_paid
