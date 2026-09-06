@@ -6,3 +6,4 @@ class FeesConfig(AppConfig):
 
     def ready(self):
         import fees.signals
+        from . import signals  # noqa

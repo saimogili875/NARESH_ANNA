@@ -213,6 +213,22 @@ class FeeManagementFeaturesTest(TestCase):
         self.assertEqual(res_excel.status_code, 200)
         self.assertEqual(res_excel['Content-Type'], 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
+    def test_auto_assign_section_fees_signal(self):
+        ft = FeeType.objects.create(name='Library Fee', academic_year=self.year)
+        StudentFeeCharge.objects.create(student=self.student, fee_type=ft, amount_assigned=1500)
+
+        # Create new student in same section
+        new_student = Student.objects.create(
+            name='New Student',
+            admission_number='2026099',
+            section=self.section,
+            academic_year=self.year
+        )
+
+        charge = StudentFeeCharge.objects.filter(student=new_student, fee_type=ft).first()
+        self.assertIsNotNone(charge)
+        self.assertEqual(charge.amount_assigned, 1500)
+
 
 
 
