@@ -19,9 +19,16 @@
                 <form method="POST">
                     {% csrf_token %}
                     <div class="mb-3">
+                        <label class="form-label fw-bold">Academic Year <span class="text-danger">*</span></label>
+                        <select name="academic_year" class="form-select">
+                            {% for ay in active_years %}
+                            <option value="{{ ay.id }}" {% if ay == active_year %}selected{% endif %}>{{ ay.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
                         <label class="form-label fw-bold">Fee Name <span class="text-danger">*</span></label>
                         <input type="text" name="name" id="feeNameInput" class="form-control" placeholder="e.g. Books Fee, Bus Fee, Lab Fee" required>
-                        <div class="form-text">Will be created for academic year: <strong>{{ active_year }}</strong></div>
                     </div>
                     <div class="mb-3">
                         <div class="small fw-bold text-muted mb-2">Quick Suggestions:</div>
@@ -73,7 +80,10 @@
                             </tr>
                             {% for ft in fee_types %}
                             <tr>
-                                <td class="fw-bold">{{ ft.name }}</td>
+                                <td class="fw-bold">
+                                    {{ ft.name }}
+                                    <span class="badge bg-secondary-subtle text-dark border ms-1" style="font-size: 0.75rem;">{{ ft.academic_year.name }}</span>
+                                </td>
                                 <td>₹{{ ft.total_assigned|floatformat:0 }}</td>
                                 <td class="text-success">₹{{ ft.total_paid|floatformat:0 }}</td>
                                 <td class="text-danger">₹{{ ft.total_pending|floatformat:0 }}</td>

@@ -17,8 +17,7 @@ def sync_student_section_fees(student):
         return 0
 
     other_charges = StudentFeeCharge.objects.filter(
-        student__section_id=section_id,
-        fee_type__academic_year=active_year
+        student__section_id=section_id
     ).exclude(student_id=student.pk).select_related('fee_type')
 
     fee_type_amounts = {}

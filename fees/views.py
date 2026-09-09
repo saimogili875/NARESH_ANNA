@@ -14,23 +14,30 @@ from whatsapp.services import send_whatsapp_media
 
 @admin_accounts_required
 def fee_type_manage(request):
-    active_year = AcademicYear.objects.filter(is_active=True).first()
+    active_years = AcademicYear.objects.filter(is_active=True)
+    active_year = active_years.first()
     if not active_year:
         messages.error(request, "No active academic year found.")
         return redirect('fee_list')
 
     if request.method == 'POST':
         name = request.POST.get('name', '').strip()
+        ay_id = request.POST.get('academic_year')
+        target_year = AcademicYear.objects.filter(pk=ay_id).first() if ay_id else active_year
 
-        if name:
-            fee_type, created = FeeType.objects.get_or_create(name=name, academic_year=active_year)
+        if name and target_year:
+            fee_type, created = FeeType.objects.get_or_create(name=name, academic_year=target_year)
             if created:
-                messages.success(request, f"Fee type '{name}' created. You can now assign it to sections.")
+                messages.success(request, f"Fee type '{name}' created for {target_year}. You can now assign it to sections.")
             else:
-                messages.warning(request, f"Fee type '{name}' already exists for this year.")
+                messages.warning(request, f"Fee type '{name}' already exists for {target_year}.")
         return redirect('fee_type_manage')
 
-    fee_types = FeeType.objects.filter(academic_year=active_year).order_by('-created_at')
+    ay_filter = request.GET.get('academic_year', '')
+    if ay_filter:
+        fee_types = FeeType.objects.filter(academic_year_id=ay_filter).order_by('-created_at')
+    else:
+        fee_types = FeeType.objects.all().order_by('-created_at')
     
     # Calculate stats per fee type
     for ft in fee_types:
@@ -39,8 +46,8 @@ def fee_type_manage(request):
         ft.total_paid = sum(c.total_paid for c in charges)
         ft.total_pending = ft.total_assigned - ft.total_paid
 
-    # Calculate overall Tuition Fee stats for active academic year
-    tuition_fees = StudentFee.objects.filter(academic_year=active_year).prefetch_related('payments')
+    # Calculate overall Tuition Fee stats
+    tuition_fees = StudentFee.objects.all().prefetch_related('payments')
     tuition_stats = {
         'name': 'Tuition Fee (Core Fee)',
         'total_assigned': sum(sf.total_fee for sf in tuition_fees),
@@ -50,22 +57,23 @@ def fee_type_manage(request):
 
     return render(request, 'fees/manage_types.html', {
         'active_year': active_year,
+        'active_years': active_years,
         'fee_types': fee_types,
         'tuition_stats': tuition_stats,
+        'ay_filter': ay_filter,
     })
 
 
 @admin_accounts_required
 def fee_type_edit(request, pk):
-    active_year = AcademicYear.objects.filter(is_active=True).first()
-    fee_type = get_object_or_404(FeeType, pk=pk, academic_year=active_year)
+    fee_type = get_object_or_404(FeeType, pk=pk)
 
     if request.method == 'POST':
         new_name = request.POST.get('name', '').strip()
         if new_name:
-            exists = FeeType.objects.filter(name__iexact=new_name, academic_year=active_year).exclude(pk=pk).exists()
+            exists = FeeType.objects.filter(name__iexact=new_name, academic_year=fee_type.academic_year).exclude(pk=pk).exists()
             if exists:
-                messages.error(request, f"A fee type named '{new_name}' already exists.")
+                messages.error(request, f"A fee type named '{new_name}' already exists for {fee_type.academic_year}.")
             else:
                 old_name = fee_type.name
                 fee_type.name = new_name
@@ -78,8 +86,7 @@ def fee_type_edit(request, pk):
 
 @admin_accounts_required
 def fee_type_assign(request, pk):
-    active_year = AcademicYear.objects.filter(is_active=True).first()
-    fee_type = get_object_or_404(FeeType, pk=pk, academic_year=active_year)
+    fee_type = get_object_or_404(FeeType, pk=pk)
 
     from accounts.models import Section
     sections = list(Section.objects.select_related('group').all().order_by('group__name', 'year', 'name'))
@@ -114,7 +121,7 @@ def fee_type_assign(request, pk):
             messages.error(request, 'Please select at least one section.')
             return redirect('fee_type_assign', pk=pk)
 
-        students = Student.objects.filter(is_active=True, academic_year=active_year, section_id__in=section_ids)
+        students = Student.objects.filter(is_active=True, section_id__in=section_ids)
         updated_count = 0
         for student in students:
             charge, _ = StudentFeeCharge.objects.get_or_create(
@@ -137,8 +144,7 @@ def fee_type_assign(request, pk):
 
 @admin_accounts_required
 def fee_type_unassign_section(request, pk, section_id):
-    active_year = AcademicYear.objects.filter(is_active=True).first()
-    fee_type = get_object_or_404(FeeType, pk=pk, academic_year=active_year)
+    fee_type = get_object_or_404(FeeType, pk=pk)
     from accounts.models import Section
     section = get_object_or_404(Section, pk=section_id)
 
@@ -162,8 +168,7 @@ def fee_type_assign_individual(request, pk):
     """Assign a fee type to students with a DIFFERENT hand-typed amount per
     student, instead of one bulk amount for a whole section. Also allows recording
     partial/installment payments directly from this screen."""
-    active_year = AcademicYear.objects.filter(is_active=True).first()
-    fee_type = get_object_or_404(FeeType, pk=pk, academic_year=active_year)
+    fee_type = get_object_or_404(FeeType, pk=pk)
 
     from accounts.models import Section
 
@@ -228,7 +233,7 @@ def fee_type_assign_individual(request, pk):
     section_filter = request.GET.get('section', '')
     status_filter = request.GET.get('status', '').lower().strip()
 
-    students = Student.objects.filter(is_active=True, academic_year=active_year).select_related('section__group')
+    students = Student.objects.filter(is_active=True).select_related('section__group')
     if year_filter:
         students = students.filter(section__year=year_filter)
     if section_filter:
@@ -248,7 +253,7 @@ def fee_type_assign_individual(request, pk):
     elif status_filter == 'paid':
         student_rows = [r for r in student_rows if r['charge'] and r['charge'].status.lower() == 'paid']
 
-    all_fee_types = FeeType.objects.filter(academic_year=active_year).order_by('name')
+    all_fee_types = FeeType.objects.all().order_by('name')
     sections = Section.objects.select_related('group').all().order_by('group__name', 'year', 'name')
 
     return render(request, 'fees/assign_type_individual.html', {
@@ -264,8 +269,7 @@ def fee_type_assign_individual(request, pk):
 
 @admin_accounts_required
 def fee_charge_delete(request, pk, charge_id):
-    active_year = AcademicYear.objects.filter(is_active=True).first()
-    fee_type = get_object_or_404(FeeType, pk=pk, academic_year=active_year)
+    fee_type = get_object_or_404(FeeType, pk=pk)
     charge = get_object_or_404(StudentFeeCharge, pk=charge_id, fee_type=fee_type)
 
     if charge.total_paid > 0:
@@ -283,8 +287,7 @@ def fee_charge_delete(request, pk, charge_id):
 
 @admin_accounts_required
 def fee_type_delete(request, pk):
-    active_year = AcademicYear.objects.filter(is_active=True).first()
-    fee_type = get_object_or_404(FeeType, pk=pk, academic_year=active_year)
+    fee_type = get_object_or_404(FeeType, pk=pk)
     
     if request.method == 'POST':
         name = fee_type.name
@@ -313,7 +316,7 @@ def fee_list(request):
     student_list = list(students)
     student_ids = [s.pk for s in student_list]
 
-    fee_types = list(FeeType.objects.filter(academic_year=active_year).order_by('created_at'))
+    fee_types = list(FeeType.objects.all().order_by('created_at'))
     fee_data = []
 
     total_collected_tuition = 0
@@ -329,29 +332,30 @@ def fee_list(request):
             return 'paid'
         return 'partial'
 
-    if active_year and student_ids:
+    if student_ids:
         existing_fees = {
             sf.student_id: sf
             for sf in StudentFee.objects.filter(
-                student_id__in=student_ids, academic_year=active_year
+                student_id__in=student_ids
             ).prefetch_related('payments')
         }
 
         missing_ids = [pk for pk in student_ids if pk not in existing_fees]
         if missing_ids:
+            missing_students = Student.objects.filter(pk__in=missing_ids)
             StudentFee.objects.bulk_create(
-                [StudentFee(student_id=pk, academic_year=active_year, total_fee=0) for pk in missing_ids],
+                [StudentFee(student_id=s.pk, academic_year=s.academic_year or active_year, total_fee=0) for s in missing_students],
                 ignore_conflicts=True,
             )
             for sf in StudentFee.objects.filter(
-                student_id__in=missing_ids, academic_year=active_year
+                student_id__in=missing_ids
             ).prefetch_related('payments'):
                 existing_fees[sf.student_id] = sf
 
         charges_by_student = {}
         if fee_types:
             for c in StudentFeeCharge.objects.filter(
-                student_id__in=student_ids, fee_type__academic_year=active_year
+                student_id__in=student_ids
             ).select_related('fee_type').prefetch_related('payments'):
                 charges_by_student.setdefault(c.student_id, {})[c.fee_type_id] = c
 
@@ -435,10 +439,12 @@ def fee_list(request):
 @admin_accounts_required
 def fee_set(request, pk):
     student = get_object_or_404(Student, pk=pk)
-    active_year = AcademicYear.objects.filter(is_active=True).first()
-    student_fee, _ = StudentFee.objects.get_or_create(
-        student=student, academic_year=active_year, defaults={'total_fee': 0}
-    )
+    active_year = student.academic_year or AcademicYear.objects.filter(is_active=True).first()
+    student_fee = StudentFee.objects.filter(student=student).first()
+    if not student_fee:
+        student_fee, _ = StudentFee.objects.get_or_create(
+            student=student, academic_year=active_year, defaults={'total_fee': 0}
+        )
     if request.method == 'POST':
         raw_fee = request.POST.get('total_fee', '0').strip()
         try:
@@ -447,7 +453,6 @@ def fee_set(request, pk):
             student_fee.total_fee = 0
         student_fee.save()
         messages.success(request, f'Total fee set to ₹{student_fee.total_fee} for {student.name}.')
-        # FIX: clean redirect logic — check next first, else go to fee_detail
         next_url = request.POST.get('next', '').strip()
         if next_url:
             return redirect(next_url)
@@ -479,14 +484,17 @@ def fee_set_bulk(request):
             messages.error(request, 'Please select at least one section.')
             return redirect('fee_set_bulk')
 
-        students = Student.objects.filter(is_active=True, academic_year=active_year, section_id__in=section_ids)
+        students = Student.objects.filter(is_active=True, section_id__in=section_ids)
         updated_count = 0
         for student in students:
-            student_fee, _ = StudentFee.objects.get_or_create(
-                student=student, 
-                academic_year=active_year,
-                defaults={'total_fee': amount}
-            )
+            student_ay = student.academic_year or active_year
+            student_fee = StudentFee.objects.filter(student=student).first()
+            if not student_fee:
+                student_fee, _ = StudentFee.objects.get_or_create(
+                    student=student, 
+                    academic_year=student_ay,
+                    defaults={'total_fee': amount}
+                )
             student_fee.total_fee = amount
             student_fee.save()
             updated_count += 1
@@ -505,16 +513,18 @@ def fee_set_bulk(request):
 @all_roles_required
 def fee_detail(request, pk):
     student = get_object_or_404(Student, pk=pk)
-    active_year = AcademicYear.objects.filter(is_active=True).first()
-    student_fee, _ = StudentFee.objects.get_or_create(
-        student=student, academic_year=active_year, defaults={'total_fee': 0}
-    )
+    active_year = student.academic_year or AcademicYear.objects.filter(is_active=True).first()
+    student_fee = StudentFee.objects.filter(student=student).first()
+    if not student_fee:
+        student_fee, _ = StudentFee.objects.get_or_create(
+            student=student, academic_year=active_year, defaults={'total_fee': 0}
+        )
     
     # Tuition payments
     tuition_payments = list(student_fee.payments.order_by('-payment_date', '-created_at'))
     
     # Other fee charges and payments
-    other_charges = StudentFeeCharge.objects.filter(student=student, fee_type__academic_year=active_year).select_related('fee_type')
+    other_charges = StudentFeeCharge.objects.filter(student=student).select_related('fee_type')
     other_payments = FeePayment.objects.filter(fee_charge__in=other_charges).order_by('-payment_date', '-created_at')
 
     all_payments = sorted(tuition_payments + list(other_payments), key=lambda p: (p.payment_date, p.created_at), reverse=True)
@@ -529,11 +539,13 @@ def fee_detail(request, pk):
 @admin_accounts_required
 def fee_collect(request, pk):
     student = get_object_or_404(Student, pk=pk)
-    active_year = AcademicYear.objects.filter(is_active=True).first()
-    student_fee, _ = StudentFee.objects.get_or_create(
-        student=student, academic_year=active_year, defaults={'total_fee': 0}
-    )
-    all_other_charges = StudentFeeCharge.objects.filter(student=student, fee_type__academic_year=active_year).select_related('fee_type').prefetch_related('payments')
+    active_year = student.academic_year or AcademicYear.objects.filter(is_active=True).first()
+    student_fee = StudentFee.objects.filter(student=student).first()
+    if not student_fee:
+        student_fee, _ = StudentFee.objects.get_or_create(
+            student=student, academic_year=active_year, defaults={'total_fee': 0}
+        )
+    all_other_charges = StudentFeeCharge.objects.filter(student=student).select_related('fee_type').prefetch_related('payments')
     # Hide fully-paid charges from collect fee context
     unpaid_other_charges = [c for c in all_other_charges if c.total_pending > 0]
 
@@ -700,11 +712,13 @@ def fee_charge_set(request, pk, charge_id):
 @admin_accounts_required
 def payment_adjust(request, pk):
     student = get_object_or_404(Student, pk=pk)
-    active_year = AcademicYear.objects.filter(is_active=True).first()
-    student_fee, _ = StudentFee.objects.get_or_create(
-        student=student, academic_year=active_year, defaults={'total_fee': 0}
-    )
-    other_charges = StudentFeeCharge.objects.filter(student=student, fee_type__academic_year=active_year).select_related('fee_type')
+    active_year = student.academic_year or AcademicYear.objects.filter(is_active=True).first()
+    student_fee = StudentFee.objects.filter(student=student).first()
+    if not student_fee:
+        student_fee, _ = StudentFee.objects.get_or_create(
+            student=student, academic_year=active_year, defaults={'total_fee': 0}
+        )
+    other_charges = StudentFeeCharge.objects.filter(student=student).select_related('fee_type')
 
     if request.method == 'POST':
         fee_head_id = request.POST.get('fee_head', 'tuition')
@@ -831,7 +845,7 @@ def fee_export(request):
     student_ids = list(students.values_list('pk', flat=True))
     fees_by_student = {
         sf.student_id: sf
-        for sf in StudentFee.objects.filter(student_id__in=student_ids, academic_year=active_year).prefetch_related('payments')
+        for sf in StudentFee.objects.filter(student_id__in=student_ids).prefetch_related('payments')
     }
 
     fee_rows = []
