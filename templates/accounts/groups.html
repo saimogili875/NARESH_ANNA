@@ -6,12 +6,13 @@
 {% block content %}
 <style>
 .group-card {
-  border: none;
-  border-radius: 14px;
-  box-shadow: 0 1px 6px rgba(0,0,0,.07);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 16px;
   overflow: hidden;
   margin-bottom: 1.25rem;
-  background: #fff;
+  background: rgba(22, 22, 28, 0.78);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border-left: 5px solid var(--gc-border);
 }
 .group-icon-box {
@@ -21,15 +22,15 @@
   font-size: 1.6rem;
   flex-shrink: 0;
 }
-.stat-chip { font-size: .8rem; color: #6b7280; display: flex; align-items: center; gap: .35rem; }
-.stat-chip strong { color: #111827; font-size: .92rem; }
+.stat-chip { font-size: .8rem; color: #86868B; display: flex; align-items: center; gap: .35rem; }
+.stat-chip strong { color: #F5F5F7; font-size: .92rem; font-family: var(--font-mono); }
 .section-badge {
   display: inline-block;
-  padding: 3px 11px;
+  padding: 4px 12px;
   border-radius: 20px;
   font-size: .75rem;
-  font-weight: 500;
-  border: 1.5px solid var(--gc-border);
+  font-weight: 600;
+  border: 1px solid var(--gc-border);
   color: var(--gc-color);
   background: var(--gc-bg);
   white-space: nowrap;
@@ -37,41 +38,94 @@
 .avatar-stack { display: flex; align-items: center; }
 .avatar-stack img, .avatar-stack .avatar-more {
   width: 32px; height: 32px; border-radius: 50%;
-  border: 2px solid #fff;
+  border: 2px solid #0B0B0E;
   margin-left: -8px;
   object-fit: cover;
 }
 .avatar-stack img:first-child, .avatar-stack .avatar-more:first-child { margin-left: 0; }
 .avatar-more {
-  background: #e5e7eb;
+  background: rgba(255,255,255,0.12);
   display: flex; align-items: center; justify-content: center;
-  font-size: .65rem; font-weight: 600; color: #374151;
+  font-size: .65rem; font-weight: 600; color: #F5F5F7;
 }
 /* Circular progress */
 .att-ring { position: relative; width: 70px; height: 70px; flex-shrink: 0; }
 .att-ring svg { transform: rotate(-90deg); }
-.att-ring .ring-track { fill: none; stroke: #e5e7eb; stroke-width: 6; }
+.att-ring .ring-track { fill: none; stroke: rgba(255,255,255,0.08); stroke-width: 6; }
 .att-ring .ring-fill  { fill: none; stroke-width: 6; stroke-linecap: round;
                         transition: stroke-dashoffset .6s ease; }
 .att-ring .ring-label {
   position: absolute; inset: 0;
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
-  font-size: .78rem; font-weight: 700; line-height: 1.1;
+  font-size: .78rem; font-weight: 700; line-height: 1.1; color: #F5F5F7;
+  font-family: var(--font-mono);
 }
-.att-ring .ring-sub { font-size: .58rem; font-weight: 400; color: #9ca3af; }
+.att-ring .ring-sub { font-size: .58rem; font-weight: 400; color: #86868B; }
 /* Summary cards */
 .summary-card {
-  background: #fff;
-  border-radius: 12px;
+  background: rgba(22, 22, 28, 0.78);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 16px;
   padding: 1.1rem 1.4rem;
-  box-shadow: 0 1px 4px rgba(0,0,0,.06);
   display: flex; align-items: center; gap: 1rem;
 }
 .summary-icon {
-  width: 46px; height: 46px; border-radius: 10px;
+  width: 46px; height: 46px; border-radius: 12px;
   display: flex; align-items: center; justify-content: center;
   font-size: 1.3rem; flex-shrink: 0;
+}
+/* Disable border rotation on group card wrapper & non-section small items */
+.group-card::before,
+.stat-chip::before,
+.avatar-more::before,
+.summary-icon::before,
+.group-icon-box::before,
+.btn-sm::before {
+  display: none !important;
+}
+
+/* Enable continuous gold border rotation strictly per section box (.section-badge) */
+.section-badge {
+  display: inline-block;
+  padding: 6px 14px;
+  border-radius: 12px;
+  font-size: .8125rem;
+  font-weight: 600;
+  color: #F5F5F7;
+  background: rgba(22, 22, 28, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(197, 160, 89, 0.3);
+  position: relative;
+  z-index: 1;
+  margin: 3px;
+  white-space: nowrap;
+}
+
+.section-badge::before {
+  content: "" !important;
+  position: absolute;
+  inset: -1.5px;
+  border-radius: inherit;
+  padding: 1.5px;
+  background: conic-gradient(from var(--gold-angle), transparent 35%, rgba(197, 160, 89, 0.4) 65%, #D4AF37 85%, #FFFFFF 95%, transparent 100%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0.85; /* Continuous non-stop gold border rotation */
+  pointer-events: none;
+  transition: opacity 0.35s ease, filter 0.35s ease;
+  z-index: 2;
+  animation: rotateGoldBorder 3s linear infinite !important;
+}
+
+.section-badge:hover::before {
+  opacity: 1 !important;
+  filter: drop-shadow(0 0 8px rgba(197, 160, 89, 0.8)) !important;
+  animation: rotateGoldBorder 1.5s linear infinite !important;
 }
 </style>
 

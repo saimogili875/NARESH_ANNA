@@ -5,69 +5,105 @@
 
 <div class="row g-3 mb-4">
   <div class="col-6 col-md-3">
-    <div class="stat-card shadow-sm" style="background:linear-gradient(135deg,#4F46E5,#6366F1); border-radius: 16px;">
-      <i class="bi bi-people-fill"></i>
-      <div class="value">{{ total_students }}</div>
-      <div class="label">Total Students</div>
+    <div class="stat-card">
+      <div class="stat-icon" style="background: rgba(197,160,89,0.14); color: var(--sf-gold); border: 1px solid rgba(197,160,89,0.25);">
+        <i class="bi bi-people-fill"></i>
+      </div>
+      <div>
+        <div class="value">{{ total_students }}</div>
+        <div class="label">Total Students</div>
+      </div>
     </div>
   </div>
   <div class="col-6 col-md-3">
-    <div class="stat-card shadow-sm" style="background:linear-gradient(135deg,#2563EB,#60A5FA); border-radius: 16px;">
-      <i class="bi bi-1-circle-fill"></i>
-      <div class="value">{{ year1_students }}</div>
-      <div class="label">1st Year Students</div>
+    <div class="stat-card">
+      <div class="stat-icon" style="background: rgba(197,160,89,0.1); color: var(--sf-gold); border: 1px solid rgba(197,160,89,0.2);">
+        <i class="bi bi-1-circle-fill"></i>
+      </div>
+      <div>
+        <div class="value">{{ year1_students }}</div>
+        <div class="label">1st Year Students</div>
+      </div>
     </div>
   </div>
   <div class="col-6 col-md-3">
-    <div class="stat-card shadow-sm" style="background:linear-gradient(135deg,#0891B2,#06B6D4); border-radius: 16px;">
-      <i class="bi bi-2-circle-fill"></i>
-      <div class="value">{{ year2_students }}</div>
-      <div class="label">2nd Year Students</div>
+    <div class="stat-card">
+      <div class="stat-icon" style="background: rgba(90,200,250,0.14); color: #5AC8FA; border: 1px solid rgba(90,200,250,0.25);">
+        <i class="bi bi-2-circle-fill"></i>
+      </div>
+      <div>
+        <div class="value">{{ year2_students }}</div>
+        <div class="label">2nd Year Students</div>
+      </div>
     </div>
   </div>
   <div class="col-6 col-md-3">
-    <div class="stat-card shadow-sm" style="background:linear-gradient(135deg,#10B981,#34D399); border-radius: 16px;">
-      <i class="bi bi-calendar-check-fill"></i>
-      <div class="value">{{ today_present }}</div>
-      <div class="label">Today Present</div>
+    <div class="stat-card">
+      <div class="stat-icon" style="background: rgba(48,209,88,0.14); color: #30D158; border: 1px solid rgba(48,209,88,0.25);">
+        <i class="bi bi-calendar-check-fill"></i>
+      </div>
+      <div>
+        <div class="value">{{ today_present }}</div>
+        <div class="label">Today Present</div>
+      </div>
     </div>
   </div>
 </div>
 
 <div class="row g-3 mb-4">
   <div class="col-6 col-md-3">
-    <div class="stat-card shadow-sm" style="background:linear-gradient(135deg,#EF4444,#F87171); border-radius: 16px;">
-      <i class="bi bi-calendar-x-fill"></i>
-      <div class="value">{{ today_absent }}</div>
-      <div class="label">Today Absent</div>
+    <div class="stat-card">
+      <div class="stat-icon" style="background: rgba(255,69,58,0.14); color: #FF453A; border: 1px solid rgba(255,69,58,0.25);">
+        <i class="bi bi-calendar-x-fill"></i>
+      </div>
+      <div>
+        <div class="value">{{ today_absent }}</div>
+        <div class="label">Today Absent</div>
+      </div>
     </div>
   </div>
   <div class="col-6 col-md-3">
-    <div class="stat-card shadow-sm" style="background:linear-gradient(135deg,#F59E0B,#FBBF24); border-radius: 16px;">
-      <i class="bi bi-cash-coin"></i>
-      <div class="value">₹{{ today_fee_collection|floatformat:0 }}</div>
-      <div class="label">Today Fee Collection</div>
+    <div class="stat-card">
+      <div class="stat-icon" style="background: rgba(255,159,10,0.14); color: #FF9F0A; border: 1px solid rgba(255,159,10,0.25);">
+        <i class="bi bi-cash-coin"></i>
+      </div>
+      <div>
+        <div class="value">₹{{ today_fee_collection|floatformat:0 }}</div>
+        <div class="label">Today Fee Collection</div>
+      </div>
     </div>
   </div>
   <div class="col-6 col-md-3">
-    <div class="stat-card shadow-sm" style="background:linear-gradient(135deg,#059669,#10B981); border-radius: 16px;">
-      <i class="bi bi-cash-stack"></i>
-      <div class="value">₹{{ total_paid|floatformat:0 }}</div>
-      <div class="label">Total Fees Collected</div>
+    <div class="stat-card">
+      <div class="stat-icon" style="background: rgba(48,209,88,0.14); color: #30D158; border: 1px solid rgba(48,209,88,0.25);">
+        <i class="bi bi-cash-stack"></i>
+      </div>
+      <div>
+        <div class="value">₹{{ total_paid|floatformat:0 }}</div>
+        <div class="label">Total Fees Collected</div>
+      </div>
     </div>
   </div>
   <div class="col-6 col-md-3">
-    <div class="stat-card shadow-sm" style="background:linear-gradient(135deg,#8B5CF6,#C084FC); border-radius: 16px;">
-      <i class="bi bi-exclamation-circle-fill"></i>
-      <div class="value">₹{{ pending_fees|floatformat:0 }}</div>
-      <div class="label">Pending Fees</div>
+    <div class="stat-card">
+      <div class="stat-icon" style="background: rgba(197,160,89,0.18); color: var(--sf-gold); border: 1px solid rgba(197,160,89,0.3);">
+        <i class="bi bi-exclamation-circle-fill"></i>
+      </div>
+      <div>
+        <div class="value">₹{{ pending_fees|floatformat:0 }}</div>
+        <div class="label">Pending Fees</div>
+      </div>
     </div>
   </div>
   <div class="col-6 col-md-3">
-    <div class="stat-card shadow-sm" style="background:linear-gradient(135deg,#0284C7,#38BDF8); border-radius: 16px;">
-      <i class="bi bi-person-plus-fill"></i>
-      <div class="value">{{ recent_students|length }}</div>
-      <div class="label">Recent Admissions</div>
+    <div class="stat-card">
+      <div class="stat-icon" style="background: rgba(197,160,89,0.14); color: var(--sf-gold); border: 1px solid rgba(197,160,89,0.25);">
+        <i class="bi bi-person-plus-fill"></i>
+      </div>
+      <div>
+        <div class="value">{{ recent_students|length }}</div>
+        <div class="label">Recent Admissions</div>
+      </div>
     </div>
   </div>
 </div>
@@ -76,26 +112,26 @@
   <!-- Recent Admissions -->
   <div class="col-lg-6">
     <div class="card border-0 shadow-sm">
-      <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center py-3">
-        <span class="fw-bold">Recent Admissions</span>
-        <a href="{% url 'student_list' %}" class="btn btn-sm btn-outline-primary">View All</a>
+      <div class="card-header border-bottom d-flex justify-content-between align-items-center py-3 bg-transparent">
+        <span class="fw-semibold text-body">Recent Admissions</span>
+        <a href="{% url 'student_list' %}" class="btn btn-sm btn-outline-warning rounded-pill px-3" style="color:var(--sf-gold); border-color:rgba(197,160,89,0.4);">View All</a>
       </div>
       <div class="card-body p-0">
-        <table class="table table-hover mb-0">
-          <thead class="bg-light">
+        <table class="table table-hover align-middle mb-0">
+          <thead>
             <tr><th>Adm. No</th><th>Name</th><th>Group</th><th>Section</th><th></th></tr>
           </thead>
           <tbody>
             {% for s in recent_students %}
             <tr>
-              <td class="small text-muted">{{ s.admission_number }}</td>
-              <td class="fw-500">{{ s.name }}</td>
-              <td>{{ s.section.group.name|default:'-' }}</td>
+              <td class="small text-muted font-monospace">{{ s.admission_number }}</td>
+              <td class="fw-medium text-light">{{ s.name }}</td>
+              <td><span class="badge bg-dark text-light border border-secondary fw-normal">{{ s.section.group.name|default:'-' }}</span></td>
               <td>{{ s.section|default:'-' }}</td>
-              <td><a href="{% url 'student_profile' s.pk %}" class="btn btn-xs btn-light"><i class="bi bi-eye"></i></a></td>
+              <td class="text-end"><a href="{% url 'student_profile' s.pk %}" class="btn btn-sm btn-outline-secondary rounded-circle px-2 py-1"><i class="bi bi-chevron-right"></i></a></td>
             </tr>
             {% empty %}
-            <tr><td colspan="5" class="text-center text-muted py-3">No students yet</td></tr>
+            <tr><td colspan="5" class="text-center text-muted py-4">No recent admissions found</td></tr>
             {% endfor %}
           </tbody>
         </table>
@@ -106,34 +142,34 @@
   <!-- Transactions by Date -->
   <div class="col-lg-6">
     <div class="card border-0 shadow-sm">
-      <div class="card-header bg-white border-bottom py-2">
+      <div class="card-header border-bottom py-3 bg-transparent">
         <div class="d-flex justify-content-between align-items-center mb-2">
-          <span class="fw-bold">Fee Transactions</span>
-          <span class="badge bg-success">₹{{ selected_day_total|floatformat:0 }} on {{ selected_txn_date|date:"d M Y" }}</span>
+          <span class="fw-semibold text-body">Fee Transactions</span>
+          <span class="badge bg-success-subtle text-success border border-success-subtle px-2.5 py-1.5 fw-medium">₹{{ selected_day_total|floatformat:0 }} on {{ selected_txn_date|date:"d M Y" }}</span>
         </div>
         <form method="get" class="d-flex gap-2 align-items-center">
           <input type="date" name="txn_date" value="{{ selected_txn_date|date:'Y-m-d' }}"
-            class="form-control form-control-sm" style="width:160px" onchange="this.form.submit()">
+            class="form-control form-control-sm border-secondary-subtle" style="width:160px" onchange="this.form.submit()">
           {% if selected_txn_date != today %}
-          <a href="?" class="btn btn-outline-secondary btn-sm">Today</a>
+          <a href="?" class="btn btn-outline-secondary btn-sm rounded-pill px-3">Today</a>
           {% endif %}
         </form>
       </div>
       <div class="card-body p-0" style="max-height:380px;overflow-y:auto">
-        <table class="table table-hover mb-0">
-          <thead class="bg-light">
+        <table class="table table-hover align-middle mb-0">
+          <thead>
             <tr><th>Receipt</th><th>Student</th><th>Amount</th><th>Mode</th></tr>
           </thead>
           <tbody>
             {% for p in selected_day_payments %}
             <tr>
-              <td class="small text-muted">#{{ p.receipt_number }}</td>
-              <td class="small">{{ p.student_fee.student.name }}</td>
-              <td class="fw-bold text-success">₹{{ p.amount|floatformat:0 }}</td>
-              <td><span class="badge bg-light text-dark" style="font-size:0.7rem">{{ p.get_payment_mode_display }}</span></td>
+              <td class="small text-muted font-monospace">#{{ p.receipt_number }}</td>
+              <td class="small fw-medium text-light">{{ p.student_fee.student.name }}</td>
+              <td class="fw-semibold text-success">₹{{ p.amount|floatformat:0 }}</td>
+              <td><span class="badge bg-dark text-light border border-secondary fw-normal">{{ p.get_payment_mode_display }}</span></td>
             </tr>
             {% empty %}
-            <tr><td colspan="4" class="text-center text-muted py-3">No transactions on {{ selected_txn_date|date:"d M Y" }}</td></tr>
+            <tr><td colspan="4" class="text-center text-muted py-4">No transactions on {{ selected_txn_date|date:"d M Y" }}</td></tr>
             {% endfor %}
           </tbody>
         </table>
