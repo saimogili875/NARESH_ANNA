@@ -383,6 +383,28 @@ def group_list(request):
         },
     }
 
+    # --- High-Performance Aggregation Algorithm (0 N+1 Queries) ---
+    student_counts_by_section = {
+        r['section_id']: r['cnt']
+        for r in Student.objects.filter(is_active=True).values('section_id').annotate(cnt=Count('id'))
+    }
+
+    att_counts_by_section = {}
+    for r in Attendance.objects.filter(date=selected_date).values('section_id', 'status').annotate(cnt=Count('id')):
+        att_counts_by_section.setdefault(r['section_id'], {})[r['status']] = r['cnt']
+
+    sample_photos_by_section = {}
+    sample_qs = (
+        Student.objects.filter(is_active=True)
+        .exclude(photo='')
+        .exclude(photo=None)
+        .only('id', 'name', 'photo', 'section_id')
+    )
+    for st in sample_qs:
+        sec_id = st.section_id
+        if sec_id and len(sample_photos_by_section.setdefault(sec_id, [])) < 4:
+            sample_photos_by_section[sec_id].append(st)
+
     group_data = []
     for group in groups:
         code_upper = (group.code or '').upper().strip()
@@ -405,17 +427,22 @@ def group_list(request):
         }
         sections = list(group.sections.all())
         section_count = len(sections)
-        students_qs = Student.objects.filter(section__in=sections, is_active=True)
-        student_count = students_qs.count()
 
-        att = Attendance.objects.filter(student__in=students_qs, date=selected_date)
-        total_att = att.count()
-        present_att = att.filter(status='P').count()
-        absent_att = att.filter(status='A').count()
+        # In-memory aggregation per group
+        student_count = sum(student_counts_by_section.get(sec.pk, 0) for sec in sections)
+        present_att = sum(att_counts_by_section.get(sec.pk, {}).get('P', 0) for sec in sections)
+        absent_att = sum(att_counts_by_section.get(sec.pk, {}).get('A', 0) for sec in sections)
+        total_att = present_att + absent_att
         att_pct = round(present_att / total_att * 100) if total_att else 0
 
-        sample = list(students_qs.exclude(photo='').exclude(photo=None)[:4])
-        extra = max(0, student_count - 4)
+        # Sample student photos across sections
+        sample = []
+        for sec in sections:
+            sample.extend(sample_photos_by_section.get(sec.pk, []))
+            if len(sample) >= 4:
+                break
+        sample = sample[:4]
+        extra = max(0, student_count - len(sample))
 
         group_data.append({
             'group': group,
