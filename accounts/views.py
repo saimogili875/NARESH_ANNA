@@ -487,8 +487,13 @@ def section_edit(request, pk):
 
 @admin_required
 def section_delete(request, pk):
-    get_object_or_404(Section, pk=pk).delete()
-    messages.success(request, 'Section deleted.')
+    sec = get_object_or_404(Section, pk=pk)
+    sec_name = str(sec)
+    try:
+        sec.delete()
+        messages.success(request, f'Section "{sec_name}" deleted successfully.')
+    except Exception as e:
+        messages.error(request, f'Could not delete section "{sec_name}": {e}')
     return redirect('group_list')
 
 @superuser_required

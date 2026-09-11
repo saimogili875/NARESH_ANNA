@@ -275,10 +275,21 @@
       <!-- Right: sections + photos + buttons -->
       <div class="col-12 col-md-6">
         <!-- Sections -->
-        <div class="mb-2" style="font-size:.75rem; font-weight:600; color:#9ca3af; text-transform:uppercase; letter-spacing:.05em;">Sections</div>
-        <div class="d-flex flex-wrap gap-1 mb-3">
+        <div class="mb-2" style="font-size:.75rem; font-weight:600; color:#86868B; text-transform:uppercase; letter-spacing:.05em;">Sections</div>
+        <div class="d-flex flex-wrap gap-2 mb-3">
           {% for sec in gd.sections %}
-          <span class="section-badge">{{ sec }}</span>
+          <div class="section-badge d-inline-flex align-items-center gap-2">
+            <span>{{ sec }}</span>
+            <div class="d-inline-flex gap-1.5 ms-1 align-items-center">
+              <a href="{% url 'section_edit' sec.pk %}" class="text-white-50 opacity-75 hover-gold" title="Edit Section" style="font-size: 0.75rem; text-decoration: none;">
+                <i class="bi bi-pencil"></i>
+              </a>
+              <a href="{% url 'section_delete' sec.pk %}" class="text-danger opacity-75 hover-bright" title="Delete Section" style="font-size: 0.75rem; text-decoration: none;"
+                 onclick="return confirm('Delete section {{ sec }}? All students in this section will be permanently removed.');">
+                <i class="bi bi-x-circle-fill"></i>
+              </a>
+            </div>
+          </div>
           {% empty %}
           <span class="text-muted small">No sections yet</span>
           {% endfor %}
