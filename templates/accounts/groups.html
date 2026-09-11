@@ -288,7 +288,7 @@
         <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
           <div class="avatar-stack">
             {% for st in gd.sample_students %}
-            <img src="{{ st.photo.url }}" alt="{{ st.name }}" title="{{ st.name }}">
+            <img src="{{ st.photo.url }}" alt="{{ st.name }}" title="{{ st.name }}" width="32" height="32" loading="lazy" decoding="async">
             {% endfor %}
             {% if gd.extra_students > 0 %}
             <div class="avatar-more">+{{ gd.extra_students }}</div>

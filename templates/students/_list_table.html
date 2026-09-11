@@ -26,7 +26,7 @@
       <td>
         <div class="d-flex align-items-center gap-2">
           {% if s.photo %}
-          <img src="{{ s.photo.url }}" width="32" height="32" style="border-radius:50%;object-fit:cover;flex-shrink:0;border:1px solid rgba(197,160,89,0.3);">
+          <img src="{{ s.photo.url }}" width="32" height="32" loading="lazy" decoding="async" style="border-radius:50%;object-fit:cover;flex-shrink:0;border:1px solid rgba(197,160,89,0.3);">
           {% else %}
           <div style="width:32px;height:32px;border-radius:50%;background:rgba(197,160,89,0.14);border:1px solid rgba(197,160,89,0.25);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--sf-gold);">
             <i class="bi bi-person"></i>

@@ -46,6 +46,21 @@ class Student(models.Model):
     def __str__(self):
         return f"{self.admission_number} - {self.name}"
 
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        if self.photo:
+            try:
+                import os
+                from PIL import Image
+                if hasattr(self.photo, 'path') and os.path.exists(self.photo.path):
+                    img_path = self.photo.path
+                    with Image.open(img_path) as img:
+                        if img.height > 400 or img.width > 400:
+                            img.thumbnail((400, 400))
+                            img.save(img_path, quality=80, optimize=True)
+            except Exception:
+                pass
+
     @property
     def year(self):
         return self.section.year if self.section else None
