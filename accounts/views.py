@@ -351,7 +351,7 @@ def group_list(request):
                 'academic_year': active_year
             }
         )
-        if grp_created or not grp.sections.exists():
+        if grp_created:
             Section.objects.get_or_create(group=grp, year='1', name='A', defaults={'academic_year': active_year})
             Section.objects.get_or_create(group=grp, year='2', name='A', defaults={'academic_year': active_year})
 
