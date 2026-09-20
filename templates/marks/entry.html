@@ -1,0 +1,215 @@
+{% extends 'base.html' %}
+{% load dict_filters %}
+{% block title %}Enter Marks{% endblock %}
+{% block page_title %}Enter Marks — {{ exam.display_name }}{% endblock %}
+{% block content %}
+
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-body py-2">
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+      {% if exam.group %}
+      <span class="badge bg-light text-dark border">{{ exam.group.code }}</span>
+      {% endif %}
+      <span class="badge bg-info-subtle text-info-emphasis border">{{ exam.category.name }}</span>
+      <span class="text-muted small">Subjects: {{ subjects|join:", " }}</span>
+    </div>
+    <form method="get" class="row g-2 align-items-center">
+      <div class="col-12 col-md-5">
+        <select name="section" class="form-select form-select-sm" onchange="this.form.submit()">
+          <option value="">-- Select Section --</option>
+          {% for s in sections %}
+          <option value="{{ s.pk }}" {% if s.pk|stringformat:"s" == section_id %}selected{% endif %}>
+            {{ s.group.name }} - Year {{ s.year }} - {{ s.name }}
+          </option>
+          {% endfor %}
+        </select>
+        {% if not sections %}
+        <div class="form-text text-warning">No sections found for this exam's group ({{ exam.group.code|default:"—" }}).</div>
+        {% endif %}
+      </div>
+      <div class="col-auto">
+        <a href="{% url 'exam_list' %}" class="btn btn-outline-secondary btn-sm">Back to Exams</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% if not subjects %}
+<div class="alert alert-warning border-warning shadow-sm mb-3">
+  <i class="bi bi-exclamation-triangle-fill me-2"></i>
+  {% if request.user.role == 'faculty' %}
+  <strong>No assigned subjects!</strong> You are not assigned to enter marks for any subject in this exam.
+  {% else %}
+  <strong>No subjects configured!</strong> No subjects are attached to the exam category <strong>{{ exam.category.name }}</strong>. Please attach subjects in Django Admin.
+  {% endif %}
+</div>
+{% endif %}
+
+{% if selected_section and rows %}
+<div class="card border-0 shadow-sm mb-5">
+  <div class="card-header bg-transparent fw-bold py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div>
+      <span>{{ exam.display_name }} — {{ selected_section }}</span>
+      <span class="badge bg-primary ms-2">Max Marks: <span class="num">{{ exam_max_total }}</span></span>
+    </div>
+    <span class="text-muted small"><i class="bi bi-info-circle me-1"></i>Type subject marks for live sum, or type directly into Total cell.</span>
+  </div>
+  <div class="card-body p-0">
+    <form method="post" id="marksEntryForm">
+      {% csrf_token %}
+      <input type="hidden" name="section_id" value="{{ selected_section.pk }}">
+      <div class="table-responsive">
+        <table class="table table-bordered mb-0 align-middle" style="font-size:0.875rem">
+          <thead class="bg-light">
+            <tr>
+              <th style="width:40px" class="text-center">#</th>
+              <th style="min-width:160px">Student</th>
+              {% for subject, max_val, is_locked in subjects_with_info %}
+              <th class="text-center" style="min-width:95px">
+                <div>
+                  {{ subject.name }}
+                  {% if is_locked %}
+                  <span class="badge bg-secondary-subtle text-dark border ms-1" title="Locked">🔒</span>
+                  {% if request.user.role == 'admin' or request.user.is_superuser %}
+                  <a href="{% url 'marks_entry_unlock' exam.id selected_section.pk subject.pk %}"
+                     class="badge bg-warning-subtle text-warning-emphasis text-decoration-none border border-warning ms-1"
+                     title="Click to unlock for faculty editing">
+                    🔓 Unlock
+                  </a>
+                  {% endif %}
+                  {% endif %}
+                </div>
+                <div class="text-muted num" style="font-size:0.7rem">/ {{ max_val }}</div>
+              </th>
+              {% endfor %}
+              <!-- Total Column -->
+              <th class="text-center bg-primary-subtle" style="min-width:110px">
+                <div class="fw-bold text-primary-emphasis">Total Marks</div>
+                <div class="text-muted num" style="font-size:0.7rem">/ {{ exam_max_total }}</div>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in rows %}
+            <tr id="student_row_{{ row.student.pk }}">
+              <td class="text-muted small text-center num">{{ forloop.counter }}</td>
+              <td>
+                <div class="fw-bold text-white d-flex align-items-center gap-2">
+                  {% include '_avatar.html' with student=row.student size=28 %}
+                  <span>{{ row.student.name }}</span>
+                </div>
+                <div class="text-muted num" style="font-size:0.7rem">{{ row.student.admission_number }}</div>
+              </td>
+              {% for subject, mark_val in row.marks %}
+              <td class="text-center p-1 align-middle">
+                {% if locked_map|get_item:subject.id and request.user.role == 'faculty' and not request.user.is_superuser %}
+                <span class="fw-bold text-white num" style="font-size:0.9rem">
+                  {% if mark_val == 0 or mark_val == '0' or mark_val == '0.0' or mark_val == '0.00' %}
+                    <span class="badge bg-danger">AB</span>
+                  {% else %}
+                    {{ mark_val|default:"—" }}
+                  {% endif %}
+                </span>
+                {% else %}
+                <input type="number"
+                  name="mark_{{ row.student.pk }}_{{ subject.name }}"
+                  class="form-control form-control-sm text-center sub-mark-input-{{ row.student.pk }} num"
+                  style="width:75px;margin:auto"
+                  min="0" max="{{ subject_max_marks|get_item:subject }}" step="0.5"
+                  value="{{ mark_val }}"
+                  placeholder="—"
+                  oninput="updateStudentLiveTotal('{{ row.student.pk }}')">
+                {% endif %}
+              </td>
+              {% endfor %}
+              <!-- Total Input Cell -->
+              <td class="text-center p-1 align-middle bg-primary-subtle">
+                <div class="d-flex flex-column align-items-center">
+                  <input type="number"
+                    name="total_mark_{{ row.student.pk }}"
+                    id="total_input_{{ row.student.pk }}"
+                    class="form-control form-control-sm text-center fw-bold num"
+                    style="width:85px;margin:auto;"
+                    min="0" max="{{ exam_max_total }}" step="0.5"
+                    value="{% if row.total != None %}{{ row.total }}{% endif %}"
+                    placeholder="Auto">
+                  {% if row.mismatch %}
+                  <span class="badge bg-warning text-dark border border-warning mt-1" style="font-size:0.65rem;" title="Manual total differs from subject marks sum ({{ row.sub_sum }})">
+                    ⚠️ Mismatch
+                  </span>
+                  {% endif %}
+                  {% if row.percentage != None %}
+                  <span class="small text-muted num mt-1" style="font-size:0.7rem;" id="pct_{{ row.student.pk }}">
+                    {{ row.percentage }}%
+                  </span>
+                  {% else %}
+                  <span class="small text-muted num mt-1" style="font-size:0.7rem;" id="pct_{{ row.student.pk }}"></span>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="p-3 border-top d-flex justify-content-between align-items-center">
+        <span class="text-muted small"><i class="bi bi-shield-check me-1"></i>Subject sums auto-calculate. Manual total entries take precedence.</span>
+        <button type="submit" class="btn btn-primary px-4 fw-bold">
+          <i class="bi bi-check-circle me-1"></i> Save All Marks & Totals
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% elif selected_section %}
+<div class="alert alert-info">No active students in this section.</div>
+{% else %}
+<div class="text-center py-5 text-muted">
+  <i class="bi bi-journal-text fs-1 d-block mb-2"></i>
+  Select a section to enter marks.
+</div>
+{% endif %}
+
+<script>
+const MAX_TOTAL = parseFloat("{{ exam_max_total|default:'100' }}");
+
+function updateStudentLiveTotal(studentPk) {
+  const inputs = document.querySelectorAll(`.sub-mark-input-${studentPk}`);
+  let sum = 0;
+  let hasAnyVal = false;
+
+  inputs.forEach(inp => {
+    const val = parseFloat(inp.value);
+    if (!isNaN(val) && val > 0) {
+      sum += val;
+      hasAnyVal = true;
+    }
+  });
+
+  const totalInput = document.getElementById(`total_input_${studentPk}`);
+  const pctSpan = document.getElementById(`pct_${studentPk}`);
+
+  if (hasAnyVal && totalInput && !totalInput.dataset.manualEdited) {
+    totalInput.value = sum.toFixed(1).replace(/\.0$/, '');
+    if (pctSpan && MAX_TOTAL > 0) {
+      const pct = (sum / MAX_TOTAL * 100).toFixed(1);
+      pctSpan.textContent = pct + '%';
+    }
+  }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('[id^="total_input_"]').forEach(inp => {
+    inp.addEventListener('input', function() {
+      this.dataset.manualEdited = "true";
+      const val = parseFloat(this.value);
+      const studentPk = this.id.replace('total_input_', '');
+      const pctSpan = document.getElementById(`pct_${studentPk}`);
+      if (!isNaN(val) && MAX_TOTAL > 0 && pctSpan) {
+        pctSpan.textContent = (val / MAX_TOTAL * 100).toFixed(1) + '%';
+      }
+    });
+  });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,176 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-9">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white border-bottom py-3">
+        <h6 class="mb-0">{{ title }}</h6>
+      </div>
+      <div class="card-body">
+        <form method="post" enctype="multipart/form-data">
+          {% csrf_token %}
+
+          <h6 class="text-primary fw-bold mb-3 border-bottom pb-2">
+            <i class="bi bi-person"></i> Basic Information
+          </h6>
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label small fw-500">Admission Number *</label>
+              {{ form.admission_number }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-500">Hall Ticket Number</label>
+              {{ form.hall_ticket_number }}
+              {% if form.hall_ticket_number.errors %}<div class="text-danger small mt-1">{{ form.hall_ticket_number.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-500">Student Name *</label>
+              {{ form.name }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-500">Father Name</label>
+              {{ form.father_name }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-500">Mother Name</label>
+              {{ form.mother_name }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-500">Aadhaar Number</label>
+              {{ form.aadhaar }}
+            </div>
+          </div>
+
+          <h6 class="text-primary fw-bold mb-3 border-bottom pb-2">
+            <i class="bi bi-telephone"></i> Contact Details
+          </h6>
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label small fw-500">Mobile Number 1 (Parent) *</label>
+              {{ form.mobile }}
+              {% if form.mobile.errors %}<div class="text-danger small mt-1">{{ form.mobile.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-500">Mobile Number 2 <span class="text-muted">(Optional)</span></label>
+              {{ form.second_mobile }}
+              {% if form.second_mobile.errors %}<div class="text-danger small mt-1">{{ form.second_mobile.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-500">Mobile Number 3 <span class="text-muted">(Optional)</span></label>
+              {{ form.third_mobile }}
+              {% if form.third_mobile.errors %}<div class="text-danger small mt-1">{{ form.third_mobile.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-500">Mobile Number 4 <span class="text-muted">(Optional)</span></label>
+              {{ form.fourth_mobile }}
+              {% if form.fourth_mobile.errors %}<div class="text-danger small mt-1">{{ form.fourth_mobile.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-12">
+              <label class="form-label small fw-500">Address</label>
+              {{ form.address }}
+            </div>
+          </div>
+
+          <h6 class="text-primary fw-bold mb-3 border-bottom pb-2">
+            <i class="bi bi-card-checklist"></i> Academic & ID Details
+          </h6>
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label small fw-500">
+                APAAR ID
+                <a href="https://apaar.education.gov.in/" target="_blank" class="ms-1 small text-primary">
+                  <i class="bi bi-box-arrow-up-right"></i> What is APAAR?
+                </a>
+              </label>
+              {{ form.apaar_id }}
+              <div class="form-text">Academic Bank of Credits ID (12-digit)</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-500">
+                <i class="bi bi-trophy"></i> Sport / Extra-curricular
+              </label>
+              {{ form.sport }}
+              <div class="form-text">e.g. Cricket, Kabaddi, Chess, etc.</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-500">Section</label>
+              {{ form.section }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-500">Academic Year</label>
+              {{ form.academic_year }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-500">Photo</label>
+              {{ form.photo }}
+              <div class="form-text">File size: 50 KB – 100 KB only</div>
+              {% if form.photo.errors %}<div class="text-danger small mt-1">{{ form.photo.errors.0 }}</div>{% endif %}
+            </div>
+          </div>
+
+          <h6 class="text-primary fw-bold mb-3 border-bottom pb-2">
+            <i class="bi bi-building"></i> Previous School Information
+          </h6>
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label small fw-500">School Name</label>
+              {{ form.prev_school_name }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-500">School Location</label>
+              {{ form.prev_school_location }}
+            </div>
+          </div>
+
+          <h6 class="text-primary fw-bold mb-3 border-bottom pb-2">
+            <i class="bi bi-clipboard2-data"></i> Previous School Marks (Subject-wise)
+          </h6>
+          <div class="row g-3 mb-4">
+            <div class="col-md-3 col-6">
+              <label class="form-label small fw-500">Telugu</label>
+              {{ form.marks_telugu }}
+            </div>
+            <div class="col-md-3 col-6">
+              <label class="form-label small fw-500">Hindi</label>
+              {{ form.marks_hindi }}
+            </div>
+            <div class="col-md-3 col-6">
+              <label class="form-label small fw-500">English</label>
+              {{ form.marks_english }}
+            </div>
+            <div class="col-md-3 col-6">
+              <label class="form-label small fw-500">Maths</label>
+              {{ form.marks_maths }}
+            </div>
+            <div class="col-md-3 col-6">
+              <label class="form-label small fw-500">Physics</label>
+              {{ form.marks_physics }}
+            </div>
+            <div class="col-md-3 col-6">
+              <label class="form-label small fw-500">Biology</label>
+              {{ form.marks_biology }}
+            </div>
+            <div class="col-md-3 col-6">
+              <label class="form-label small fw-500">Social</label>
+              {{ form.marks_social }}
+            </div>
+            <div class="col-md-3 col-6">
+              <label class="form-label small fw-500 text-success">Total Marks</label>
+              {{ form.marks_total }}
+            </div>
+          </div>
+
+          <div class="d-flex gap-2 mt-3">
+            <button type="submit" class="btn btn-primary px-4">
+              <i class="bi bi-check-circle"></i> Save Student
+            </button>
+            <a href="{% url 'student_list' %}" class="btn btn-outline-secondary">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

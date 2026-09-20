@@ -1,0 +1,393 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Groups & Sections{% endblock %}
+{% block page_title %}Academic Structure{% endblock %}
+
+{% block content %}
+<style>
+.group-card {
+  border: 1px solid var(--sf-border);
+  border-radius: 16px;
+  overflow: hidden;
+  margin-bottom: 1.25rem;
+  background: rgba(22, 22, 28, 0.78);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-left: 5px solid var(--gc-border);
+}
+.group-icon-box {
+  width: 56px; height: 56px;
+  border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.6rem;
+  flex-shrink: 0;
+}
+.stat-chip { font-size: .8rem; color: #86868B; display: flex; align-items: center; gap: .35rem; }
+.stat-chip strong { color: #F5F5F7; font-size: .92rem; font-family: var(--font-mono); }
+
+.section-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 12px;
+  font-size: .8125rem;
+  font-weight: 600;
+  color: #F5F5F7;
+  background: rgba(22, 22, 28, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--sf-border);
+  margin: 3px;
+  white-space: nowrap;
+}
+
+.avatar-stack { display: flex; align-items: center; }
+.avatar-stack .avatar-wrapper, .avatar-stack .avatar-more {
+  margin-left: -8px;
+}
+.avatar-stack .avatar-wrapper:first-child, .avatar-stack .avatar-more:first-child { margin-left: 0; }
+.avatar-more {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: rgba(255,255,255,0.12);
+  border: 2px solid #0B0B0E;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .65rem; font-weight: 600; color: #F5F5F7;
+}
+
+/* Circular progress */
+.att-ring { position: relative; width: 70px; height: 70px; flex-shrink: 0; }
+.att-ring svg { transform: rotate(-90deg); }
+.att-ring .ring-track { fill: none; stroke: rgba(255,255,255,0.08); stroke-width: 6; }
+.att-ring .ring-fill  { fill: none; stroke-width: 6; stroke-linecap: round; transition: stroke-dashoffset .6s ease; }
+.att-ring .ring-label {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  font-size: .78rem; font-weight: 700; line-height: 1.1; color: #F5F5F7;
+  font-family: var(--font-mono);
+}
+.att-ring .ring-sub { font-size: .58rem; font-weight: 400; color: #86868B; }
+
+/* Summary cards */
+.summary-card {
+  background: rgba(22, 22, 28, 0.78);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--sf-border);
+  border-radius: 16px;
+  padding: 1.1rem 1.4rem;
+  display: flex; align-items: center; gap: 1rem;
+}
+.summary-icon {
+  width: 46px; height: 46px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.3rem; flex-shrink: 0;
+}
+</style>
+
+<!-- Top bar: date picker + actions -->
+<div class="d-flex gap-2 justify-content-between align-items-center mb-4 flex-wrap">
+  <form method="get" class="d-flex align-items-center gap-2">
+    <i class="bi bi-calendar3 text-primary fs-5"></i>
+    <input type="date" name="date" value="{{ selected_date|date:'Y-m-d' }}"
+           class="form-control form-control-sm" style="width:160px;"
+           onchange="this.form.submit()" id="groupDatePicker">
+    {% if selected_date|date:'Y-m-d' != today|date:'Y-m-d' %}
+    <a href="{% url 'group_list' %}" class="btn btn-outline-secondary btn-sm">Today</a>
+    {% endif %}
+  </form>
+  <div class="d-flex gap-2 align-items-center flex-wrap">
+    <span class="text-muted small">
+      <i class="bi bi-arrow-clockwise me-1"></i>
+      Refreshes in <strong id="refreshCountdown">5:00</strong>
+      &nbsp;|&nbsp; <span id="lastUpdated"></span>
+    </span>
+    <button onclick="location.reload()" class="btn btn-outline-secondary btn-sm px-3">
+      <i class="bi bi-arrow-clockwise me-1"></i>Refresh Now
+    </button>
+    <a href="{% url 'section_add' %}" class="btn btn-outline-primary btn-sm px-3">
+      <i class="bi bi-plus-lg me-1"></i>Add Section
+    </a>
+    <a href="{% url 'group_add' %}" class="btn btn-primary btn-sm px-3">
+      <i class="bi bi-plus-lg me-1"></i>Add Group
+    </a>
+  </div>
+</div>
+
+<!-- Summary stats row -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="summary-card">
+      <div class="summary-icon" style="background:#dbeafe; color:#2563eb;">
+        <i class="bi bi-grid-fill"></i>
+      </div>
+      <div>
+        <div class="num" style="font-size:1.6rem; font-weight:700; line-height:1.1;">{{ total_groups }}</div>
+        <div class="text-muted" style="font-size:.78rem;">Total Groups</div>
+        <div style="font-size:.7rem; color:#9ca3af;">All Streams</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="summary-card">
+      <div class="summary-icon" style="background:#dcfce7; color:#16a34a;">
+        <i class="bi bi-diagram-3-fill"></i>
+      </div>
+      <div>
+        <div class="num" style="font-size:1.6rem; font-weight:700; line-height:1.1;">{{ total_sections }}</div>
+        <div class="text-muted" style="font-size:.78rem;">Total Sections</div>
+        <div style="font-size:.7rem; color:#9ca3af;">All Streams</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="summary-card">
+      <div class="summary-icon" style="background:#fce7f3; color:#9d174d;">
+        <i class="bi bi-people-fill"></i>
+      </div>
+      <div>
+        <div class="num" style="font-size:1.6rem; font-weight:700; line-height:1.1;">{{ total_students }}</div>
+        <div class="text-muted" style="font-size:.78rem;">Total Students</div>
+        <div style="font-size:.7rem; color:#9ca3af;">All Streams</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="summary-card">
+      <div class="summary-icon" style="background:#ede9fe; color:#7c3aed;">
+        <i class="bi bi-person-badge-fill"></i>
+      </div>
+      <div>
+        <div class="num" style="font-size:1.6rem; font-weight:700; line-height:1.1;">{{ total_faculty }}</div>
+        <div class="text-muted" style="font-size:.78rem;">Total Faculty</div>
+        <div style="font-size:.7rem; color:#9ca3af;">All Streams</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Group cards -->
+{% for gd in group_data %}
+{% with s=gd.style %}
+<div class="group-card shadow-sm mb-4" style="--gc-color:{{ s.color }}; --gc-bg:{{ s.bg }}; --gc-border:{{ s.border }}; border-left: 6px solid {{ s.border }};">
+  <div class="p-4">
+    <div class="row align-items-start g-3">
+
+      <!-- Left: Stream logo photo + name + subjects + stats -->
+      <div class="col-12 col-md-6">
+        <div class="d-flex align-items-center gap-3 mb-3">
+          <img src="{% static s.image %}" alt="{{ gd.group.name }}" 
+               class="rounded-3 shadow-sm border" 
+               style="width: 68px; height: 68px; object-fit: cover; border-color: {{ s.border }} !important;"
+               loading="lazy" decoding="async"
+               onerror="this.onerror=null; this.src='{% static 'srinri_logo.png' %}';">
+          <div>
+            <div class="d-flex align-items-center gap-2">
+              <span class="fs-4 fw-bold" style="color: {{ s.color }};">{{ gd.group.name }}</span>
+              <span class="badge px-2 py-1 text-white fw-semibold" style="background: {{ s.gradient }}; font-size: 0.72rem;">
+                {{ gd.group.code }} STREAM
+              </span>
+            </div>
+            <div class="text-secondary fw-500 small mt-1"><i class="bi bi-book me-1"></i>{{ s.subjects }}</div>
+          </div>
+        </div>
+
+        <!-- Stats row -->
+        <div class="d-flex flex-wrap gap-4 align-items-center">
+          <div class="stat-chip">
+            <i class="bi bi-grid" style="color:{{ s.color }};"></i>
+            <div><strong>{{ gd.section_count }}</strong><br>Sections</div>
+          </div>
+          <div class="stat-chip">
+            <i class="bi bi-people" style="color:{{ s.color }};"></i>
+            <div><strong>{{ gd.student_count }}</strong><br>Students</div>
+          </div>
+
+          <!-- Attendance ring -->
+          <div class="att-ring">
+            <svg width="70" height="70" viewBox="0 0 70 70">
+              <circle class="ring-track" cx="35" cy="35" r="28"/>
+              <circle class="ring-fill" cx="35" cy="35" r="28"
+                stroke="{{ s.color }}"
+                stroke-dasharray="175.93"
+                style="stroke-dashoffset: calc(175.93 - 175.93 * {{ gd.att_pct }} / 100);"/>
+            </svg>
+            <div class="ring-label" style="color:{{ s.color }};">
+              {{ gd.att_pct }}%
+              <span class="ring-sub">Attend.</span>
+            </div>
+          </div>
+
+          {% if gd.total_att > 0 %}
+          <div class="d-flex flex-column gap-1 ms-2">
+            <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>{{ gd.present_att }} Present</span>
+            <span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i>{{ gd.absent_att }} Absent</span>
+          </div>
+          {% else %}
+          <span class="text-muted small ms-2">Not marked</span>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Right: sections + photos + buttons -->
+      <div class="col-12 col-md-6">
+        <div class="mb-2" style="font-size:.75rem; font-weight:600; color:#86868B; text-transform:uppercase; letter-spacing:.05em;">Sections</div>
+        <div class="d-flex flex-wrap gap-2 mb-3">
+          {% for sec in gd.sections %}
+          <div class="section-badge d-inline-flex align-items-center gap-2">
+            <span>{{ sec }}</span>
+            <div class="d-inline-flex gap-1.5 ms-1 align-items-center">
+              <a href="{% url 'section_edit' sec.pk %}" class="text-white-50 opacity-75 hover-gold" title="Edit Section" style="font-size: 0.75rem; text-decoration: none;">
+                <i class="bi bi-pencil"></i>
+              </a>
+              <button type="button" class="btn btn-link text-danger p-0 border-0 ms-1 opacity-75" title="Delete Section" style="font-size: 0.75rem;" data-bs-toggle="modal" data-bs-target="#deleteSectionModal{{ sec.pk }}">
+                <i class="bi bi-x-circle-fill"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Delete Section Modal -->
+          <div class="modal fade" id="deleteSectionModal{{ sec.pk }}" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+              <div class="modal-content text-start">
+                <div class="modal-header border-bottom-0">
+                  <h5 class="modal-title text-danger fw-bold"><i class="bi bi-exclamation-triangle-fill me-2"></i>Delete Section {{ sec }}</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                  <p>Are you sure you want to delete section <strong>{{ sec }}</strong>?</p>
+                  <div class="alert alert-warning small mb-0">
+                    <i class="bi bi-shield-alert me-1"></i>
+                    All student profiles, attendance logs, exam marks, and fee payment histories associated with section <strong>{{ sec }}</strong> will be permanently removed.
+                  </div>
+                </div>
+                <div class="modal-footer border-top-0">
+                  <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                  <form method="post" action="{% url 'section_delete' sec.pk %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger btn-sm px-3 fw-bold">Permanently Delete</button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+          {% empty %}
+          <span class="text-muted small">No sections yet</span>
+          {% endfor %}
+        </div>
+
+        <!-- Photos + action buttons -->
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+          <div class="avatar-stack">
+            {% for st in gd.sample_students %}
+              {% include '_avatar.html' with student=st size=32 %}
+            {% endfor %}
+            {% if gd.extra_students > 0 %}
+            <div class="avatar-more">+{{ gd.extra_students }}</div>
+            {% endif %}
+          </div>
+
+          <div class="d-flex align-items-center gap-2">
+            <a href="{% url 'student_list' %}?group={{ gd.group.pk }}" class="btn btn-sm btn-outline-secondary px-3" style="border-radius:8px;">View</a>
+            <a href="{% url 'group_edit' gd.group.pk %}" class="btn btn-sm btn-primary px-3" style="background:{{ s.color }}; border-color:{{ s.color }}; border-radius:8px;">Edit</a>
+            <div class="dropdown">
+              <button class="btn btn-sm btn-light" data-bs-toggle="dropdown" style="border-radius:8px; width:32px; padding:0;">
+                <i class="bi bi-three-dots-vertical"></i>
+              </button>
+              <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item" href="{% url 'section_add' %}"><i class="bi bi-plus me-2"></i>Add Section</a></li>
+                <li><a class="dropdown-item" href="{% url 'group_edit' gd.group.pk %}"><i class="bi bi-pencil me-2"></i>Edit Group</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                  <button type="button" class="dropdown-item text-danger" data-bs-toggle="modal" data-bs-target="#deleteGroupModal{{ gd.group.pk }}">
+                    <i class="bi bi-trash me-2"></i>Delete Group
+                  </button>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Delete Group Modal -->
+<div class="modal fade" id="deleteGroupModal{{ gd.group.pk }}" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header border-bottom-0">
+        <h5 class="modal-title text-danger fw-bold"><i class="bi bi-exclamation-triangle-fill me-2"></i>Delete Group {{ gd.group.name }}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>Are you sure you want to delete group <strong>{{ gd.group.name }}</strong>?</p>
+        <div class="alert alert-danger small mb-2">
+          <i class="bi bi-exclamation-octagon-fill me-1"></i>
+          <strong>Destructive Action:</strong> Deleting this group will permanently remove:
+          <ul class="mb-0 mt-1 ps-3">
+            <li><strong>{{ gd.section_count }}</strong> Section(s)</li>
+            <li><strong>{{ gd.student_count }}</strong> Student record(s)</li>
+            <li>All associated Marks, Attendance logs, and Fee payments</li>
+          </ul>
+        </div>
+        <p class="text-muted small mb-0"><i class="bi bi-info-circle me-1"></i>Any exams linked to this group will remain intact and revert to "All Groups".</p>
+      </div>
+      <div class="modal-footer border-top-0">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+        <form method="post" action="{% url 'group_delete' gd.group.pk %}" class="d-inline">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger btn-sm px-3 fw-bold">Permanently Delete Group</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endwith %}
+{% empty %}
+<div class="text-center text-muted py-5">
+  <i class="bi bi-grid" style="font-size:2.5rem; opacity:.3;"></i>
+  <p class="mt-2">No groups yet. <a href="{% url 'group_add' %}">Add one</a></p>
+</div>
+{% endfor %}
+
+<script>
+(function () {
+  const urlParams = new URLSearchParams(window.location.search);
+  if (!urlParams.has('date')) {
+    const n = new Date();
+    const todayVal = n.getFullYear() + '-' +
+      String(n.getMonth() + 1).padStart(2, '0') + '-' +
+      String(n.getDate()).padStart(2, '0');
+    const dp = document.getElementById('groupDatePicker');
+    if (dp) dp.value = todayVal;
+  }
+
+  const REFRESH_SECS = 300;
+  let remaining = REFRESH_SECS;
+
+  const now = new Date();
+  const hh = String(now.getHours()).padStart(2, '0');
+  const mm = String(now.getMinutes()).padStart(2, '0');
+  const lu = document.getElementById('lastUpdated');
+  if (lu) lu.textContent = 'Updated at ' + hh + ':' + mm;
+
+  function tick() {
+    remaining--;
+    const m = Math.floor(remaining / 60);
+    const s = String(remaining % 60).padStart(2, '0');
+    const rc = document.getElementById('refreshCountdown');
+    if (rc) rc.textContent = m + ':' + s;
+    if (remaining <= 0) {
+      location.reload();
+    } else {
+      setTimeout(tick, 1000);
+    }
+  }
+  setTimeout(tick, 1000);
+})();
+</script>
+{% endblock %}

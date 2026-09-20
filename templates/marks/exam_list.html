@@ -1,0 +1,144 @@
+{% extends 'base.html' %}
+{% block title %}Exams & Marks — Sri NRI Junior College{% endblock %}
+{% block page_title %}Exams & Marks{% endblock %}
+{% block content %}
+
+<!-- Header & Quick Actions -->
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+  <div>
+    <h5 class="mb-1 fw-bold">Exams & Marks Management</h5>
+    <span class="text-muted small"><i class="bi bi-calendar-range me-1"></i>Academic Year: <strong>{{ active_year|default:"Not set" }}</strong></span>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'marks_report' %}" class="btn btn-outline-primary btn-sm px-3 fw-bold rounded-pill">
+      <i class="bi bi-bar-chart-line me-1"></i>View Reports
+    </a>
+    <a href="{% url 'exam_add' %}" class="btn btn-primary btn-sm px-3 fw-bold rounded-pill">
+      <i class="bi bi-plus-lg me-1"></i>Add New Exam
+    </a>
+  </div>
+</div>
+
+<!-- Category Selector & Search -->
+<div class="card border-0 shadow-sm mb-4 p-3">
+  <label for="categorySelect" class="form-label fw-bold small text-muted text-uppercase mb-2">
+    <i class="bi bi-filter-circle me-1"></i>Select Exam Category
+  </label>
+  <form method="get" id="categoryFilterForm" class="row g-2 align-items-center">
+    <div class="col-12 col-md-6">
+      <select name="category" id="categorySelect" class="form-select form-select-sm" onchange="this.form.submit()">
+        <option value="">-- Choose Category (e.g. JEE-MAIN, IPE-MPC...) --</option>
+        {% for cat in categories %}
+        <option value="{{ cat.id }}" {% if selected_category and selected_category.id == cat.id %}selected{% endif %}>
+          {{ cat.name }}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+    {% if selected_category %}
+    <div class="col-auto">
+      <a href="{% url 'exam_list' %}" class="btn btn-outline-secondary btn-sm">Clear Selection</a>
+    </div>
+    {% endif %}
+  </form>
+
+  <!-- Mobile & Desktop Category Chips -->
+  <div class="d-flex flex-wrap gap-2 mt-3">
+    {% for cat in categories %}
+    <a href="{% url 'exam_list' %}?category={{ cat.id }}"
+       class="btn btn-sm rounded-pill px-3 fw-semibold text-decoration-none {% if selected_category and selected_category.id == cat.id %}btn-primary active{% else %}btn-outline-secondary{% endif %}">
+      {{ cat.name }}
+    </a>
+    {% endfor %}
+  </div>
+</div>
+
+{% if selected_category %}
+  <!-- Selected Category Exams List -->
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-transparent d-flex justify-content-between align-items-center py-3">
+      <div class="d-flex align-items-center gap-2">
+        <span class="badge px-3 py-2 text-white fw-bold fs-6 rounded-pill" style="background: {{ selected_category.bg_color|default:'#C5A059' }}; color: {{ selected_category.text_color|default:'#000' }} !important;">
+          <i class="bi {{ selected_category.icon|default:'bi-book' }} me-1"></i>{{ selected_category.name }}
+        </span>
+        <span class="text-muted small ms-2"><span class="num">{{ selected_exams|length }}</span> exam{{ selected_exams|length|pluralize }} found</span>
+      </div>
+    </div>
+
+    <div class="card-body p-3">
+      {% for exam in selected_exams %}
+      <div class="card border mb-3 p-3 shadow-none hover-shadow transition">
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+          <div>
+            <h6 class="fw-bold mb-1 text-white">{{ exam.display_name }}</h6>
+            <div class="text-muted small d-flex align-items-center gap-3 flex-wrap">
+              <span><i class="bi bi-calendar3 me-1"></i>{{ exam.date|date:"d M Y" }}</span>
+              <span><i class="bi bi-people me-1"></i>Group: <strong>{{ exam.group.name|default:"All Groups" }}</strong></span>
+              <span><i class="bi bi-award me-1"></i>Max Marks: <strong class="num">{{ exam.max_marks }}</strong></span>
+            </div>
+          </div>
+          
+          <div class="d-flex gap-2 align-items-center flex-wrap">
+            <a href="{% url 'marks_entry' exam.pk %}" class="btn btn-sm btn-primary px-3 fw-bold">
+              <i class="bi bi-pencil-square me-1"></i>Enter Marks
+            </a>
+            {% if user.role == 'admin' or user.is_superuser %}
+            <a href="{% url 'exam_edit' exam.pk %}" class="btn btn-sm btn-outline-secondary px-3">
+              <i class="bi bi-pencil me-1"></i>Edit
+            </a>
+            <button type="button" class="btn btn-sm btn-outline-danger px-2" data-bs-toggle="modal" data-bs-target="#deleteExamModal{{ exam.pk }}" title="Delete Exam">
+              <i class="bi bi-trash"></i>
+            </button>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Delete Exam Modal -->
+      <div class="modal fade" id="deleteExamModal{{ exam.pk }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content">
+            <div class="modal-header border-bottom-0">
+              <h5 class="modal-title text-danger fw-bold"><i class="bi bi-exclamation-triangle-fill me-2"></i>Delete Exam</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-start">
+              <p>Are you sure you want to delete exam <strong>{{ exam.display_name }}</strong> ({{ exam.date|date:"d M Y" }})?</p>
+              <div class="alert alert-danger small mb-0">
+                <i class="bi bi-shield-alert me-1"></i>
+                All marks submitted for this exam across all sections will be permanently removed.
+              </div>
+            </div>
+            <div class="modal-footer border-top-0">
+              <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+              <form method="post" action="{% url 'exam_delete' exam.pk %}" class="d-inline">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger btn-sm px-3 fw-bold">Delete Exam</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% empty %}
+      <div class="text-center text-muted py-4">
+        <i class="bi bi-journal-x fs-2 d-block mb-1"></i>
+        No exams created under {{ selected_category.name }} yet.
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+{% else %}
+  <!-- Empty State when no category is selected -->
+  <div class="card border-0 shadow-sm text-center py-5">
+    <div class="card-body">
+      <i class="bi bi-hand-index-thumb text-muted display-4 d-block mb-3" style="opacity: 0.5;"></i>
+      <h5 class="fw-bold text-white mb-2">Select an Exam Category</h5>
+      <p class="text-muted small mx-auto" style="max-width: 420px;">
+        Choose a category from the dropdown or tap one of the chips above (e.g. <strong>JEE-MAIN</strong>, <strong>IPE-MPC</strong>, <strong>NEET</strong>) to view its exams.
+      </p>
+    </div>
+  </div>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,24 @@
+{% comment %}
+Reusable Avatar Component with Missing/Error Fallback to Initials
+Usage: {% include '_avatar.html' with student=st size=36 %}
+{% endcomment %}
+{% with avatar_size=size|default:36 name=student.name|default:"Student" %}
+<div class="avatar-wrapper d-inline-flex align-items-center justify-content-center flex-shrink-0 {{ class|default:'' }}"
+     style="width: {{ avatar_size }}px; height: {{ avatar_size }}px; border-radius: 50%; overflow: hidden; background: rgba(255,255,255,0.1); border: 1px solid var(--sf-border, rgba(255,255,255,0.12)); position: relative;">
+  {% if student.photo %}
+    <img src="{{ student.photo.url }}" alt="{{ name }}"
+         loading="lazy" decoding="async" width="{{ avatar_size }}" height="{{ avatar_size }}"
+         style="width: 100%; height: 100%; object-fit: cover;"
+         onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+    <span class="avatar-initials fw-bold"
+          style="display: none; width: 100%; height: 100%; align-items: center; justify-content: center; font-size: calc({{ avatar_size }}px * 0.4); color: var(--sf-text, #F5F5F7); text-transform: uppercase;">
+      {% if name %}{{ name.0 }}{% else %}S{% endif %}
+    </span>
+  {% else %}
+    <span class="avatar-initials fw-bold d-flex align-items-center justify-content-center"
+          style="width: 100%; height: 100%; font-size: calc({{ avatar_size }}px * 0.4); color: var(--sf-text, #F5F5F7); text-transform: uppercase;">
+      {% if name %}{{ name.0 }}{% else %}S{% endif %}
+    </span>
+  {% endif %}
+</div>
+{% endwith %}

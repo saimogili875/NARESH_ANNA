@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% block title %}Delete Fee Type{% endblock %}
+{% block page_title %}Delete Fee Type{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-5">
+    <div class="col-md-6">
+        <div class="card shadow-sm border-0 border-danger">
+            <div class="card-header bg-danger text-white border-0 py-3">
+                <h6 class="mb-0"><i class="bi bi-exclamation-triangle-fill me-2"></i>Confirm Deletion</h6>
+            </div>
+            <div class="card-body p-4 text-center">
+                <h5 class="text-danger mb-4">Are you sure you want to delete "{{ fee_type.name }}"?</h5>
+                
+                <div class="alert alert-warning text-start">
+                    <strong><i class="bi bi-exclamation-circle me-2"></i>Warning: Hard Delete</strong><br>
+                    This action is permanent and cannot be undone. Deleting this fee type will:
+                    <ul class="mb-0 mt-2">
+                        <li>Remove this fee type from all students.</li>
+                        <li><strong>Permanently destroy all payment records and receipts</strong> that were collected for this fee type.</li>
+                    </ul>
+                </div>
+                
+                <form method="POST" class="mt-4 d-flex justify-content-center gap-3">
+                    {% csrf_token %}
+                    <a href="{% url 'fee_type_manage' %}" class="btn btn-secondary px-4">Cancel</a>
+                    <button type="submit" class="btn btn-danger px-4">Yes, Delete Everything</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

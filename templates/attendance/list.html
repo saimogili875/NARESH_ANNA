@@ -1,0 +1,393 @@
+{% extends 'base.html' %}
+{% load dict_filters %}
+{% block title %}Attendance — Sri NRI Junior College{% endblock %}
+{% block page_title %}Attendance{% endblock %}
+{% block content %}
+
+<!-- Header Selection Card -->
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-body py-2">
+    <form method="get" class="row g-2 align-items-center">
+      <div class="col-12 col-md-5">
+        <select name="section" class="form-select form-select-sm" onchange="this.form.submit()">
+          <option value="">-- Select Section --</option>
+          {% for s in sections %}
+          <option value="{{ s.pk }}" {% if s.pk|stringformat:"s" == section_id %}selected{% endif %}>
+            {{ s.group.name }} - Year {{ s.year }} - {{ s.name }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-7 col-md-4">
+        <input type="date" name="date" value="{{ selected_date|date:'Y-m-d' }}" class="form-control form-control-sm" onchange="this.form.submit()">
+      </div>
+      <div class="col-5 col-md-3 text-end">
+        <a href="{% url 'attendance_report' %}" class="btn btn-outline-primary btn-sm w-100">
+          <i class="bi bi-bar-chart"></i> Report
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% if selected_section and students %}
+
+  <!-- Premium Live Search Bar & Filter Chips -->
+  <div class="card border-0 shadow-sm mb-3 p-3">
+    <div class="position-relative mb-2">
+      <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted fs-6"></i>
+      <input type="text" id="attendanceSearchInput" class="form-control ps-5 pe-5 rounded-pill shadow-sm"
+             placeholder="Search by student name, admission number... (Press '/' to focus)" autocomplete="off">
+      <button type="button" id="clearAttSearchBtn" class="btn btn-link text-muted position-absolute top-50 end-0 translate-middle-y me-2 p-0 text-decoration-none" style="display:none;" onclick="clearAttSearch()">
+        <i class="bi bi-x-circle-fill fs-5"></i>
+      </button>
+    </div>
+
+    <!-- Quick Filter Chips -->
+    <div class="d-flex flex-wrap gap-2 align-items-center mt-2" id="attFilterChips">
+      <button type="button" class="btn btn-sm btn-primary px-3 rounded-pill att-chip active" data-filter="all">
+        All <span class="badge bg-light text-dark ms-1" id="chipCountAll">{{ students|length }}</span>
+      </button>
+      <button type="button" class="btn btn-sm btn-outline-success px-3 rounded-pill att-chip" data-filter="present">
+        Present <span class="badge bg-success ms-1" id="chipCountPresent">0</span>
+      </button>
+      <button type="button" class="btn btn-sm btn-outline-danger px-3 rounded-pill att-chip" data-filter="absent">
+        Absent <span class="badge bg-danger ms-1" id="chipCountAbsent">0</span>
+      </button>
+    </div>
+  </div>
+
+  {% if is_locked %}
+  <!-- Locked State -->
+  <div class="alert alert-warning d-flex align-items-center gap-2 mb-3">
+    <i class="bi bi-lock-fill fs-5"></i>
+    <span>Attendance saved for <strong>{{ selected_section }}</strong> on <strong>{{ selected_date }}</strong>. Changes locked.</span>
+  </div>
+
+  <div class="card border-0 shadow-sm">
+    <div class="card-header bg-transparent d-flex justify-content-between align-items-center py-3">
+      <span class="fw-bold">{{ selected_section }} — {{ selected_date }}</span>
+      <span class="text-muted small"><span class="num">{{ students|length }}</span> students</span>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-hover mb-0 align-middle" id="attTable">
+        <thead>
+          <tr>
+            <th style="width:40px">#</th>
+            <th>Admission No</th>
+            <th>Student Name</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="attTableBody">
+          {% for student in students %}
+          {% with cur=attendance_map|get_item:student.pk remark=remarks_map|get_item:student.pk %}
+          <tr class="att-row" data-name="{{ student.name|lower }}" data-adm="{{ student.admission_number|lower }}" data-status="{% if cur == 'P' %}present{% elif cur == 'A' %}absent{% else %}none{% endif %}">
+            <td class="small text-muted num">{{ forloop.counter }}</td>
+            <td class="small text-muted num">{{ student.admission_number }}</td>
+            <td class="fw-bold d-flex align-items-center gap-2">
+              {% include '_avatar.html' with student=student size=32 %}
+              <span>{{ student.name }}</span>
+            </td>
+            <td>
+              {% if cur == 'P' %}
+                <span class="badge bg-success">Present</span>
+              {% elif cur == 'A' %}
+                <span class="badge bg-danger">Absent</span>
+                {% if remark %}
+                  <span class="badge bg-secondary ms-1"><i class="bi bi-info-circle me-1"></i>{{ remark }}</span>
+                {% endif %}
+              {% else %}
+                <span class="badge bg-secondary">—</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endwith %}
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div id="noAttResults" class="text-center py-4 text-muted" style="display:none;">
+      <i class="bi bi-search fs-2 d-block mb-1"></i>
+      No students match your search query.
+    </div>
+
+    <!-- Summary -->
+    <div class="card-footer bg-transparent border-top py-3">
+      <div class="row text-center g-0">
+        <div class="col border-end">
+          <div class="fs-4 fw-bold num">{{ students|length }}</div>
+          <div class="small text-muted">Total Strength</div>
+        </div>
+        <div class="col border-end">
+          <div class="fs-4 fw-bold text-success num">{{ stats.present }}</div>
+          <div class="small text-muted">Present</div>
+        </div>
+        <div class="col">
+          <div class="fs-4 fw-bold text-danger num">{{ stats.absent }}</div>
+          <div class="small text-muted">Absent</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% if stats.absent > 0 %}
+  <div class="card border-0 shadow-sm mt-3">
+    <div class="card-header bg-transparent py-2 d-flex justify-content-between align-items-center">
+      <span class="fw-bold text-secondary small"><i class="bi bi-pencil-square me-2"></i>Absence Reasons</span>
+      <span class="badge bg-light text-dark border"><span class="num">{{ stats.absent }}</span> absent</span>
+    </div>
+    <div class="card-body p-0">
+      <form id="reasonForm">
+        {% csrf_token %}
+        <div class="table-responsive">
+          <table class="table table-hover table-sm mb-0 align-middle">
+            <thead>
+              <tr>
+                <th>Student</th>
+                <th>Phone Number</th>
+                <th>Reason for Absence</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for student in absent_students %}
+              {% with cur_reason=absent_reason_map|get_item:student.pk %}
+              <tr>
+                <td class="fw-bold small d-flex align-items-center gap-2">
+                  {% include '_avatar.html' with student=student size=28 %}
+                  <span>{{ student.name }}</span>
+                </td>
+                <td>
+                  <div class="d-flex flex-wrap gap-1">
+                    {% if student.mobile %}<a href="tel:{{ student.mobile }}" class="badge bg-dark text-decoration-none"><i class="bi bi-telephone-fill me-1"></i>{{ student.mobile }}</a>{% endif %}
+                    {% if student.second_mobile %}<a href="tel:{{ student.second_mobile }}" class="badge bg-dark text-decoration-none"><i class="bi bi-telephone-fill me-1"></i>{{ student.second_mobile }}</a>{% endif %}
+                  </div>
+                </td>
+                <td>
+                  <div class="btn-group btn-group-sm" role="group">
+                    <input type="radio" class="btn-check" name="reason_{{ student.pk }}" id="lh_{{ student.pk }}" value="health" autocomplete="off" {% if cur_reason == 'health' %}checked{% endif %}>
+                    <label class="btn btn-outline-warning" for="lh_{{ student.pk }}">Health</label>
+
+                    <input type="radio" class="btn-check" name="reason_{{ student.pk }}" id="lw_{{ student.pk }}" value="went_out" autocomplete="off" {% if cur_reason == 'went_out' %}checked{% endif %}>
+                    <label class="btn btn-outline-info" for="lw_{{ student.pk }}">Went Out</label>
+
+                    <input type="radio" class="btn-check" name="reason_{{ student.pk }}" id="ln_{{ student.pk }}" value="no_reason" autocomplete="off" {% if cur_reason != 'health' and cur_reason != 'went_out' and cur_reason != 'other' %}checked{% endif %}>
+                    <label class="btn btn-outline-secondary" for="ln_{{ student.pk }}">No Reason</label>
+
+                    <input type="radio" class="btn-check" name="reason_{{ student.pk }}" id="lo_{{ student.pk }}" value="other" autocomplete="off" {% if cur_reason == 'other' %}checked{% endif %}>
+                    <label class="btn btn-outline-primary" for="lo_{{ student.pk }}">Other</label>
+                  </div>
+                </td>
+              </tr>
+              {% endwith %}
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <div class="p-2 px-3 border-top d-flex align-items-center gap-3">
+          <button type="button" class="btn btn-primary btn-sm" id="waBtn" onclick="saveReasonsOnly()">
+            <i class="bi bi-save me-1"></i> Save Reason
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+  {% endif %}
+
+  {% else %}
+  <!-- Editable Attendance Form -->
+  <div class="card border-0 shadow-sm mb-5">
+    <div class="card-header bg-transparent d-flex justify-content-between align-items-center py-3">
+      <span class="fw-bold">{{ selected_section }} — {{ selected_date }}</span>
+      <div class="d-flex align-items-center gap-2">
+        <button type="button" class="btn btn-outline-success btn-sm px-3" onclick="markAll('P')">All Present</button>
+        <button type="button" class="btn btn-outline-danger btn-sm px-3" onclick="markAll('A')">All Absent</button>
+      </div>
+    </div>
+    <div class="card-body p-0">
+      <form method="post" action="{% url 'attendance_mark' %}" id="attForm">
+        {% csrf_token %}
+        <input type="hidden" name="section_id" value="{{ selected_section.pk }}">
+        <input type="hidden" name="date" value="{{ selected_date|date:'Y-m-d' }}">
+        
+        <div class="table-responsive">
+          <table class="table table-hover mb-0 align-middle" id="attTable">
+            <thead>
+              <tr>
+                <th style="width:40px">#</th>
+                <th>Admission No</th>
+                <th>Student Name</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="attTableBody">
+              {% for student in students %}
+              <tr class="att-row" id="row_{{ student.pk }}" data-name="{{ student.name|lower }}" data-adm="{{ student.admission_number|lower }}" data-status="present">
+                <td class="small text-muted num">{{ forloop.counter }}</td>
+                <td class="small text-muted num">{{ student.admission_number }}</td>
+                <td class="fw-bold d-flex align-items-center gap-2">
+                  {% include '_avatar.html' with student=student size=32 %}
+                  <span>{{ student.name }}</span>
+                </td>
+                <td>
+                  <div class="btn-group btn-group-sm" role="group">
+                    <input class="btn-check att-radio" type="radio" name="status_{{ student.pk }}" id="P_{{ student.pk }}" value="P" checked onchange="updateRowStatus('{{ student.pk }}', 'P'); updateLiveSummary();">
+                    <label class="btn btn-outline-success px-3 fw-bold" for="P_{{ student.pk }}">Present</label>
+
+                    <input class="btn-check att-radio" type="radio" name="status_{{ student.pk }}" id="A_{{ student.pk }}" value="A" onchange="updateRowStatus('{{ student.pk }}', 'A'); updateLiveSummary();">
+                    <label class="btn btn-outline-danger px-3 fw-bold" for="A_{{ student.pk }}">Absent</label>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <div id="noAttResults" class="text-center py-4 text-muted" style="display:none;">
+          <i class="bi bi-search fs-2 d-block mb-1"></i>
+          No students match your search.
+        </div>
+
+        <!-- Desktop Action Footer -->
+        <div class="p-3 border-top d-none d-md-flex align-items-center justify-content-between">
+          <span class="text-muted small" id="liveSummary"></span>
+          <button type="submit" class="btn btn-primary px-4 fw-bold">
+            <i class="bi bi-check-circle me-1"></i> Save Attendance
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Mobile Sticky Bottom Action Bar -->
+  <div class="d-md-none fixed-bottom bg-dark p-3 border-top shadow-lg d-flex align-items-center justify-content-between" style="z-index: 1040; background: rgba(18,18,22,0.95) !important; backdrop-filter: blur(12px);">
+    <span class="small text-light fw-bold" id="mobileLiveSummary"></span>
+    <button type="button" class="btn btn-primary px-4 fw-bold rounded-pill" onclick="document.getElementById('attForm').submit();">
+      <i class="bi bi-check-circle me-1"></i> Save
+    </button>
+  </div>
+  {% endif %}
+
+{% elif selected_section %}
+<div class="alert alert-info">No active students in this section.</div>
+{% else %}
+<div class="text-center py-5 text-muted">
+  <i class="bi bi-calendar-check fs-1 d-block mb-2"></i>
+  Select a section and date above to mark attendance.
+</div>
+{% endif %}
+
+<script>
+let currentFilter = 'all';
+
+document.addEventListener('DOMContentLoaded', function() {
+  const searchInput = document.getElementById('attendanceSearchInput');
+  if (searchInput) {
+    let timeout = null;
+    searchInput.addEventListener('input', function() {
+      clearTimeout(timeout);
+      timeout = setTimeout(filterAttendanceRows, 150);
+    });
+
+    document.addEventListener('keydown', function(e) {
+      if (e.key === '/' && document.activeElement !== searchInput) {
+        e.preventDefault();
+        searchInput.focus();
+      }
+    });
+  }
+
+  document.querySelectorAll('#attFilterChips .att-chip').forEach(btn => {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('#attFilterChips .att-chip').forEach(b => {
+        b.classList.remove('btn-primary', 'btn-success', 'btn-danger', 'active');
+        b.classList.add('btn-outline-secondary');
+      });
+      this.classList.remove('btn-outline-secondary');
+      this.classList.add('btn-primary', 'active');
+      currentFilter = this.dataset.filter;
+      filterAttendanceRows();
+    });
+  });
+
+  updateLiveSummary();
+});
+
+function updateRowStatus(pk, val) {
+  const tr = document.getElementById('row_' + pk);
+  if (tr) {
+    tr.dataset.status = (val === 'P') ? 'present' : 'absent';
+  }
+}
+
+function filterAttendanceRows() {
+  const query = (document.getElementById('attendanceSearchInput')?.value || '').toLowerCase().trim();
+  const clearBtn = document.getElementById('clearAttSearchBtn');
+  if (clearBtn) clearBtn.style.display = query ? 'block' : 'none';
+
+  const rows = document.querySelectorAll('#attTableBody .att-row');
+  let visibleCount = 0;
+
+  rows.forEach(tr => {
+    const name = tr.dataset.name || '';
+    const adm = tr.dataset.adm || '';
+    const status = tr.dataset.status || 'all';
+
+    const matchesQuery = !query || name.includes(query) || adm.includes(query);
+    const matchesFilter = (currentFilter === 'all') || (status === currentFilter);
+
+    if (matchesQuery && matchesFilter) {
+      tr.style.display = '';
+      visibleCount++;
+    } else {
+      tr.style.display = 'none';
+    }
+  });
+
+  const noResults = document.getElementById('noAttResults');
+  if (noResults) noResults.style.display = (visibleCount === 0 && rows.length > 0) ? 'block' : 'none';
+}
+
+function clearAttSearch() {
+  const searchInput = document.getElementById('attendanceSearchInput');
+  if (searchInput) {
+    searchInput.value = '';
+    filterAttendanceRows();
+    searchInput.focus();
+  }
+}
+
+function markAll(val) {
+  document.querySelectorAll('.att-radio[value="' + val + '"]').forEach(r => {
+    r.checked = true;
+    const pk = r.name.replace('status_', '');
+    updateRowStatus(pk, val);
+  });
+  filterAttendanceRows();
+  updateLiveSummary();
+}
+
+function updateLiveSummary() {
+  const names = new Set();
+  document.querySelectorAll('.att-radio').forEach(r => names.add(r.name));
+  let p = 0, a = 0;
+  names.forEach(name => {
+    const checked = document.querySelector(`.att-radio[name="${name}"]:checked`);
+    if (checked && checked.value === 'P') p++; else a++;
+  });
+  
+  const chipP = document.getElementById('chipCountPresent');
+  const chipA = document.getElementById('chipCountAbsent');
+  if (chipP) chipP.textContent = p;
+  if (chipA) chipA.textContent = a;
+
+  const txt = `Present: ${p}  |  Absent: ${a}  |  Total: ${p + a}`;
+  const el = document.getElementById('liveSummary');
+  const mobEl = document.getElementById('mobileLiveSummary');
+  if (el) el.textContent = txt;
+  if (mobEl) mobEl.textContent = `P: ${p} | A: ${a}`;
+}
+</script>
+{% endblock %}

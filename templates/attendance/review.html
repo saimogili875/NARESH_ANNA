@@ -1,0 +1,214 @@
+{% extends 'base.html' %}
+
+{% block title %}Admin Review — Attendance & WhatsApp Status — Sri NRI Junior College{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+    <!-- Header -->
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <div>
+            <h3 class="fw-bold mb-0 text-dark"><i class="bi bi-shield-check text-primary me-2"></i>Attendance & WhatsApp Live Review</h3>
+            <span class="text-muted small">Monitor real-time student attendance status and WhatsApp message dispatch</span>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <span class="badge bg-primary-subtle text-primary border border-primary px-3 py-2 fs-7 rounded-pill" title="Daily scheduled batch dispatch time">
+                <i class="bi bi-alarm me-1"></i>Daily Auto-Dispatch: 10:30 AM
+            </span>
+            <form method="POST" action="{% url 'attendance_trigger_whatsapp_sender' %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-success btn-sm rounded-pill px-3 py-1.5 fw-semibold shadow-sm" title="Dispatch pending WhatsApp messages via Meta Cloud API">
+                    <i class="bi bi-rocket-takeoff me-1"></i>Dispatch WhatsApp Messages Now
+                </button>
+            </form>
+            <span class="badge bg-dark px-3 py-2 fs-7 rounded-pill">
+                <i class="bi bi-clock me-1"></i>Server Time: {{ today|date:"d M Y" }}
+            </span>
+        </div>
+    </div>
+
+    {% if failed_today_count > 0 %}
+        <div class="alert alert-danger rounded-4 shadow-sm border-danger border-2 p-3 mb-4 d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center gap-3">
+                <i class="bi bi-exclamation-octagon-fill fs-3 text-danger"></i>
+                <div>
+                    <strong class="d-block text-danger fs-6">{{ failed_today_count }} message(s) failed to send today — check WhatsApp session!</strong>
+                    <span class="small text-muted">Persistent log: <code>logs/whatsapp_sender.log</code></span>
+                </div>
+            </div>
+            <form method="POST" action="{% url 'attendance_trigger_whatsapp_sender' %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger btn-sm rounded-pill px-3 py-1.5 fw-semibold shadow-sm">
+                    <i class="bi bi-arrow-clockwise me-1"></i>Retry Dispatch
+                </button>
+            </form>
+        </div>
+    {% endif %}
+
+
+
+    <!-- Filter Form -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+        <div class="card-body p-3">
+            <form method="GET" action="{% url 'attendance_review' %}" class="row g-3 align-items-end">
+                <div class="col-12 col-sm-5 col-md-4">
+                    <label for="section" class="form-label font-weight-semibold small text-muted">Select Section</label>
+                    <select name="section" id="section" class="form-select rounded-3">
+                        <option value="">-- Choose Section --</option>
+                        {% for s in sections %}
+                            <option value="{{ s.id }}" {% if section_id == s.id|stringformat:"s" %}selected{% endif %}>
+                                {{ s }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-12 col-sm-4 col-md-3">
+                    <label for="date" class="form-label font-weight-semibold small text-muted">Select Date</label>
+                    <input type="date" name="date" id="date" class="form-control rounded-3" value="{{ selected_date|date:'Y-m-d' }}">
+                </div>
+                <div class="col-12 col-sm-3 col-md-2">
+                    <button type="submit" class="btn btn-primary w-100 rounded-3">
+                        <i class="bi bi-search me-1"></i>Filter
+                    </button>
+                </div>
+            </form>
+            {% if selected_section %}
+                <div class="mt-3 pt-3 border-top d-flex justify-content-between align-items-center">
+                    <span class="small text-muted"><i class="bi bi-info-circle me-1"></i>One-click queue absent student WhatsApp alerts for this section:</span>
+                    <form method="POST" action="{% url 'attendance_send_section_absent' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="section_id" value="{{ selected_section.id }}">
+                        <input type="hidden" name="date" value="{{ selected_date|date:'Y-m-d' }}">
+                        <button type="submit" class="btn btn-danger rounded-3 px-3 py-1.5 fw-semibold shadow-sm">
+                            <i class="bi bi-whatsapp me-1"></i>Send Section {{ selected_section }} Absent Alerts
+                        </button>
+                    </form>
+                </div>
+            {% endif %}
+        </div>
+
+    </div>
+
+    {% if selected_section %}
+        <!-- Stats summary cards -->
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-md-2.4 col-lg">
+                <div class="card border-0 shadow-sm rounded-4 text-center p-3">
+                    <span class="text-muted small d-block">Total Students</span>
+                    <strong class="fs-4 text-dark">{{ stats.total }}</strong>
+                </div>
+            </div>
+            <div class="col-6 col-md-2.4 col-lg">
+                <div class="card border-0 shadow-sm rounded-4 text-center p-3 bg-success-subtle border-success">
+                    <span class="text-success small d-block fw-semibold">Present</span>
+                    <strong class="fs-4 text-success">{{ stats.present }}</strong>
+                </div>
+            </div>
+            <div class="col-6 col-md-2.4 col-lg">
+                <div class="card border-0 shadow-sm rounded-4 text-center p-3 bg-danger-subtle border-danger">
+                    <span class="text-danger small d-block fw-semibold">Absent</span>
+                    <strong class="fs-4 text-danger">{{ stats.absent }}</strong>
+                </div>
+            </div>
+            <div class="col-6 col-md-2.4 col-lg">
+                <div class="card border-0 shadow-sm rounded-4 text-center p-3 bg-warning-subtle border-warning">
+                    <span class="text-warning-emphasis small d-block fw-semibold">WhatsApp Pending</span>
+                    <strong class="fs-4 text-warning-emphasis">{{ stats.msg_pending }}</strong>
+                </div>
+            </div>
+            <div class="col-6 col-md-2.4 col-lg">
+                <div class="card border-0 shadow-sm rounded-4 text-center p-3 bg-info-subtle border-info">
+                    <span class="text-info-emphasis small d-block fw-semibold">WhatsApp Sent</span>
+                    <strong class="fs-4 text-info-emphasis">{{ stats.msg_sent }}</strong>
+                </div>
+            </div>
+        </div>
+
+        <!-- Student Attendance Table -->
+        <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+            <div class="card-header bg-white py-3 px-4 d-flex justify-content-between align-items-center">
+                <h5 class="fw-bold mb-0 text-dark">
+                    Students List — {{ selected_section }} ({{ selected_date|date:"d M Y" }})
+                </h5>
+                <span class="badge bg-light text-dark border px-3 py-1.5 rounded-pill">
+                    {{ records|length }} Records
+                </span>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-4">#</th>
+                            <th>Roll / Adm No</th>
+                            <th>Student Name</th>
+                            <th>Phone Number</th>
+                            <th class="text-center">Attendance Status</th>
+                            <th class="text-center">WhatsApp Message Status</th>
+                            <th class="pe-4">Error / Remark</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in records %}
+                            <tr>
+                                <td class="ps-4 text-muted small">{{ forloop.counter }}</td>
+                                <td class="fw-semibold">{{ item.student.hall_ticket_number|default:item.student.admission_number }}</td>
+                                <td>
+                                    <strong class="text-dark">{{ item.student.name }}</strong>
+                                </td>
+                                <td>
+                                    <span class="text-secondary small">
+                                        <i class="bi bi-telephone me-1"></i>{{ item.student.mobile|default:item.student.second_mobile|default:"N/A" }}
+                                    </span>
+                                </td>
+
+                                <td class="text-center">
+                                    {% if item.status == 'P' %}
+                                        <span class="badge bg-success rounded-pill px-3 py-1.5"><i class="bi bi-check-circle-fill me-1"></i>PRESENT</span>
+                                    {% elif item.status == 'A' %}
+                                        <span class="badge bg-danger rounded-pill px-3 py-1.5"><i class="bi bi-x-circle-fill me-1"></i>ABSENT</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary rounded-pill px-3 py-1.5">NOT MARKED</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    {% if item.message %}
+                                        {% if item.message.status == 'pending' %}
+                                            <span class="badge bg-warning text-dark rounded-pill px-3 py-1.5"><i class="bi bi-hourglass-split me-1"></i>Pending</span>
+                                        {% elif item.message.status == 'sent' %}
+                                            <span class="badge bg-success rounded-pill px-3 py-1.5"><i class="bi bi-whatsapp me-1"></i>Sent</span>
+                                        {% elif item.message.status == 'failed' %}
+                                            <span class="badge bg-danger rounded-pill px-3 py-1.5"><i class="bi bi-exclamation-triangle-fill me-1"></i>Failed</span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-muted small">—</span>
+                                    {% endif %}
+                                </td>
+                                <td class="pe-4 small">
+                                    {% if item.message and item.message.error_message %}
+                                        <span class="text-danger fw-semibold"><i class="bi bi-exclamation-circle me-1"></i>{{ item.message.error_message }}</span>
+                                    {% elif item.attendance and item.attendance.remarks %}
+                                        <span class="text-muted">{{ item.attendance.remarks }}</span>
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="{{ dynamic_list|length|add:'7' }}" class="text-center py-4 text-muted">
+                                    <i class="bi bi-inbox fs-3 d-block mb-2"></i>
+                                    No students found for this section.
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {% else %}
+        <div class="card border-0 shadow-sm rounded-4 p-5 text-center text-muted">
+            <i class="bi bi-arrow-up-circle fs-1 text-primary mb-3"></i>
+            <h5>Please select a section above to view the attendance and WhatsApp status review.</h5>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

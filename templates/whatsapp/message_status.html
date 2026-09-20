@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+{% block title %}WhatsApp Status — Sri NRI Junior College{% endblock %}
+{% block page_title %}WhatsApp Status{% endblock %}
+{% block content %}
+
+<!-- Search Bar -->
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-body py-2 px-3">
+    <form method="get" class="row g-2 align-items-center">
+      <div class="col-12 col-md-6 col-lg-5">
+        <input type="text" name="q" value="{{ search_query }}" class="form-control form-control-sm" placeholder="Search by student name or phone number...">
+      </div>
+      <div class="col-auto d-flex gap-2">
+        <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-search me-1"></i>Search</button>
+        {% if search_query %}
+          <a href="{% url 'whatsapp-status' %}" class="btn btn-outline-secondary btn-sm" title="Clear Search"><i class="bi bi-x-lg"></i> Clear</a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+    <span class="fw-bold"><i class="bi bi-whatsapp text-success me-2"></i>WhatsApp Messages Log</span>
+    <span class="text-muted small">
+      {% if not search_query %}
+        Showing last 20 messages
+      {% else %}
+        Showing {{ messages_list|length }} result(s) for '{{ search_query }}'
+      {% endif %}
+    </span>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive" id="results-table-container">
+      {% include 'whatsapp/_status_table.html' %}
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  const input = document.querySelector('input[name="q"]');
+  const form = input ? input.closest('form') : null;
+  const tableContainer = document.querySelector('#results-table-container');
+  if (!input || !form || !tableContainer) return;
+
+  let debounceTimer;
+  input.addEventListener('input', function() {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(function() {
+      const params = new URLSearchParams(new FormData(form));
+      const actionUrl = form.getAttribute('action') || window.location.pathname;
+      fetch(actionUrl + '?' + params.toString(), {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      })
+        .then(res => res.text())
+        .then(html => { tableContainer.innerHTML = html; })
+        .catch(() => {}); // fail silently, button still works
+    }, 600);
+  });
+})();
+</script>
+{% endblock %}

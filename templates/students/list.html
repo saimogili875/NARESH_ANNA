@@ -1,0 +1,385 @@
+{% extends 'base.html' %}
+{% block title %}Students{% endblock %}
+{% block page_title %}Student Management{% endblock %}
+
+{% block content %}
+<!-- Search & Actions Bar -->
+<div class="card border-0 mb-3">
+  <div class="card-body py-2 px-3">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-12 col-md-4">
+        <label class="form-label small text-muted mb-1 d-md-none fw-semibold">Search</label>
+        <input type="text" name="q" value="{{ request.GET.q }}" class="form-control form-control-sm" placeholder="Search name, admission no, mobile, aadhaar...">
+      </div>
+      <div class="col-6 col-md-2">
+        <label class="form-label small text-muted mb-1 d-md-none fw-semibold">Group</label>
+        <select name="group" class="form-select form-select-sm">
+          <option value="">All Groups</option>
+          {% for g in groups %}<option value="{{ g.pk }}" {% if request.GET.group == g.pk|stringformat:'s' %}selected{% endif %}>{{ g.name }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="col-6 col-md-2">
+        <label class="form-label small text-muted mb-1 d-md-none fw-semibold">Year</label>
+        <select name="year" class="form-select form-select-sm">
+          <option value="">All Years</option>
+          <option value="1" {% if request.GET.year == '1' %}selected{% endif %}>1st Year</option>
+          <option value="2" {% if request.GET.year == '2' %}selected{% endif %}>2nd Year</option>
+        </select>
+      </div>
+      <div class="col-6 col-md-2">
+        <label class="form-label small text-muted mb-1 d-md-none fw-semibold">Section</label>
+        <select name="section" class="form-select form-select-sm">
+          <option value="">All Sections</option>
+          {% for s in sections %}<option value="{{ s.pk }}" {% if request.GET.section == s.pk|stringformat:'s' %}selected{% endif %}>{{ s }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="col-6 col-md-2 d-flex gap-2">
+        <button type="submit" class="btn btn-gold btn-sm flex-fill rounded-pill"><i class="bi bi-search me-1"></i>Search</button>
+        <a href="{% url 'student_list' %}" class="btn btn-outline-light btn-sm rounded-circle px-2" title="Clear Filter"><i class="bi bi-x-lg"></i></a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Action Buttons -->
+<div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 mb-3">
+  <span class="text-muted small fw-semibold"><i class="bi bi-people-fill text-gold me-1"></i><strong class="text-white">{{ total }}</strong> student{{ total|pluralize }} found</span>
+  <div class="d-flex flex-wrap gap-2">
+    <button type="button" id="selectModeBtn" class="btn btn-outline-gold btn-sm rounded-pill px-3">
+      <i class="bi bi-check2-square me-1"></i>Select Students
+    </button>
+    <a href="{% url 'student_import' %}" class="btn btn-outline-light btn-sm rounded-pill px-3"><i class="bi bi-upload me-1"></i>Import Excel</a>
+    <a href="{% url 'student_export' %}?group={{ request.GET.group }}&year={{ request.GET.year }}&section={{ request.GET.section }}&q={{ request.GET.q }}" class="btn btn-outline-success btn-sm rounded-pill px-3"><i class="bi bi-download me-1"></i>Export Excel</a>
+    <a href="{% url 'student_add' %}" class="btn btn-gold btn-sm rounded-pill px-3"><i class="bi bi-plus-lg me-1"></i>Add Student</a>
+  </div>
+</div>
+
+<!-- Bulk Action Bar (shown once at least one row is checked) -->
+<div id="bulkBar" class="card border-0 mb-3 d-none" style="background: rgba(197, 160, 89, 0.12); border: 1px solid rgba(197, 160, 89, 0.3) !important;">
+  <div class="card-body py-2 px-3 d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2">
+    <span class="small fw-semibold text-white"><span id="bulkCount" class="text-gold font-monospace">0</span> student(s) selected</span>
+    <div class="d-flex flex-wrap gap-2">
+      <button type="button" class="btn btn-outline-gold btn-sm rounded-pill px-3" id="bulkEditBtn">
+        <i class="bi bi-pencil-square me-1"></i>Change Details
+      </button>
+      <button type="button" class="btn btn-outline-gold btn-sm rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#moveModal">
+        <i class="bi bi-arrow-left-right me-1"></i>Move / Edit Group-Section
+      </button>
+      <button type="button" class="btn btn-outline-danger btn-sm rounded-pill px-3" id="bulkDeleteBtn">
+        <i class="bi bi-trash me-1"></i>Delete Selected
+      </button>
+      <button type="button" class="btn btn-outline-light btn-sm rounded-pill px-3" id="clearSelectionBtn">Clear</button>
+    </div>
+  </div>
+</div>
+
+<!-- Bulk delete form (submitted via JS) -->
+<form id="bulkDeleteForm" method="post" action="{% url 'student_bulk_delete' %}" class="d-none">
+  {% csrf_token %}
+</form>
+
+<!-- Pending inline-edit bar: tapped cells stay "unsaved" until Save Edits is clicked -->
+<div id="pendingEditBar" class="pending-edit-bar d-none">
+  <span class="small fw-semibold text-white"><span id="pendingCount" class="text-gold font-monospace">0</span> unsaved change(s)</span>
+  <div class="d-flex gap-2">
+    <button type="button" class="btn btn-gold btn-sm rounded-pill px-3" id="saveEditsBtn"><i class="bi bi-check-lg me-1"></i>Save Edits</button>
+    <button type="button" class="btn btn-outline-light btn-sm rounded-pill px-3" id="discardEditsBtn">Discard</button>
+  </div>
+</div>
+
+<!-- Bulk edit ("Change Details") form (submitted via JS, GET to the edit screen) -->
+<form id="bulkEditForm" method="get" action="{% url 'student_bulk_edit' %}" class="d-none">
+  <input type="hidden" name="ids" id="bulkEditIds" value="">
+</form>
+
+<!-- Move / Reassign Group-Section Modal -->
+<div class="modal fade" id="moveModal" tabindex="-1">
+  <div class="modal-dialog">
+    <form method="post" action="{% url 'student_bulk_transfer' %}" class="modal-content border-0" id="bulkTransferForm">
+      {% csrf_token %}
+      <div class="modal-header border-bottom border-secondary-subtle py-3">
+        <h6 class="modal-title text-white fw-bold">Move Selected Students</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="small text-muted mb-3">This moves every selected student into the Group / Year / Section you choose below &mdash; use it to fix a wrong section or promote a batch in bulk.</p>
+        <label class="form-label small text-white fw-semibold mb-1">Group / Year / Section</label>
+        <select name="section" class="form-select" required>
+          <option value="">Choose section...</option>
+          {% for s in sections %}<option value="{{ s.pk }}">{{ s.group.name }} - {{ s.get_year_display }} - {{ s.name }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="modal-footer border-top border-secondary-subtle py-2">
+        <button type="button" class="btn btn-outline-light btn-sm rounded-pill px-3" data-bs-dismiss="modal">Cancel</button>
+        <button type="submit" class="btn btn-gold btn-sm rounded-pill px-3">Move Students</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Student Table -->
+<div class="card border-0">
+  <div class="card-body p-0">
+    <div class="table-responsive" id="results-table-container">
+      {% include 'students/_list_table.html' %}
+    </div>
+  </div>
+</div>
+
+<style>
+  .editable-cell { cursor: pointer; border-radius: 6px; padding: 2px 6px; transition: all 0.15s ease; }
+  .editable-cell:hover { background: rgba(197, 160, 89, 0.15); outline: 1px dashed rgba(197, 160, 89, 0.5); }
+  .editable-cell input { border: 1px solid var(--sf-gold); background: #0B0B0E; color: #F5F5F7; border-radius: 6px; padding: 2px 6px; font-size: inherit; width: 100%; }
+  .editable-cell.pending-edit { background: rgba(255, 159, 10, 0.2); outline: 1px solid #FF9F0A; color: #FF9F0A; }
+  .editable-cell.pending-error { background: rgba(255, 69, 58, 0.2); outline: 1px solid #FF453A; color: #FF453A; }
+  .pending-edit-bar {
+    position: fixed;
+    bottom: 1.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(22, 22, 28, 0.95);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(197, 160, 89, 0.4);
+    border-radius: 999px;
+    padding: 0.6rem 1.4rem;
+    display: flex;
+    align-items: center;
+    gap: 1.2rem;
+    z-index: 1050;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+    max-width: 90vw;
+  }
+
+  @media (max-width: 768px) {
+    .table-responsive { border-radius: 12px; }
+    .table th, .table td { white-space: nowrap; font-size: 0.825rem; padding: 0.6rem 0.65rem; }
+    .editable-cell { padding: 4px 6px; display: inline-block; }
+    .pending-edit-bar { width: 92%; justify-content: space-between; padding: 0.5rem 0.95rem; }
+    .btn-xs { padding: 0.35rem 0.55rem; font-size: 0.775rem; }
+  }
+</style>
+
+{% block extra_js %}
+<script>
+(function () {
+  function getCookie(name) {
+    const m = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+    return m ? m.pop() : '';
+  }
+  const csrftoken = getCookie('csrftoken');
+
+  // ---- Select mode: checkboxes stay hidden until "Select Students" is clicked ----
+  const selectModeBtn = document.getElementById('selectModeBtn');
+  const selectCols = document.querySelectorAll('.select-col');
+  let selectMode = false;
+
+  function setSelectMode(on) {
+    selectMode = on;
+    selectCols.forEach(el => el.classList.toggle('d-none', !on));
+    selectModeBtn.classList.toggle('btn-outline-primary', !on);
+    selectModeBtn.classList.toggle('btn-primary', on);
+    selectModeBtn.innerHTML = on
+      ? '<i class="bi bi-x-lg me-1"></i>Cancel Selecting'
+      : '<i class="bi bi-check2-square me-1"></i>Select Students';
+    if (!on) {
+      checkboxes().forEach(c => c.checked = false);
+      selectAll.checked = false;
+      refreshBar();
+    }
+  }
+
+  selectModeBtn.addEventListener('click', function () { setSelectMode(!selectMode); });
+
+  // ---- Row selection + bulk action bar ----
+  const selectAll = document.getElementById('selectAll');
+  const bulkBar = document.getElementById('bulkBar');
+  const bulkCount = document.getElementById('bulkCount');
+
+  function checkboxes() { return Array.from(document.querySelectorAll('.row-check')); }
+  function checked() { return checkboxes().filter(c => c.checked); }
+
+  function refreshBar() {
+    const n = checked().length;
+    bulkCount.textContent = n;
+    bulkBar.classList.toggle('d-none', n === 0);
+  }
+
+  selectAll.addEventListener('change', function () {
+    checkboxes().forEach(c => c.checked = selectAll.checked);
+    refreshBar();
+  });
+
+  document.querySelectorAll('.row-check').forEach(c => c.addEventListener('change', refreshBar));
+
+  document.getElementById('clearSelectionBtn').addEventListener('click', function () {
+    checkboxes().forEach(c => c.checked = false);
+    selectAll.checked = false;
+    refreshBar();
+  });
+
+  function selectedIds() { return checked().map(c => c.value); }
+
+  function appendIds(form) {
+    selectedIds().forEach(id => {
+      const inp = document.createElement('input');
+      inp.type = 'hidden';
+      inp.name = 'student_ids';
+      inp.value = id;
+      form.appendChild(inp);
+    });
+  }
+
+  document.getElementById('bulkDeleteBtn').addEventListener('click', function () {
+    const ids = selectedIds();
+    if (!ids.length) return;
+    if (!confirm('Permanently remove ' + ids.length + ' selected student(s)? This cannot be undone.')) return;
+    const form = document.getElementById('bulkDeleteForm');
+    appendIds(form);
+    form.submit();
+  });
+
+  document.getElementById('bulkTransferForm').addEventListener('submit', function (e) {
+    if (!selectedIds().length) { e.preventDefault(); return; }
+    appendIds(this);
+  });
+
+  document.getElementById('bulkEditBtn').addEventListener('click', function () {
+    const ids = selectedIds();
+    if (!ids.length) return;
+    document.getElementById('bulkEditIds').value = ids.join(',');
+    document.getElementById('bulkEditForm').submit();
+  });
+
+  // ---- Tap-to-edit inline editing: edits are STAGED, not saved, until the
+  // "Save Edits" button is pressed. This lets you fix several boxes across
+  // the table first and review everything before committing. ----
+  const pendingEdits = new Map(); // key "pk_field" -> {pk, field, value, cell, original}
+  const pendingBar = document.getElementById('pendingEditBar');
+  const pendingCount = document.getElementById('pendingCount');
+
+  function refreshPendingBar() {
+    pendingCount.textContent = pendingEdits.size;
+    pendingBar.classList.toggle('d-none', pendingEdits.size === 0);
+  }
+
+  document.querySelectorAll('.editable-cell').forEach(function (cell) {
+    // Remember each cell's true saved value so Discard can restore it even
+    // after several edit/save rounds.
+    cell.dataset.savedValue = cell.textContent.trim();
+
+    cell.addEventListener('click', function () {
+      if (cell.querySelector('input')) return; // already editing
+      const pk = cell.dataset.pk;
+      const field = cell.dataset.field;
+      const current = cell.textContent.trim();
+
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.value = current;
+      cell.textContent = '';
+      cell.appendChild(input);
+      input.focus();
+      input.select();
+
+      function stage() {
+        const newVal = input.value.trim();
+        const key = pk + '_' + field;
+        cell.classList.remove('pending-error');
+        if (newVal === cell.dataset.savedValue) {
+          // Back to the last-saved value — nothing left to stage.
+          pendingEdits.delete(key);
+          cell.classList.remove('pending-edit');
+          cell.textContent = newVal;
+        } else {
+          pendingEdits.set(key, { pk: pk, field: field, value: newVal, cell: cell });
+          cell.classList.add('pending-edit');
+          cell.textContent = newVal;
+        }
+        refreshPendingBar();
+      }
+
+      input.addEventListener('blur', stage);
+      input.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+        if (e.key === 'Escape') { input.value = current; input.blur(); }
+      });
+    });
+  });
+
+  document.getElementById('discardEditsBtn').addEventListener('click', function () {
+    pendingEdits.forEach(function (edit) {
+      edit.cell.textContent = edit.cell.dataset.savedValue;
+      edit.cell.classList.remove('pending-edit', 'pending-error');
+    });
+    pendingEdits.clear();
+    refreshPendingBar();
+  });
+
+  document.getElementById('saveEditsBtn').addEventListener('click', function () {
+    if (!pendingEdits.size) return;
+    const payload = Array.from(pendingEdits.values()).map(function (e) {
+      return { pk: e.pk, field: e.field, value: e.value };
+    });
+    fetch("/students/inline-bulk-save/", {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': csrftoken,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    })
+      .then(r => r.json())
+      .then(function (data) {
+        const errors = [];
+        (data.results || []).forEach(function (res) {
+          const edit = pendingEdits.get(res.key);
+          if (!edit) return;
+          if (res.ok) {
+            edit.cell.dataset.savedValue = res.value;
+            edit.cell.classList.remove('pending-edit', 'pending-error');
+            pendingEdits.delete(res.key);
+          } else {
+            edit.cell.classList.add('pending-error');
+            errors.push(res.error);
+          }
+        });
+        refreshPendingBar();
+        if (errors.length) {
+          alert('Some changes could not be saved:\n' + errors.join('\n'));
+        }
+      })
+      .catch(function () {
+        alert('Network error — no changes were saved. Please try again.');
+      });
+  });
+  // ---- Live search debounced AJAX ----
+  const searchInput = document.querySelector('input[name="q"]');
+  const searchForm = searchInput ? searchInput.closest('form') : null;
+  const tableContainer = document.querySelector('#results-table-container');
+  if (searchInput && searchForm && tableContainer) {
+    let debounceTimer;
+    searchInput.addEventListener('input', function() {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(function() {
+        const params = new URLSearchParams(new FormData(searchForm));
+        const actionUrl = searchForm.getAttribute('action') || window.location.pathname;
+        fetch(actionUrl + '?' + params.toString(), {
+          headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+          .then(res => res.text())
+          .then(html => {
+            tableContainer.innerHTML = html;
+            // Re-bind inline edit handlers for newly loaded table cells
+            document.querySelectorAll('#results-table-container .editable-cell').forEach(function (cell) {
+              cell.dataset.savedValue = cell.textContent.trim();
+            });
+          })
+          .catch(() => {});
+      }, 600);
+    });
+  }
+})();
+</script>
+{% endblock %}
+{% endblock %}

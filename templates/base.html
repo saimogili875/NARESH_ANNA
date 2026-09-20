@@ -1,0 +1,548 @@
+{% load dict_filters %}{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>{% block title %}Sri NRI Junior College{% endblock %}</title>
+
+<!-- Google Fonts: Inter & JetBrains Mono -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+<script>
+  (function() {
+    const savedTheme = localStorage.getItem('srinri_theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    if (savedTheme === 'dark') {
+      document.documentElement.classList.add('dark-mode');
+      document.documentElement.setAttribute('data-bs-theme', 'dark');
+    }
+  })();
+</script>
+<style>
+  :root {
+    --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    --sf-bg: #0B0B0E;
+    --sf-surface: #121216;
+    --sf-card: rgba(22, 22, 28, 0.75);
+    --sf-text: #F5F5F7;
+    --sf-muted: #86868B;
+    --sf-border: rgba(255, 255, 255, 0.08);
+    --sf-glass-border: rgba(255, 255, 255, 0.12);
+    --sf-gold: #C5A059;
+    --sf-gold-hover: #D4AF37;
+    --sf-gold-tint: rgba(197, 160, 89, 0.12);
+    --sf-accent: #C5A059;
+    --sf-accent-hover: #D4AF37;
+    --sf-success: #30D158;
+    --sf-warning: #FF9F0A;
+    --sf-danger: #FF453A;
+    --sidebar-width: 240px;
+    --radius-card: 16px;
+    --radius-pill: 999px;
+  }
+
+  html, body {
+    background-color: var(--sf-bg);
+    color: var(--sf-text);
+    font-family: var(--font-sans);
+    font-size: clamp(0.9375rem, 0.9rem + 0.25vw, 1.05rem);
+    line-height: 1.5;
+    letter-spacing: -0.015em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+
+  /* Ultra-Premium Typography */
+  h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6, .page-title, .brand-name, .fw-bold {
+    font-family: var(--font-sans);
+    letter-spacing: -0.025em;
+    color: #FFFFFF;
+  }
+  h1, .h1, .page-title { font-size: clamp(1.35rem, 1.1rem + 1vw, 1.9rem); }
+  h2, .h2 { font-size: clamp(1.2rem, 1.0rem + 0.8vw, 1.6rem); }
+  h3, .h3 { font-size: clamp(1.1rem, 0.95rem + 0.6vw, 1.35rem); }
+
+  .text-gold-gradient {
+    color: var(--sf-gold) !important;
+  }
+
+  .text-gold {
+    color: var(--sf-gold) !important;
+  }
+
+  /* Ultra-Precision Tabular Numbers & Figures */
+  .value, .stat-value, .num, .figure, .amount, .price, .count, [data-field="admission_number"], [data-field="mobile"], .font-monospace, .stat-card .value {
+    font-family: var(--font-mono) !important;
+    font-variant-numeric: tabular-nums !important;
+    letter-spacing: -0.02em !important;
+  }
+  .value, .stat-value { font-size: clamp(1.4rem, 1.1rem + 1vw, 2.1rem) !important; }
+
+  /* Focus Accessibility */
+  :focus-visible {
+    outline: 2px solid var(--sf-gold) !important;
+    outline-offset: 2px !important;
+  }
+
+  /* Sidebar Navigation */
+  #sidebar {
+    width: var(--sidebar-width);
+    background: rgba(18, 18, 22, 0.95);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    backdrop-filter: blur(24px) saturate(180%);
+    height: 100vh;
+    position: fixed;
+    top: 0; left: 0;
+    overflow-y: auto;
+    z-index: 1050;
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s ease;
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+    padding: 0.75rem 0.6rem;
+  }
+  #sidebar .brand {
+    padding: 0.6rem 0.75rem 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    color: var(--sf-text);
+    font-weight: 700;
+    font-size: 1rem;
+    letter-spacing: -0.02em;
+    display: flex; align-items: center; gap: 0.75rem;
+  }
+  #sidebar .brand img {
+    flex-shrink: 0;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+  }
+  #sidebar .nav-label {
+    padding: 1.25rem 0.75rem 0.35rem;
+    font-size: 0.72rem;
+    color: var(--sf-muted);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  #sidebar .nav-link {
+    color: #E5E5EA;
+    padding: 0.6rem 0.75rem;
+    display: flex; align-items: center; gap: 0.75rem;
+    font-size: clamp(0.875rem, 0.85rem + 0.2vw, 0.95rem);
+    font-weight: 500;
+    border-radius: var(--radius-pill);
+    margin-bottom: 2px;
+    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+    border: 1px solid transparent;
+  }
+  #sidebar .nav-link:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: #FFFFFF;
+    border-color: rgba(255, 255, 255, 0.05);
+  }
+  #sidebar .nav-link.active {
+    background: rgba(197, 160, 89, 0.15);
+    color: #FFFFFF;
+    font-weight: 600;
+    border: 1px solid rgba(197, 160, 89, 0.35);
+  }
+  #sidebar .nav-link i {
+    width: 20px;
+    text-align: center;
+    font-size: 1.05rem;
+    color: var(--sf-muted);
+    transition: color 0.15s ease;
+  }
+  #sidebar .nav-link:hover i { color: #FFFFFF; }
+  #sidebar .nav-link.active i { color: var(--sf-gold); }
+
+  /* Mobile Sidebar Drawer */
+  #sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(4px);
+    z-index: 1040;
+    transition: opacity 0.3s ease;
+  }
+  @media (max-width: 991.98px) {
+    #sidebar {
+      transform: translateX(-100%);
+      width: 260px;
+    }
+    #sidebar.show {
+      transform: translateX(0);
+    }
+    #sidebar-overlay.show {
+      display: block;
+    }
+    #main {
+      margin-left: 0 !important;
+    }
+  }
+  @media (min-width: 992px) {
+    #main {
+      margin-left: var(--sidebar-width);
+    }
+  }
+
+  /* Main Workspace & Topbar */
+  #main { min-height: 100vh; }
+  .topbar {
+    background: rgba(18, 18, 22, 0.95);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    backdrop-filter: blur(24px) saturate(180%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 0.75rem 1.25rem;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 100;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+  }
+  .page-content { padding: 1.25rem; }
+
+  /* Buttons & Badges */
+  .btn {
+    font-weight: 500;
+    border-radius: var(--radius-pill);
+    min-height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+  }
+  .btn-primary {
+    background-color: var(--sf-gold) !important;
+    border-color: var(--sf-gold) !important;
+    color: #0B0B0E !important;
+    font-weight: 600;
+  }
+  .btn-primary:hover {
+    background-color: var(--sf-gold-hover) !important;
+    border-color: var(--sf-gold-hover) !important;
+    color: #000000 !important;
+  }
+  .badge {
+    font-weight: 600;
+    border-radius: 6px;
+    padding: 0.35em 0.65em;
+  }
+  .badge.bg-primary { background-color: var(--sf-gold) !important; color: #0B0B0E !important; }
+  .badge.bg-success { background-color: rgba(48, 209, 88, 0.15) !important; color: #30D158 !important; border: 1px solid rgba(48, 209, 88, 0.25); }
+  .badge.bg-info { background-color: rgba(90, 200, 250, 0.15) !important; color: #5AC8FA !important; border: 1px solid rgba(90, 200, 250, 0.25); }
+
+  /* Clean Neutral Cards & Surfaces (No Golden Light Rotation) */
+  .card, .summary-card, .group-card, .stat-card, .filter-card, .sec-box, .report-box {
+    background: rgba(22, 22, 28, 0.75) !important;
+    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--sf-border) !important;
+    border-radius: var(--radius-card);
+    box-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.3) !important;
+    transition: transform 0.2s ease, border-color 0.2s ease;
+  }
+  .card:hover, .stat-card:hover, .summary-card:hover, .group-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(255, 255, 255, 0.18) !important;
+  }
+  .card-header {
+    background: transparent !important;
+    border-bottom: 1px solid var(--sf-border) !important;
+    padding: 1rem 1.25rem;
+  }
+
+  /* Metric Stat Cards */
+  .stat-card {
+    padding: 1.25rem;
+    color: var(--sf-text);
+    position: relative;
+    overflow: hidden;
+  }
+  .stat-card .value { font-weight: 700; color: var(--sf-text); }
+  .stat-card .label { font-size: 0.8125rem; color: var(--sf-muted); font-weight: 500; }
+  .stat-card i { position: absolute; right: 1rem; top: 1rem; font-size: 2rem; color: var(--sf-gold); opacity: 0.3; }
+
+  /* Tables */
+  .table {
+    --bs-table-bg: transparent;
+    --bs-table-color: var(--sf-text);
+    border-color: var(--sf-border);
+    font-size: clamp(0.85rem, 0.825rem + 0.15vw, 0.9375rem);
+  }
+  .table th {
+    font-size: clamp(0.72rem, 0.7rem + 0.1vw, 0.8rem);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--sf-muted);
+    border-bottom: 1px solid var(--sf-border);
+    padding: 0.75rem 0.85rem;
+    background: transparent;
+  }
+  .table td {
+    padding: 0.75rem 0.85rem;
+    vertical-align: middle;
+    border-bottom: 1px solid var(--sf-border);
+  }
+  .table-hover tbody tr:hover {
+    background-color: rgba(255, 255, 255, 0.04);
+    color: #FFFFFF;
+  }
+  .badge-paid { background: rgba(48, 209, 88, 0.15); color: #30D158; font-weight: 600; padding: 0.25rem 0.6rem; border-radius: 6px; border: 1px solid rgba(48, 209, 88, 0.25); }
+  .badge-partial { background: rgba(197, 160, 89, 0.15); color: #C5A059; font-weight: 600; padding: 0.25rem 0.6rem; border-radius: 6px; border: 1px solid rgba(197, 160, 89, 0.25); }
+  .badge-pending { background: rgba(255, 69, 58, 0.15); color: #FF453A; font-weight: 600; padding: 0.25rem 0.6rem; border-radius: 6px; border: 1px solid rgba(255, 69, 58, 0.25); }
+
+  /* Forms */
+  .form-control, .form-select {
+    background-color: rgba(18, 18, 22, 0.9) !important;
+    color: #F5F5F7 !important;
+    border: 1px solid var(--sf-border) !important;
+    border-radius: var(--radius-pill);
+    padding: 0.5rem 0.9rem;
+    font-size: clamp(0.875rem, 0.85rem + 0.2vw, 0.95rem);
+    min-height: 42px;
+  }
+  @media (max-width: 767.98px) {
+    .form-control, .form-select {
+      font-size: 16px !important; /* Prevents iOS auto zoom on focus */
+    }
+  }
+  .form-control:focus, .form-select:focus {
+    border-color: var(--sf-gold) !important;
+    box-shadow: 0 0 0 3px rgba(197, 160, 89, 0.18) !important;
+  }
+
+  /* Alerts */
+  .messages { position: fixed; top: 70px; right: 1.25rem; z-index: 9999; max-width: 90vw; width: 360px; }
+
+  /* Dark Mode Compatibility */
+  body.dark-mode, html.dark-mode, html[data-bs-theme="dark"] {
+    --sf-bg: #0B0B0E;
+    --sf-card: rgba(22, 22, 28, 0.75);
+    --sf-text: #F5F5F7;
+    --sf-muted: #86868B;
+    --sf-border: rgba(255, 255, 255, 0.08);
+    background-color: #0B0B0E !important;
+    color: var(--sf-text) !important;
+  }
+  .dark-mode #sidebar {
+    background: rgba(18, 18, 22, 0.95) !important;
+    border-right-color: rgba(255, 255, 255, 0.08) !important;
+  }
+  .dark-mode #sidebar .nav-link.active {
+    background: rgba(197, 160, 89, 0.15) !important;
+    color: #FFFFFF !important;
+    border-color: rgba(197, 160, 89, 0.35) !important;
+    box-shadow: none !important;
+  }
+
+  /* Reduced Motion Support */
+  @media (prefers-reduced-motion: reduce) {
+    *, ::before, ::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+</style>
+</head>
+<body>
+
+<!-- Mobile Sidebar Overlay -->
+<div id="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+<!-- Sidebar -->
+<nav id="sidebar">
+  <div class="brand">
+    <img src="{% static 'srinri_logo.png' %}" alt="SRI NRI Logo" style="width:38px;height:38px;object-fit:contain;border-radius:4px;">
+    Sri NRI Junior College
+  </div>
+
+  {% if not user.is_faculty %}
+  <div class="nav-label">Main</div>
+  <a href="{% url 'dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+    <i class="bi bi-grid"></i> Dashboard
+  </a>
+  {% endif %}
+
+  <div class="nav-label">Academics</div>
+  {% if not user.is_faculty %}
+  <a href="{% url 'student_list' %}" class="nav-link {% if 'student' in request.resolver_match.url_name %}active{% endif %}">
+    <i class="bi bi-people"></i> Students
+  </a>
+  <a href="{% url 'group_list' %}" class="nav-link {% if 'group' in request.resolver_match.url_name or 'section' in request.resolver_match.url_name %}active{% endif %}">
+    <i class="bi bi-diagram-3"></i> Groups & Sections
+  </a>
+  {% endif %}
+  <a href="{% url 'attendance_list' %}" class="nav-link {% if 'attendance' in request.resolver_match.url_name %}active{% endif %}">
+    <i class="bi bi-calendar-check"></i> Attendance
+  </a>
+  <a href="{% url 'exam_list' %}" class="nav-link {% if 'mark' in request.resolver_match.url_name or 'exam' in request.resolver_match.url_name %}active{% endif %}">
+    <i class="bi bi-journal-text"></i> Marks
+  </a>
+  <a href="{% url 'whatsapp-status' %}" class="nav-link {% if 'whatsapp' in request.resolver_match.url_name %}active{% endif %}">
+    <i class="bi bi-whatsapp"></i> WhatsApp Status
+  </a>
+
+  {% if not user.is_faculty %}
+  <div class="nav-label">Finance</div>
+  <a href="{% url 'fee_list' %}" class="nav-link {% if 'fee' in request.resolver_match.url_name %}active{% endif %}">
+    <i class="bi bi-cash-stack"></i> Fees
+  </a>
+
+  <div class="nav-label">Staff</div>
+  <a href="{% url 'faculty_list' %}" class="nav-link {% if 'faculty' in request.resolver_match.url_name %}active{% endif %}">
+    <i class="bi bi-person-badge"></i> Faculty
+  </a>
+
+  <div class="nav-label">Data</div>
+  <a href="{% url 'reports_home' %}" class="nav-link {% if 'report' in request.resolver_match.url_name %}active{% endif %}">
+    <i class="bi bi-file-earmark-bar-graph"></i> Reports
+  </a>
+
+  <div class="nav-label">Miscellaneous</div>
+  <a href="{% url 'misc_sheet' %}" class="nav-link {% if 'misc' in request.resolver_match.url_name %}active{% endif %}">
+    <i class="bi bi-journal-bookmark-fill"></i> IPE / JEE / EAMCET
+  </a>
+
+  <div class="nav-label">System</div>
+  <a href="{% url 'login_logs' %}" class="nav-link {% if 'login_log' in request.resolver_match.url_name %}active{% endif %}">
+    <i class="bi bi-shield-lock"></i> Login Audit Logs
+  </a>
+  <a href="/admin/accounts/academicyear/" class="nav-link">
+    <i class="bi bi-calendar2-range"></i> Academic Year
+  </a>
+  <a href="/admin/" class="nav-link">
+    <i class="bi bi-gear"></i> Settings
+  </a>
+  {% endif %}
+
+  <div class="nav-label">System</div>
+  <a href="{% url 'logout' %}" class="nav-link text-danger">
+    <i class="bi bi-box-arrow-left"></i> Logout
+  </a>
+</nav>
+
+<!-- Main -->
+<div id="main">
+  <div class="topbar">
+    <div class="d-flex align-items-center gap-2">
+      <button type="button" class="btn btn-sm btn-outline-secondary d-lg-none me-1 px-2" onclick="toggleSidebar()" aria-label="Toggle Sidebar">
+        <i class="bi bi-list fs-5"></i>
+      </button>
+      <button onclick="history.back()" class="btn btn-sm btn-outline-secondary px-2" title="Go Back" id="backBtn">
+        <i class="bi bi-arrow-left"></i>
+      </button>
+      <h6 class="mb-0 fw-bold">{% block page_title %}Dashboard{% endblock %}</h6>
+    </div>
+    <div class="d-flex align-items-center gap-2 gap-sm-3">
+      <button type="button" id="themeToggleBtn" onclick="toggleDarkMode()"
+              class="btn btn-sm d-flex align-items-center gap-2 py-1 px-2 px-sm-3 rounded-pill shadow-sm fw-bold border-0"
+              title="Toggle Dark / Light Mode" style="transition: all 0.25s ease;">
+        <i class="bi bi-moon-stars-fill text-warning fs-6" id="themeIcon"></i>
+        <span id="themeLabel" class="small d-none d-sm-inline">Dark Mode</span>
+      </button>
+      <span class="text-muted small d-none d-sm-inline">{{ user.get_full_name|default:user.username }}</span>
+      <span class="badge bg-primary">{{ user.get_role_display }}</span>
+    </div>
+  </div>
+
+  <!-- Flash messages -->
+  {% if messages %}
+  <div class="messages">
+    {% for msg in messages %}
+    <div class="alert alert-{% if msg.tags == 'error' %}danger{% else %}{{ msg.tags }}{% endif %} alert-dismissible fade show shadow-sm">
+      {{ msg }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="page-content">
+    {% block content %}{% endblock %}
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+{% block extra_js %}{% endblock %}
+<script>
+(function(){
+  var btn = document.getElementById('backBtn');
+  if(btn && window.history.length <= 1) btn.style.display='none';
+})();
+
+function toggleSidebar() {
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('sidebar-overlay');
+  if (sidebar && overlay) {
+    sidebar.classList.toggle('show');
+    overlay.classList.toggle('show');
+  }
+}
+
+// Close sidebar on link click on mobile or Esc key
+document.addEventListener('DOMContentLoaded', function() {
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('sidebar-overlay');
+  if (sidebar) {
+    sidebar.querySelectorAll('.nav-link').forEach(link => {
+      link.addEventListener('click', () => {
+        if (window.innerWidth < 992) {
+          sidebar.classList.remove('show');
+          if (overlay) overlay.classList.remove('show');
+        }
+      });
+    });
+  }
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && sidebar && sidebar.classList.contains('show')) {
+      sidebar.classList.remove('show');
+      if (overlay) overlay.classList.remove('show');
+    }
+  });
+
+  const isDark = document.documentElement.classList.contains('dark-mode');
+  if (isDark) document.body.classList.add('dark-mode');
+  updateThemeUI(isDark);
+});
+
+function toggleDarkMode() {
+  const isDark = document.documentElement.classList.toggle('dark-mode');
+  document.body.classList.toggle('dark-mode', isDark);
+  if (isDark) {
+    document.documentElement.setAttribute('data-bs-theme', 'dark');
+    localStorage.setItem('srinri_theme', 'dark');
+  } else {
+    document.documentElement.setAttribute('data-bs-theme', 'light');
+    localStorage.setItem('srinri_theme', 'light');
+  }
+  updateThemeUI(isDark);
+}
+
+function updateThemeUI(isDark) {
+  const btn = document.getElementById('themeToggleBtn');
+  const icon = document.getElementById('themeIcon');
+  const label = document.getElementById('themeLabel');
+  if (btn && icon && label) {
+    if (isDark) {
+      btn.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
+      btn.style.color = '#ffffff';
+      icon.className = 'bi bi-sun-fill text-white fs-6';
+      label.textContent = 'Light Mode';
+    } else {
+      btn.style.background = 'linear-gradient(135deg, #0f172a, #1e293b)';
+      btn.style.color = '#ffffff';
+      icon.className = 'bi bi-moon-stars-fill text-warning fs-6';
+      label.textContent = 'Dark Mode';
+    }
+  }
+}
+</script>
+</body>
+</html>

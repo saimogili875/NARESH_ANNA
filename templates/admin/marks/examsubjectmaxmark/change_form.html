@@ -1,0 +1,49 @@
+{% extends "admin/change_form.html" %}
+
+{% block extrahead %}
+    {{ block.super }}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // exam_subject_map_json is injected via the ModelAdmin render_change_form
+            const mapJsonElement = document.getElementById('exam-subject-map');
+            if (!mapJsonElement) return;
+            
+            const map = JSON.parse(mapJsonElement.textContent);
+            const examSelect = document.getElementById('id_exam');
+            const subjectSelect = document.getElementById('id_subject');
+            
+            function updateSubjects() {
+                const examId = examSelect.value;
+                const validSubjects = map[examId] || [];
+                
+                for (let i = 0; i < subjectSelect.options.length; i++) {
+                    const opt = subjectSelect.options[i];
+                    if (opt.value === "") continue; // Keep the '---------' option
+                    
+                    if (validSubjects.includes(parseInt(opt.value))) {
+                        opt.style.display = '';
+                        opt.disabled = false;
+                    } else {
+                        opt.style.display = 'none';
+                        opt.disabled = true;
+                    }
+                }
+                
+                // If current selection is invalid, reset it
+                if (subjectSelect.value && !validSubjects.includes(parseInt(subjectSelect.value))) {
+                    subjectSelect.value = '';
+                }
+            }
+            
+            if (examSelect && subjectSelect) {
+                examSelect.addEventListener('change', updateSubjects);
+                updateSubjects(); // initial load
+            }
+        });
+    </script>
+{% endblock %}
+
+{% block content %}
+    <script type="application/json" id="exam-subject-map">{{ exam_subject_map_json|safe }}</script>
+    {{ block.super }}
+{% endblock %}

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome - Sri NRI Junior College</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #000;
+        }
+        #welcome-video {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            min-width: 100%;
+            min-height: 100%;
+            width: auto;
+            height: auto;
+            transform: translateX(-50%) translateY(-50%);
+            object-fit: cover;
+        }
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.4);
+            color: white;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            text-align: center;
+            z-index: 10;
+        }
+        .welcome-text {
+            font-size: 4rem;
+            font-weight: bold;
+            text-shadow: 2px 2px 8px rgba(0,0,0,0.7);
+            animation: fadeIn 2s ease-in-out;
+        }
+        .skip-btn {
+            position: absolute;
+            bottom: 30px;
+            right: 30px;
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid white;
+            border-radius: 5px;
+            text-decoration: none;
+            font-size: 1.2rem;
+            transition: background 0.3s;
+        }
+        .skip-btn:hover {
+            background: rgba(255, 255, 255, 0.4);
+        }
+        @keyframes fadeIn {
+            0% { opacity: 0; transform: translateY(20px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <video id="welcome-video" autoplay muted playsinline>
+        <source src="/static/videos/welcome.mp4" type="video/mp4">
+        Your browser does not support HTML5 video.
+    </video>
+    <div class="overlay">
+        <div class="welcome-text">Welcome, {{ user.first_name|default:user.username }}!</div>
+        <a href="{{ next_url }}" class="skip-btn">Skip <span style="font-family: sans-serif;">&rarr;</span></a>
+    </div>
+
+    <script>
+        const video = document.getElementById('welcome-video');
+        video.addEventListener('ended', () => {
+            window.location.href = "{{ next_url|safe }}";
+        });
+        
+        // Failsafe: if video fails to play, buffer forever, or is too long, redirect after 8 seconds
+        setTimeout(() => {
+            window.location.href = "{{ next_url|safe }}";
+        }, 8000);
+    </script>
+</body>
+</html>

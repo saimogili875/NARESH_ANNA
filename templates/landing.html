@@ -1,0 +1,1209 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sri NRI Junior College — Admissions Open 2026–28</title>
+<meta name="description" content="Sri NRI Junior College offers MPC, BiPC, CEC, and MEC streams with integrated JEE/NEET/CA prep and personalized mentorship in Hyderabad.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<style>
+  :root{
+    --bg:#FFFFFF; /* Crisp White */
+    --ink:#0F172A; /* Slate Text */
+    --muted:#475569;
+    --muted-2:#94A3B8;
+    --line: rgba(56,189,248,0.18);
+    --card:#FFFFFF;
+    --panel:#F0F9FF; /* Soft Light Blue Tint */
+    --c1:#FF6A1F; /* Warm Saffron Orange */
+    --c2:#10B981; /* Bright Light Green */
+    --c3:#38BDF8; /* Soft Sky Light Blue */
+    --c4:#FFFFFF; /* Pure White */
+    --grad: linear-gradient(120deg, #FF6A1F 0%, #10B981 50%, #38BDF8 100%);
+    --radius: 20px;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:'Inter', sans-serif; -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,h4{ margin:0; line-height:1.08; letter-spacing:-0.02em; font-weight:700; color:#0F172A;}
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace; font-size:12.5px; letter-spacing:.1em;
+    text-transform:uppercase; color:#FF6A1F; font-weight:600;
+    display:inline-flex; align-items:center; gap:8px;
+  }
+  .eyebrow::before{content:""; width:6px; height:6px; border-radius:50%; background:#10B981;}
+  a{color:inherit;}
+  img{max-width:100%; display:block;}
+  .wrap{max-width:1180px; margin:0 auto; padding:0 28px;}
+  section{padding:110px 0;}
+  @media(max-width:760px){ section{padding:72px 0;} .wrap{padding:0 20px;} }
+
+  .reveal{opacity:0; transform:translateY(18px); transition:opacity .7s ease, transform .7s ease;}
+  .reveal.in{opacity:1; transform:translateY(0);}
+  @media (prefers-reduced-motion: reduce){ .reveal{opacity:1; transform:none; transition:none;} html{scroll-behavior:auto;} }
+
+  /* ---------- nav ---------- */
+  header{
+    position:sticky; top:0; z-index:50;
+    padding:18px 20px 0;
+    background:linear-gradient(180deg, #E0F2FE 0%, #BAE6FD 35%, #FF8A3D 75%, #FF6A1F 100%);
+  }
+  .nav{
+    display:flex; align-items:center; justify-content:space-between; gap:20px;
+    max-width:1220px; margin:0 auto; padding:10px 10px 10px 26px;
+    background:rgba(255,255,255,0.92); backdrop-filter:blur(16px);
+    border-radius:999px; border:1.5px solid rgba(56,189,248,0.3);
+    box-shadow:0 8px 30px rgba(56,189,248,0.15);
+    position:relative;
+  }
+  .brand{display:flex; align-items:center; gap:10px; text-decoration:none; flex-shrink:0;}
+  .brand-mark{
+    width:38px;height:38px;border-radius:10px; background:#fff;
+    display:flex;align-items:center;justify-content:center; color:#fff; font-weight:800; font-size:16px; flex-shrink:0;
+    overflow:hidden; border:1px solid var(--line);
+  }
+  .brand-name{font-weight:800; font-size:19px; color:#0F172A; letter-spacing:-0.02em;}
+  .brand-name span{color:#FF6A1F; font-weight:600; font-size:11px; display:block; font-family:'IBM Plex Mono',monospace; letter-spacing:.07em;}
+  nav ul, .nav ul{list-style:none !important; display:flex; gap:30px; margin:0; padding:0;}
+  nav ul li, .nav ul li{list-style:none !important;}
+  nav ul li a, .nav ul li a{
+    text-decoration:none !important; color:#0F172A; font-size:13.5px; font-weight:700;
+    letter-spacing:.05em; text-transform:uppercase; opacity:0.85; transition:opacity .2s ease, color .2s ease;
+  }
+  nav ul li a:hover{opacity:1; color:#FF6A1F;}
+  .nav-actions{display:flex; align-items:center; gap:8px; flex-shrink:0;}
+  .nav-login{
+    background:#0F172A; color:#fff !important; padding:11px 24px; border-radius:8px;
+    font-size:13.5px; font-weight:600; text-decoration:none !important; white-space:nowrap;
+    display:inline-flex; align-items:center; gap:6px;
+    transition:background .18s ease, transform .12s ease, box-shadow .18s ease;
+    box-shadow:0 2px 8px rgba(15,23,42,0.18);
+  }
+  .nav-login:hover{background:#1E293B; box-shadow:0 6px 20px rgba(15,23,42,0.28); transform:translateY(-1px); color:#fff !important;}
+  .nav-cta{
+    background:transparent; color:#0F172A !important; padding:10px 22px; border-radius:8px;
+    font-size:13.5px; font-weight:600; text-decoration:none !important; white-space:nowrap;
+    border:1.5px solid #CBD5E1; transition:border-color .2s ease, background .2s ease;
+  }
+  .nav-cta:hover{border-color:#0F172A; background:rgba(15,23,42,0.04);}
+  .nav-toggle{display:none; background:none; border:none; cursor:pointer; padding:6px; flex-shrink:0;}
+  .nav-toggle span{display:block; width:22px; height:2px; background:#0F172A; margin:5px 0; border-radius:2px;}
+  @media(max-width:880px){
+    .nav ul{display:none;} .nav-actions .nav-login{display:inline-flex;} .nav-toggle{display:block;}
+    .nav.open{border-radius:28px;}
+    .nav.open ul{
+      display:flex !important; flex-direction:column; list-style:none !important;
+      position:absolute; top:64px; left:0; right:0; background:#fff;
+      padding:22px 26px; gap:16px; border-radius:20px; box-shadow:0 12px 30px rgba(56,189,248,0.15);
+    }
+    .nav.open ul li{list-style:none !important;}
+    .nav.open ul li a{text-decoration:none !important; opacity:1; font-size:14px; color:#0F172A;}
+  }
+
+  /* ---------- hero ---------- */
+  .hero{
+    padding:90px 0 60px; position:relative; overflow:hidden;
+    background:linear-gradient(180deg, #FF6A1F 0%, #FF8A3D 18%, #E0F2FE 55%, #FFFFFF 100%);
+  }
+  .hero-bg-video{
+    position:absolute; inset:0; width:100%; height:100%; object-fit:cover;
+    opacity:0.28; z-index:0; pointer-events:none; filter:contrast(1.05) brightness(1.02);
+  }
+  .hero::before{
+    content:""; position:absolute; inset:0; z-index:0; pointer-events:none;
+    background:
+      radial-gradient(ellipse 60% 50% at 8% 100%, rgba(16,185,129,0.2), transparent 70%),
+      radial-gradient(ellipse 60% 50% at 95% 90%, rgba(56,189,248,0.25), transparent 70%);
+  }
+  .hero-inner{position:relative; z-index:1;}
+  .hero-top .eyebrow, .hero-top .eyebrow::before{color:#0F172A;}
+  .hero-top .lede{color:#334155;}
+  .hero-top{width:85%; min-width:69vw; max-width:1400px; margin:0 auto; text-align:center;}
+  .hero-top h1{ font-size:clamp(58px, 9.5vw, 110px); font-weight:800; color:#0F172A; }
+  .hero-top h1 .grad-text{
+    background:linear-gradient(120deg, #FF6A1F 0%, #10B981 50%, #0284C7 100%); -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  .hero-top p.lede{ font-size:18px; line-height:1.6; color:#334155; max-width:52ch; margin:22px auto 0; }
+
+  /* ---- big rotating word inside the headline ---- */
+  .rotate-word{
+    display:inline-block; background:linear-gradient(120deg, #FF6A1F 0%, #10B981 50%, #0284C7 100%); -webkit-background-clip:text; background-clip:text; color:transparent;
+    transition:opacity .4s ease, transform .4s ease; opacity:1; transform:translateY(0);
+  }
+  .rotate-word.swap{ opacity:0; transform:translateY(10px); }
+  @media (prefers-reduced-motion: reduce){ .rotate-word{transition:none;} }
+
+  .hero-actions{display:flex; gap:14px; margin-top:34px; flex-wrap:wrap; justify-content:center;}
+  .btn-primary{
+    background:linear-gradient(135deg, #FF6A1F, #FF4500); color:#fff; padding:15px 28px; border-radius:999px; font-weight:700;
+    text-decoration:none; font-size:15px; border:none; cursor:pointer; transition:transform .15s ease, box-shadow .15s ease;
+    box-shadow:0 10px 26px rgba(255,106,31,0.3);
+  }
+  .btn-primary:hover{transform:translateY(-2px); box-shadow:0 12px 30px rgba(255,106,31,0.5);}
+  .btn-ghost{ padding:14px 26px; border-radius:999px; font-weight:600; font-size:15px; text-decoration:none; border:1.5px solid #38BDF8; color:#0284C7; background:#F0F9FF; transition:background .2s ease, border-color .2s ease;}
+  .btn-ghost:hover{border-color:#FF6A1F; color:#FF6A1F; background:#FFF5ED;}
+
+  /* ---- stream selector ---- */
+  .stream-select{
+    background:rgba(240,249,255,0.95); backdrop-filter:blur(12px);
+    border:1.5px solid #38BDF8; border-radius:24px; padding:30px;
+    margin-top:64px; position:relative; overflow:hidden;
+    box-shadow:0 20px 50px rgba(56,189,248,0.12);
+  }
+  .stream-select .label{font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:.1em; text-transform:uppercase; color:#0284C7; margin-bottom:16px; display:block;}
+  .stream-tabs{display:flex; gap:8px; margin-bottom:22px; flex-wrap:wrap;}
+  .stream-tab{
+    background:#FFFFFF; border:1.5px solid #BAE6FD; color:#0F172A; padding:9px 16px; border-radius:999px;
+    font-size:13.5px; font-weight:700; cursor:pointer; transition:all .2s ease;
+  }
+  .stream-tab.active{ background:#FF6A1F; color:#fff; border-color:#FF6A1F; box-shadow:0 4px 14px rgba(255,106,31,0.35);}
+  .stream-panel{min-height:120px;}
+  .stream-panel h3{font-size:24px; margin-bottom:6px; color:#0F172A;}
+  .stream-panel .subs{font-family:'IBM Plex Mono',monospace; font-size:12.5px; color:#10B981; margin-bottom:12px; font-weight:600;}
+  .stream-panel p{font-size:14.5px; color:#334155; line-height:1.6; margin:0; max-width:60ch;}
+  .stream-panel .careers{margin-top:10px; font-size:13.5px; font-weight:700; color:#0284C7;}
+
+  /* ---------- stat strip ---------- */
+  .stats{ border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
+  .stats .wrap{ display:grid; grid-template-columns:repeat(4,1fr); gap:24px; padding:44px 28px;}
+  @media(max-width:700px){ .stats .wrap{grid-template-columns:repeat(2,1fr);} }
+  .stat b{font-size:38px; font-weight:800; display:block; background:var(--grad); -webkit-background-clip:text; background-clip:text; color:transparent;}
+  .stat span{font-size:13.5px; color:var(--muted); font-weight:500;}
+
+  /* ---------- section headers ---------- */
+  .sec-head{max-width:640px; margin-bottom:52px;}
+  .sec-head h2{font-size:clamp(28px,3.6vw,42px); font-weight:800; margin-top:12px;}
+  .sec-head p{color:var(--muted); font-size:16px; margin-top:14px; line-height:1.6;}
+
+  /* ---------- about ---------- */
+  .about-grid{display:grid; grid-template-columns:1fr 1fr; gap:60px; align-items:start;}
+  @media(max-width:860px){ .about-grid{grid-template-columns:1fr;} }
+  .about-grid p{color:#3B3F45; line-height:1.75; font-size:15.5px; margin-bottom:16px;}
+  .pillars{display:grid; gap:12px;}
+  .pillar{ background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:20px 22px; display:flex; gap:16px; align-items:flex-start;}
+  .pillar-num{ width:30px; height:30px; border-radius:8px; background:var(--grad); flex-shrink:0; display:flex; align-items:center; justify-content:center; color:#fff; font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:12px;}
+  .pillar h4{font-size:16px; margin-bottom:4px; font-weight:700;}
+  .pillar p{font-size:14px; color:var(--muted); margin:0; line-height:1.5;}
+
+  /* ---------- values strip ---------- */
+  .values-scroll { position: relative; }
+  
+  .values-sticky {
+    position: sticky; 
+    top: 50%; 
+    transform: translateY(-50%);
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
+    padding: 40px 0 60px;
+    overflow: visible;
+  }
+
+  .stack-tower {
+    position: relative;
+    width: 120px;
+    height: 440px;
+    margin: 0 auto;
+  }
+
+  .anim-row {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    margin-left: -55px;
+    width: 110px;
+    height: 110px;
+    transition: transform 0.7s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .anim-shape {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    transition: transform 0.7s cubic-bezier(0.34, 1.56, 0.64, 1), 
+                opacity 0.6s ease, 
+                border-radius 0.6s ease;
+    box-shadow: 0 10px 24px rgba(0,0,0,0.15);
+  }
+
+  .anim-content {
+    font-size: 13px;
+    font-weight: 800;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 10px;
+    transition: opacity 0.4s ease;
+  }
+
+  .side-label {
+    position: absolute;
+    left: 130px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: clamp(20px, 4vw, 28px);
+    font-weight: 800;
+    color: var(--ink);
+    white-space: nowrap;
+    letter-spacing: -0.02em;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+    text-shadow: 0 4px 12px rgba(255, 255, 255, 0.8);
+  }
+
+  .stack-caption {
+    text-align: center; 
+    max-width: 420px; 
+    min-height: 52px; 
+    margin-top: 80px;
+  }
+  .stack-caption h4 { font-size: 19px; font-weight: 800; margin-bottom: 6px; }
+  .stack-caption p { font-size: 14.5px; color: var(--muted); margin: 0; line-height: 1.5; }
+  
+  .value-dots { display: flex; gap: 9px; margin-top: 20px; }
+  .value-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--line); transition: background .3s ease, transform .3s ease; }
+  .value-dot.active { background: var(--ink); transform: scale(1.35); }
+
+  @media (prefers-reduced-motion: reduce){ .anim-row, .anim-shape, .anim-content, .side-label { transition: none; } }
+
+  /* ---------- courses ---------- */
+  .course-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:20px;}
+  @media(max-width:980px){ .course-grid{grid-template-columns:repeat(2,1fr);} }
+  @media(max-width:560px){ .course-grid{grid-template-columns:1fr;} }
+  .course-card{ background:#FFFFFF; border:1px solid #E2E8F0; border-radius:20px; overflow:hidden; display:flex; flex-direction:column; transition:transform .2s ease, box-shadow .2s ease, border-color .2s ease;}
+  .course-card:hover{transform:translateY(-6px); box-shadow:0 20px 40px rgba(15,23,42,0.08); border-color:#FF6A1F;}
+  .course-photo{ width:100%; aspect-ratio:4/3; position:relative; overflow:hidden;}
+  .course-photo img{ width:100%; height:100%; object-fit:cover; display:block;}
+  .course-photo .ph-fallback{
+    width:100%; height:100%; display:flex; align-items:center; justify-content:center;
+    color:#fff; font-weight:800; font-size:15px; letter-spacing:.04em;
+  }
+  .course-body{padding:20px 22px 26px; display:flex; flex-direction:column; gap:12px;}
+  .course-card h3{font-size:19px; font-weight:800; color:#0F172A;}
+  .course-card .subs{font-size:12px; font-family:'IBM Plex Mono',monospace; color:#10B981;}
+  .course-card p{font-size:13.5px; color:#475569; line-height:1.5; margin:0;}
+  .course-card .careers{font-size:12.5px; color:#FF6A1F; font-weight:700; margin-top:auto;}
+
+  /* ---------- toppers ---------- */
+  .toppers-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:28px 20px;}
+  @media(max-width:900px){ .toppers-grid{grid-template-columns:repeat(2,1fr);} }
+  @media(max-width:520px){ .toppers-grid{grid-template-columns:repeat(2,1fr); gap:22px 14px;} }
+  .topper-card{
+    text-align:center; opacity:0; transform:translateY(28px) scale(0.94);
+    transition:opacity .55s ease, transform .55s ease;
+  }
+  .topper-card.in{opacity:1; transform:translateY(0) scale(1);}
+  .topper-photo-wrap{ position:relative; width:118px; height:118px; margin:0 auto 14px;}
+  .topper-photo{
+    width:100%; height:100%; border-radius:50%; overflow:hidden; border:3px solid #FF6A1F;
+    box-shadow:0 10px 24px rgba(15,23,42,0.12); position:relative;
+  }
+  .topper-photo img{width:100%; height:100%; object-fit:cover; display:block;}
+  .topper-photo .ph-fallback{
+    width:100%; height:100%; display:flex; align-items:center; justify-content:center;
+    color:#fff; font-weight:800; font-size:26px;
+  }
+  .topper-score{
+    position:absolute; right:-8px; bottom:-6px; min-width:54px; height:54px; border-radius:50%;
+    background:linear-gradient(135deg, #FF6A1F, #10B981); color:#fff; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    border:3px solid #fff; box-shadow:0 6px 14px rgba(15,23,42,0.18); line-height:1.05; padding:2px;
+  }
+  .topper-score b{font-size:13px; font-weight:800;}
+  .topper-score span{font-size:8.5px; opacity:0.9; font-weight:600;}
+  .topper-name{font-size:14px; font-weight:800; margin-bottom:2px; color:#0F172A;}
+  .topper-stream{font-size:11.5px; color:#475569; font-family:'IBM Plex Mono',monospace; letter-spacing:.04em;}
+
+  /* ---------- faculty ---------- */
+  .fac-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:22px;}
+  @media(max-width:980px){ .fac-grid{grid-template-columns:repeat(2,1fr);} }
+  @media(max-width:560px){ .fac-grid{grid-template-columns:1fr;} }
+  .fac-avatar{ width:100%; aspect-ratio:1/1; border-radius:18px; margin-bottom:14px; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:32px; color:#fff;}
+  .fac-card h4{font-size:16px; margin-bottom:2px; font-weight:700; color:#0F172A;}
+  .fac-card .role{font-size:12.5px; color:#10B981; font-weight:700; font-family:'IBM Plex Mono',monospace;}
+  .fac-card .dept{font-size:13px; color:#475569; margin-top:6px; line-height:1.4;}
+
+  /* ---------- gallery ---------- */
+  .gallery-grid{ display:grid; grid-template-columns:repeat(6,1fr); grid-auto-rows:120px; gap:14px;}
+  @media(max-width:760px){ .gallery-grid{grid-template-columns:repeat(2,1fr); grid-auto-rows:130px;} }
+  .g-item{border-radius:16px; position:relative; overflow:hidden; transition:transform 0.25s ease, box-shadow 0.25s ease;}
+  .g-item:hover{transform:scale(1.02); box-shadow:0 12px 30px rgba(15,23,42,0.25);}
+  .g-item span{ position:absolute; left:14px; bottom:12px; color:#fff; font-size:12px; font-family:'IBM Plex Mono',monospace; opacity:.95; font-weight:600; text-shadow:0 2px 6px rgba(0,0,0,0.6);}
+  .g1{grid-column:span 3; grid-row:span 2;} .g2{grid-column:span 3; grid-row:span 1;}
+  .g3{grid-column:span 2; grid-row:span 1;} .g4{grid-column:span 2; grid-row:span 2;}
+  .g5{grid-column:span 2; grid-row:span 1;} .g6{grid-column:span 3; grid-row:span 1;}
+  .g7{grid-column:span 3; grid-row:span 1;}
+  @media(max-width:760px){ .g1,.g2,.g3,.g4,.g5,.g6,.g7{grid-column:span 1; grid-row:span 1;} }
+  .gallery-note{margin-top:18px; font-size:13px; color:var(--muted-2); font-style:italic;}
+
+  /* ---------- parent testimonials ---------- */
+  .parents-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:22px;}
+  @media(max-width:900px){ .parents-grid{grid-template-columns:repeat(2,1fr);} }
+  @media(max-width:560px){ .parents-grid{grid-template-columns:1fr;} }
+  .parent-card{ background:#F0F9FF; border:1.5px solid #BAE6FD; border-radius:20px; padding:24px; display:flex; flex-direction:column; gap:14px;}
+  .parent-quote{font-size:14px; color:#0F172A; line-height:1.6; margin:0;}
+  .parent-quote::before{content:"“"; font-weight:800; color:#FF6A1F; font-size:20px; margin-right:2px;}
+  .parent-who{display:flex; align-items:center; gap:12px; margin-top:auto;}
+  .parent-photo{
+    width:46px; height:46px; border-radius:50%; overflow:hidden; flex-shrink:0; position:relative;
+  }
+  .parent-photo img{width:100%; height:100%; object-fit:cover; display:block;}
+  .parent-photo .ph-fallback{
+    width:100%; height:100%; display:flex; align-items:center; justify-content:center;
+    color:#fff; font-weight:800; font-size:14px;
+  }
+  .parent-name{font-size:13.5px; font-weight:800; color:#0F172A;}
+  .parent-child{font-size:12px; color:#0284C7;}
+
+  /* ---------- admissions ---------- */
+  .timeline{position:relative; padding-left:34px; margin-top:10px;}
+  .timeline::before{content:""; position:absolute; left:9px; top:6px; bottom:6px; width:2px; background:#BAE6FD;}
+  .t-item{
+    position:relative; padding-bottom:56px;
+    opacity:.28; transform:translateY(22px) scale(.97); filter:blur(1.5px);
+    transition:opacity .65s cubic-bezier(.2,.8,.2,1), transform .65s cubic-bezier(.2,.8,.2,1), filter .65s ease;
+    --step-color:#FF6A1F;
+  }
+  .t-item:last-child{padding-bottom:0;}
+  .t-item:nth-child(1){--step-color:#FF6A1F;}
+  .t-item:nth-child(2){--step-color:#10B981;}
+  .t-item:nth-child(3){--step-color:#0284C7;}
+  .t-item:nth-child(4){--step-color:#7B5CFF;}
+  .t-item.step-active{ opacity:1; transform:translateY(0) scale(1); filter:blur(0); }
+  .t-item::before{
+    content:""; position:absolute; left:-34px; top:2px; width:20px; height:20px; border-radius:50%; background:#fff;
+    border:3px solid #BAE6FD; transition:border-color .5s ease, box-shadow .5s ease, transform .5s ease; transform:scale(.85);
+  }
+  .t-item.step-active::before{ border-color:var(--step-color); box-shadow:0 0 0 5px color-mix(in srgb, var(--step-color) 18%, transparent); transform:scale(1); }
+  .t-item h4{font-size:17px; margin-bottom:4px; font-weight:700; transition:color .5s ease;}
+  .t-item.step-active h4{color:var(--step-color);}
+  .t-item .when{font-family:'IBM Plex Mono',monospace; font-size:12.5px; color:#10B981; margin-bottom:6px; display:block; font-weight:500; transition:color .5s ease;}
+  .t-item.step-active .when{color:var(--step-color);}
+  .t-item p{font-size:14.5px; color:#334155; margin:0; line-height:1.55; max-width:52ch;}
+  @media (prefers-reduced-motion: reduce){ .t-item{opacity:1; transform:none; filter:none; transition:none;} }
+  .adm-grid{display:grid; grid-template-columns:1.1fr 0.9fr; gap:60px;}
+  @media(max-width:860px){ .adm-grid{grid-template-columns:1fr;} }
+  .adm-card{background:linear-gradient(145deg, #0284C7, #0369A1); border-radius:24px; padding:34px; color:#fff; height:fit-content; position:relative; overflow:hidden;}
+  .adm-card::before{content:""; position:absolute; top:-100px; right:-100px; width:260px; height:260px; background:var(--grad); filter:blur(70px); opacity:0.35;}
+  .adm-card h3{color:#fff; font-size:22px; margin-bottom:18px; position:relative;}
+  .adm-card ul{list-style:none; margin:0 0 26px; padding:0; display:grid; gap:10px; position:relative;}
+  .adm-card li{font-size:14px; padding-left:22px; position:relative; color:rgba(255,255,255,0.92);}
+  .adm-card li::before{content:"✓"; position:absolute; left:0; color:#34D399; font-weight:700;}
+  .adm-card .btn-primary{background:linear-gradient(135deg, #FF6A1F, #FF4500); color:#fff; width:100%; text-align:center; display:block; position:relative;}
+
+  /* ---------- contact ---------- */
+  .contact-grid{display:grid; grid-template-columns:0.9fr 1.1fr; gap:56px;}
+  @media(max-width:860px){ .contact-grid{grid-template-columns:1fr;} }
+  .info-row{display:flex; gap:14px; margin-bottom:22px; align-items:flex-start;}
+  .info-row .ico{ width:38px;height:38px;border-radius:10px;background:var(--grad); flex-shrink:0; display:flex;align-items:center;justify-content:center; color:#fff; font-size:16px;}
+  .info-row h4{font-size:15px; margin-bottom:3px; font-weight:700; color:#0F172A;}
+  .info-row p{font-size:14px; color:#334155; margin:0; line-height:1.5;}
+  form{display:grid; gap:16px;}
+  .field{display:grid; gap:6px;}
+  .field label{font-size:13px; font-weight:700; color:#0F172A;}
+  .field input, .field select, .field textarea{
+    border:1.5px solid #BAE6FD; border-radius:12px; padding:12px 14px; font-family:'Inter',sans-serif;
+    font-size:14.5px; background:#F0F9FF; color:#0F172A; resize:vertical;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus{outline:2px solid #FF6A1F; outline-offset:1px; border-color:transparent;}
+  .row2{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+  @media(max-width:520px){ .row2{grid-template-columns:1fr;} }
+
+  /* ---------- footer ---------- */
+  footer{background:#0284C7; color:rgba(255,255,255,0.9); padding:60px 0 26px;}
+  .foot-grid{display:grid; grid-template-columns:1.4fr 1fr 1fr 1fr; gap:40px; padding-bottom:36px; border-bottom:1px solid rgba(255,255,255,0.2);}
+  @media(max-width:760px){ .foot-grid{grid-template-columns:1fr 1fr;} }
+  footer h4{color:#fff; font-size:13px; font-family:'IBM Plex Mono',monospace; letter-spacing:.06em; margin-bottom:14px; text-transform:uppercase; font-weight:600;}
+  footer ul{list-style:none; margin:0; padding:0; display:grid; gap:9px;}
+  footer ul a{text-decoration:none; color:rgba(255,255,255,0.85); font-size:14px;}
+  footer ul a:hover{color:#FF6A1F;}
+  .foot-bottom{display:flex; justify-content:space-between; padding-top:22px; font-size:12.5px; flex-wrap:wrap; gap:10px;}
+
+  /* ---------- DEDICATED SMART MOBILE UI OPTIMIZATIONS (Laptop Unchanged) ---------- */
+  @media (max-width: 768px) {
+    header { padding: 10px 12px 0; }
+    .nav { padding: 6px 8px 6px 14px; gap: 10px; border-radius: 999px; }
+    .brand-mark { width: 32px; height: 32px; border-radius: 8px; }
+    .brand-name { font-size: 15px; }
+    .brand-name span { font-size: 9px; }
+    .nav-actions { gap: 6px; }
+    .nav-login { padding: 8px 16px; font-size: 12.5px; font-weight: 700; border-radius: 999px; }
+    .nav-cta { display: none; }
+    .nav.open ul { top: 54px; border-radius: 20px; padding: 18px 22px; gap: 14px; box-shadow: 0 16px 40px rgba(0,0,0,0.15); }
+    
+    .hero { padding: 48px 0 36px; }
+    .hero-top { width: 100%; min-width: 100%; }
+    .hero-top h1 { font-size: clamp(30px, 8.5vw, 44px); line-height: 1.14; letter-spacing: -0.03em; }
+    .eyebrow { font-size: 11px; gap: 6px; }
+    .hero-top p.lede { font-size: 14.5px; margin-top: 14px; line-height: 1.55; }
+    
+    .hero-actions { margin-top: 24px; flex-direction: column; width: 100%; gap: 10px; }
+    .btn-primary, .btn-ghost { width: 100%; text-align: center; justify-content: center; display: flex; align-items: center; padding: 14px 20px; font-size: 14.5px; border-radius: 999px; }
+
+    .stream-select { margin-top: 36px; padding: 20px 16px; border-radius: 20px; }
+    .stream-tabs { display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 8px; padding-bottom: 8px; -webkit-overflow-scrolling: touch; }
+    .stream-tab { flex-shrink: 0; padding: 8px 16px; font-size: 13px; border-radius: 999px; }
+    .stream-panel h3 { font-size: 20px; }
+    .stream-panel p { font-size: 13.5px; }
+
+    .stats .wrap { grid-template-columns: repeat(2, 1fr); gap: 20px 14px; padding: 32px 18px; }
+    .stat b { font-size: 30px; }
+    .stat span { font-size: 12px; }
+
+    .sec-head { margin-bottom: 32px; }
+    .sec-head h2 { font-size: clamp(24px, 6vw, 32px); }
+    .sec-head p { font-size: 14.5px; margin-top: 10px; }
+    
+    .about-grid { gap: 32px; }
+    .pillar { padding: 16px 18px; border-radius: 14px; }
+    .pillar-num { width: 28px; height: 28px; font-size: 11px; }
+
+    /* Values Mobile Animation Adjustments */
+    .values-scroll { height: 320vh; }
+    .stack-tower { width: 90px; height: 320px; }
+    .anim-row { width: 85px; height: 85px; margin-left: -42px; }
+    .side-label { left: 95px; font-size: 18px; }
+    .stack-caption { margin-top: 18px; min-height: 48px; }
+    .stack-caption h4 { font-size: 17px; }
+    .stack-caption p { font-size: 13.5px; }
+
+    .course-grid { grid-template-columns: 1fr; gap: 16px; }
+    .course-card { border-radius: 18px; }
+    .course-body { padding: 18px 20px 22px; }
+
+    .toppers-grid { grid-template-columns: repeat(2, 1fr); gap: 16px 12px; }
+    .topper-photo-wrap { width: 96px; height: 96px; margin-bottom: 10px; }
+    .topper-score { min-width: 44px; height: 44px; right: -4px; bottom: -4px; border-width: 2px; }
+    .topper-score b { font-size: 11.5px; }
+    .topper-score span { font-size: 7.5px; }
+    .topper-name { font-size: 13px; }
+    .topper-stream { font-size: 10.5px; }
+
+    .fac-grid { grid-template-columns: repeat(2, 1fr); gap: 14px; }
+    .fac-avatar { border-radius: 14px; font-size: 26px; }
+    .fac-card h4 { font-size: 14.5px; }
+    .fac-card .role { font-size: 11.5px; }
+    .fac-card .dept { font-size: 12px; }
+
+    .parents-grid { grid-template-columns: 1fr; gap: 16px; }
+    .parent-card { padding: 18px 20px; border-radius: 16px; }
+    .parent-quote { font-size: 13.5px; }
+
+    .timeline { padding-left: 26px; }
+    .t-item { padding-bottom: 36px; }
+    .t-item::before { left: -26px; width: 16px; height: 16px; }
+    .t-item h4 { font-size: 15.5px; }
+    .t-item p { font-size: 13.5px; }
+
+    .adm-card { padding: 24px 20px; border-radius: 18px; }
+    .adm-card h3 { font-size: 19px; }
+    .adm-card li { font-size: 13.5px; }
+
+    .contact-grid { gap: 36px; }
+    .info-row { gap: 12px; margin-bottom: 18px; }
+    .info-row .ico { width: 34px; height: 34px; font-size: 14px; border-radius: 8px; }
+    .info-row h4 { font-size: 14.5px; }
+    .info-row p { font-size: 13.5px; }
+
+    form { gap: 12px; }
+    .field label { font-size: 12.5px; }
+    .field input, .field select, .field textarea { padding: 11px 13px; font-size: 14px; border-radius: 10px; }
+
+    footer { padding: 44px 0 20px; }
+    .foot-grid { grid-template-columns: 1fr 1fr; gap: 28px 16px; padding-bottom: 28px; }
+    footer h4 { font-size: 12px; margin-bottom: 10px; }
+    footer ul a { font-size: 13px; }
+    .foot-bottom { font-size: 11.5px; flex-direction: column; gap: 6px; text-align: center; }
+  }
+
+  @media (max-width: 480px) {
+    .nav { padding: 5px 6px 5px 12px; }
+    .brand-name { font-size: 14px; }
+    .brand-name span { display: none; }
+    .hero-top h1 { font-size: 28px; }
+    .stats .wrap { grid-template-columns: repeat(2, 1fr); gap: 16px 10px; padding: 26px 14px; }
+    .stat b { font-size: 26px; }
+    .toppers-grid { grid-template-columns: repeat(2, 1fr); gap: 14px 10px; }
+    .topper-photo-wrap { width: 84px; height: 84px; }
+    .fac-grid { grid-template-columns: 1fr; gap: 16px; }
+    .foot-grid { grid-template-columns: 1fr; gap: 24px; }
+  }
+
+  a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible{
+    outline:2px solid var(--c1); outline-offset:2px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="nav" id="nav">
+    <a href="#home" class="brand">
+      <span class="brand-mark">
+        <img src="{% static 'srinri_logo.png' %}" alt="Sri NRI Junior College logo" style="width:100%;height:100%;object-fit:contain;">
+      </span>
+      <span class="brand-name">Sri NRI <span>JUNIOR COLLEGE</span></span>
+    </a>
+    <ul>
+      <li><a href="#home">Home</a></li>
+      <li><a href="#about">About</a></li>
+      <li><a href="#courses">Courses</a></li>
+      <li><a href="#faculty">Faculty</a></li>
+      <li><a href="#gallery">Gallery</a></li>
+      <li><a href="#admissions">Admissions</a></li>
+      <li><a href="#contact">Contact</a></li>
+    </ul>
+    <div class="nav-actions">
+      {% if user.is_authenticated %}
+        <a href="{% url 'dashboard' %}" class="nav-login">
+          <i class="bi bi-speedometer2"></i> Dashboard
+        </a>
+      {% else %}
+        <a href="{% url 'login' %}" class="nav-login">
+          <i class="bi bi-box-arrow-in-right"></i> Log in
+        </a>
+      {% endif %}
+      <a href="#contact" class="nav-cta">Contact Us</a>
+    </div>
+    <button class="nav-toggle" id="navToggle" aria-label="Toggle menu">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</header>
+
+<!-- HOME / HERO -->
+<section class="hero" id="home">
+  <video class="hero-bg-video" autoplay loop muted playsinline preload="auto">
+    <source src="{% static 'videos/video2.mp4' %}" type="video/mp4">
+    <source src="{% static 'video2.mp4' %}" type="video/mp4">
+    <source src="/static/video2.mp4" type="video/mp4">
+  </video>
+  <div class="wrap hero-inner">
+    <div class="hero-top reveal in">
+      <span class="eyebrow">Admissions open — 2026–28 batch</span>
+      <h1 style="margin-top:16px;">Two years to find <span class="grad-text">your direction</span>, not just your <span class="rotate-word" id="rotateWord" aria-live="polite">marks</span>.</h1>
+      <p class="lede">Sri NRI Junior College prepares students across MPC, BiPC, CEC and MEC streams for board exams, entrance tests, and the decisions that come after both.</p>
+
+      <div class="hero-actions">
+        <a href="#admissions" class="btn-primary">Start your application</a>
+        <a href="#courses" class="btn-ghost">See all streams</a>
+      </div>
+    </div>
+
+    <div class="stream-select reveal in" id="streamSelect">
+      <span class="label">Choose a stream to explore</span>
+      <div class="stream-tabs" id="streamTabs"></div>
+      <div class="stream-panel" id="streamPanel"></div>
+    </div>
+  </div>
+</section>
+
+<div class="stats">
+  <div class="wrap">
+    <div class="stat reveal"><b>1,240</b><span>students enrolled</span></div>
+    <div class="stat reveal"><b>68</b><span>faculty &amp; lab staff</span></div>
+    <div class="stat reveal"><b>96%</b><span>board pass rate, 2026</span></div>
+    <div class="stat reveal"><b>15</b><span>years since founding</span></div>
+  </div>
+</div>
+
+<!-- ABOUT -->
+<section id="about">
+  <div class="wrap">
+    <div class="about-grid">
+      <div class="reveal">
+        <span class="eyebrow">About the college</span>
+        <h2 style="margin-top:14px;">Built for the two years that decide the next twenty.</h2>
+        <p style="margin-top:20px;">Founded in 2010, Sri NRI Junior College began as a single-block science college with dedicated classrooms and state-of-the-art laboratories. Today it runs four full streams across two campuses, but the founding idea hasn't moved: intermediate is not a waiting room before "real" college — it's where habits, confidence and direction get set.</p>
+        <p>We keep sections small enough that a subject teacher notices when a student who used to sit in the front row starts sitting at the back. Board results matter here, and so does the six weeks before NEET or JEE when a student needs someone to just be available.</p>
+      </div>
+      <div class="pillars reveal">
+        <div class="pillar">
+          <span class="pillar-num">01</span>
+          <div><h4>Small sections, real attention</h4><p>Capped at 40 per section, with weekly progress notes home for every student.</p></div>
+        </div>
+        <div class="pillar">
+          <span class="pillar-num">02</span>
+          <div><h4>Entrance-exam integrated</h4><p>MPC and BiPC timetables are built around JEE/NEET prep, not bolted on after hours.</p></div>
+        </div>
+        <div class="pillar">
+          <span class="pillar-num">03</span>
+          <div><h4>Labs students actually run</h4><p>Physics, chemistry and biology labs are hands-on from week one, not demo-only.</p></div>
+        </div>
+        <div class="pillar">
+          <span class="pillar-num">04</span>
+          <div><h4>A counsellor, not just a warden</h4><p>Every student is assigned a mentor faculty they can walk up to without an appointment.</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- VALUES (DYNAMIC 6-STEP ANIMATION) -->
+<section id="values" style="padding-top:0;">
+  <div class="wrap">
+    <div class="sec-head reveal" style="margin-bottom:36px;">
+      <span class="eyebrow">What we stand on</span>
+      <h2 style="font-size:clamp(24px,2.6vw,32px);">Six things we don't compromise on.</h2>
+    </div>
+    
+    <div class="values-scroll" id="valuesScroll" style="height: 480vh;">
+      <div class="values-sticky">
+        <div class="stack-tower" id="stackTower"></div>
+        <div class="stack-caption" id="stackCaption">
+          <h4 id="valueTitle">Consistency</h4>
+          <p id="valueDesc">Same standard, every class, every week.</p>
+        </div>
+        <div class="value-dots" id="valueDots"></div>
+      </div>
+    </div>
+    
+  </div>
+</section>
+
+<!-- COURSES -->
+<section id="courses" style="background:var(--panel);">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="eyebrow">Streams</span>
+      <h2>Four streams, one honest promise: we'll teach the whole subject.</h2>
+      <p>Pick a combination based on where you want to go next — not just what sounds impressive on a form.</p>
+    </div>
+    <div class="course-grid" id="courseGrid"></div>
+  </div>
+</section>
+
+<!-- TOPPERS -->
+<section id="toppers">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="eyebrow">Results, 2026</span>
+      <h2>Board results our students earned.</h2>
+      <p>Scroll to meet them — real scores, from students across all four streams.</p>
+    </div>
+    <div class="toppers-grid" id="toppersGrid"></div>
+  </div>
+</section>
+
+<!-- FACULTY -->
+<section id="faculty">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="eyebrow">Faculty</span>
+      <h2>Teachers who stay past the syllabus.</h2>
+      <p>A few of the department leads students end up mentioning years later.</p>
+    </div>
+    <div class="fac-grid" id="facGrid"></div>
+  </div>
+</section>
+
+<!-- GALLERY -->
+<section id="gallery" style="background:var(--panel);">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="eyebrow">Campus life</span>
+      <h2>A look around campus.</h2>
+      <p>Labs, the library block, the quad during fest week — experience our vibrant campus life.</p>
+    </div>
+    <div class="gallery-grid reveal" id="galleryGrid"></div>
+    <p class="gallery-note">Sri NRI Junior College Campus Highlights.</p>
+  </div>
+</section>
+
+<!-- PARENTS -->
+<section id="parents" style="background:var(--panel);">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="eyebrow">Parents speak</span>
+      <h2>What parents notice, in their own words.</h2>
+      <p>Six families, from six different sections and streams, on what changed for their child here.</p>
+    </div>
+    <div class="parents-grid" id="parentsGrid"></div>
+  </div>
+</section>
+
+<!-- ADMISSIONS -->
+<section id="admissions">
+  <div class="wrap adm-grid">
+    <div class="reveal">
+      <span class="eyebrow">Admissions</span>
+      <h2 style="margin-top:14px; margin-bottom:34px;">How admission works, start to finish.</h2>
+      <div class="timeline">
+        <div class="t-item">
+          <span class="when">Step 1 · Jun</span>
+          <h4>Submit the application</h4>
+          <p>Fill the form online or collect a physical form from the admissions office. 10th-grade marksheet required.</p>
+        </div>
+        <div class="t-item">
+          <span class="when">Step 2 · Jun</span>
+          <h4>Stream counselling</h4>
+          <p>A short conversation with a faculty counsellor to confirm the stream fits your goals, not just your marks.</p>
+        </div>
+        <div class="t-item">
+          <span class="when">Step 3 · Jul</span>
+          <h4>Document verification &amp; fee payment</h4>
+          <p>Bring original certificates for verification; fee can be paid in full or in two instalments.</p>
+        </div>
+        <div class="t-item">
+          <span class="when">Step 4 · Jul</span>
+          <h4>Orientation week</h4>
+          <p>Campus tour, lab safety briefing, and a first meeting with your section's mentor faculty.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="adm-card reveal">
+      <h3>What you'll need</h3>
+      <ul>
+        <li>10th-grade marksheet (original + 2 copies)</li>
+        <li>Transfer certificate from previous school</li>
+        <li>4 passport-size photographs</li>
+        <li>Aadhaar / ID proof of student</li>
+        <li>Caste / income certificate, if applying under quota</li>
+      </ul>
+      <a href="#contact" class="btn-primary">Download application form</a>
+    </div>
+  </div>
+</section>
+
+<!-- CONTACT -->
+<section id="contact" style="background:var(--panel);">
+  <div class="wrap contact-grid">
+    <div class="reveal">
+      <span class="eyebrow">Contact</span>
+      <h2 style="margin-top:14px; margin-bottom:28px;">Come by, call, or write in.</h2>
+      <div class="info-row">
+        <div class="ico"><i class="bi bi-geo-alt-fill"></i></div>
+        <div><h4>Admissions office</h4><p>Plot No. 16, B N Reddy Nagar, Hyderabad – Nagarjuna Sagar Road, Hasthinapuram, behind Bharath Petrol station, B.N. Reddy Nagar, Hyderabad, Telangana 500079, India</p></div>
+      </div>
+      <div class="info-row">
+        <div class="ico"><i class="bi bi-telephone-fill"></i></div>
+        <div><h4>Phone</h4><p><a href="tel:9248078999" style="color:inherit;text-decoration:none;">9248078999</a>, <a href="tel:9848426562" style="color:inherit;text-decoration:none;">9848426562</a> (Mon–Sat, 9am–6pm)</p></div>
+      </div>
+      <div class="info-row">
+        <div class="ico"><i class="bi bi-envelope-fill"></i></div>
+        <div><h4>Email</h4><p><a href="mailto:srinri58320@gmail.com" style="color:inherit;text-decoration:none;">srinri58320@gmail.com</a></p></div>
+      </div>
+    </div>
+    <form onsubmit="return false;" class="reveal">
+      <div class="row2">
+        <div class="field"><label for="fname">Full name</label><input id="fname" type="text" placeholder="Your name"></div>
+        <div class="field"><label for="phone">Phone</label><input id="phone" type="tel" placeholder="10-digit number"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label for="email">Email</label><input id="email" type="email" placeholder="you@email.com"></div>
+        <div class="field"><label for="stream">Interested stream</label>
+          <select id="stream">
+            <option>MPC — Maths, Physics, Chemistry</option>
+            <option>BiPC — Biology, Physics, Chemistry</option>
+            <option>CEC — Commerce, Economics, Civics</option>
+            <option>MEC — Mathematics, Economics, Commerce</option>
+          </select>
+        </div>
+      </div>
+      <div class="field"><label for="msg">Message</label><textarea id="msg" rows="4" placeholder="Questions about admission, fees, or anything else"></textarea></div>
+      <button type="submit" class="btn-primary" style="justify-self:start;">Send message</button>
+    </form>
+  </div>
+  <div class="wrap reveal" style="margin-top:44px;">
+    <div style="border-radius:20px; overflow:hidden; border:1px solid var(--line); box-shadow:0 20px 50px rgba(10,10,10,0.08);">
+      <iframe
+        title="Sri NRI Junior College location map"
+        src="https://www.google.com/maps?q=Sri+NRI+Junior+College,+Plot+No.+16,+B+N+Reddy+Nagar,+Hyderabad,+Telangana+500079&output=embed"
+        width="100%" height="380" style="border:0; display:block;" loading="lazy"
+        referrerpolicy="no-referrer-when-downgrade">
+      </iframe>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-grid">
+      <div>
+        <div class="brand" style="margin-bottom:14px;">
+          <span class="brand-mark">
+            <img src="{% static 'srinri_logo.png' %}" alt="Sri NRI Junior College logo" style="width:100%;height:100%;object-fit:contain;">
+          </span>
+          <span class="brand-name" style="color:#fff;">Sri NRI <span style="color:rgba(255,255,255,0.5);">JUNIOR COLLEGE</span></span>
+        </div>
+        <p style="font-size:13.5px; max-width:32ch; color:rgba(255,255,255,0.55); line-height:1.6;">Affiliated to the Board of Intermediate Education, Telangana. Est. 2010.</p>
+      </div>
+      <div>
+        <h4>Explore</h4>
+        <ul>
+          <li><a href="#about">About</a></li>
+          <li><a href="#courses">Courses</a></li>
+          <li><a href="#toppers">Toppers</a></li>
+          <li><a href="#faculty">Faculty</a></li>
+          <li><a href="#gallery">Gallery</a></li>
+          <li><a href="#parents">Parents Speak</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Streams</h4>
+        <ul>
+          <li><a href="#courses">MPC</a></li>
+          <li><a href="#courses">BiPC</a></li>
+          <li><a href="#courses">CEC</a></li>
+          <li><a href="#courses">MEC</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Get in touch</h4>
+        <ul>
+          <li><a href="#contact">Admissions office</a></li>
+          <li><a href="#contact">Campus map</a></li>
+          <li><a href="#contact">Careers</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <span>© 2026 Sri NRI Junior College. All rights reserved.</span>
+      <span>Sri NRI Junior College — Excellence in Education.</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+  document.getElementById('navToggle').addEventListener('click', ()=>{
+    document.getElementById('nav').classList.toggle('open');
+  });
+  document.querySelectorAll('#nav ul a').forEach(a=>{
+    a.addEventListener('click', ()=> document.getElementById('nav').classList.remove('open'));
+  });
+
+  /* --- HERO HEADLINE ROTATING WORD (3s per word) --- */
+  const rotateWords = ["marks.", "memorization.", "guesswork.", "shortcuts."];
+  const rotateWordEl = document.getElementById('rotateWord');
+  let wIdx = 0;
+  setInterval(()=>{
+    rotateWordEl.classList.add('swap');
+    setTimeout(()=>{
+      wIdx = (wIdx + 1) % rotateWords.length;
+      rotateWordEl.textContent = rotateWords[wIdx];
+      rotateWordEl.classList.remove('swap');
+    }, 400);
+  }, 3000);
+
+  const stepIo = new IntersectionObserver((entries)=>{
+    entries.forEach(e=> e.target.classList.toggle('step-active', e.isIntersecting));
+  }, {threshold:0, rootMargin:"-42% 0px -42% 0px"});
+  document.querySelectorAll('.t-item').forEach(el=> stepIo.observe(el));
+
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } });
+  }, {threshold:0.15});
+  document.querySelectorAll('.reveal').forEach(el=> io.observe(el));
+
+
+  /* --- SCROLL ANIMATION LOGIC FOR SQUARE TO DIAMOND EFFECT --- */
+  const valuesData = [
+    { title:"Consistency", desc:"Same standard, every class, every week.", color:"linear-gradient(135deg,#FF6A3D,#FF3D81)" },
+    { title:"Quality", desc:"Depth over shortcuts, in every subject.", color:"linear-gradient(135deg,#22C77C,#7B5CFF)" },
+    { title:"Every student", desc:"No one gets lost in a back row.", color:"linear-gradient(135deg,#FFD65C,#E8A312)" },
+    { title:"Uniqueness", desc:"Teaching built around how each student learns.", color:"linear-gradient(135deg,#3CE28A,#1FA866)" },
+    { title:"Patience", desc:"Time given until a concept actually lands.", color:"linear-gradient(135deg,#4FA3FF,#2463DB)" },
+    { title:"Research", desc:"Methods revisited every year, not on autopilot.", color:"linear-gradient(135deg,#B98CFF,#7B4FE0)" }
+  ];
+
+  const stackTower = document.getElementById('stackTower');
+  const valueTitle = document.getElementById('valueTitle');
+  const valueDesc = document.getElementById('valueDesc');
+  const valuesScroll = document.getElementById('valuesScroll');
+  const valueDots = document.getElementById('valueDots');
+
+  const wrappers = [];
+  const dotEls = [];
+  
+  valuesData.forEach((v, i) => {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'anim-row';
+    wrapper.style.zIndex = 10 - i; 
+    
+    const shape = document.createElement('div');
+    shape.className = 'anim-shape';
+    shape.style.background = v.color;
+    
+    const content = document.createElement('div');
+    content.className = 'anim-content';
+    content.innerHTML = v.title;
+    shape.appendChild(content);
+
+    const label = document.createElement('div');
+    label.className = 'side-label';
+    label.innerHTML = v.title;
+    
+    wrapper.appendChild(shape);
+    wrapper.appendChild(label);
+    stackTower.appendChild(wrapper);
+    wrappers.push(wrapper);
+
+    const d = document.createElement('span');
+    d.className = 'value-dot';
+    valueDots.appendChild(d);
+    dotEls.push(d);
+  });
+
+  let currentIdx = -1;
+  function setStacked(count){
+    const targetIdx = Math.max(0, count - 1); 
+    
+    if(targetIdx === currentIdx && count !== 0) return;
+    currentIdx = targetIdx;
+
+    wrappers.forEach((wrapper, i) => {
+      const shape = wrapper.querySelector('.anim-shape');
+      const content = wrapper.querySelector('.anim-content');
+      const label = wrapper.querySelector('.side-label');
+      
+      if(i < currentIdx){
+        wrapper.style.transform = `translateY(${i * 50}px)`; 
+        shape.style.transform = `rotate(45deg) scale(0.85)`;
+        shape.style.opacity = '1';
+        shape.style.borderRadius = '16px';
+        content.style.opacity = '0';
+        label.style.opacity = '1';
+        
+      } else if(i === currentIdx){
+        wrapper.style.transform = `translateY(${280}px)`; 
+        shape.style.transform = `rotate(0deg) scale(1.1)`;
+        shape.style.opacity = '1';
+        shape.style.borderRadius = '12px';
+        content.style.opacity = '1';
+        label.style.opacity = '0';
+        
+      } else {
+        wrapper.style.transform = `translateY(${380}px)`;
+        shape.style.transform = `rotate(0deg) scale(0.5)`;
+        shape.style.opacity = '0';
+        label.style.opacity = '0';
+      }
+    });
+
+    dotEls.forEach((d, i) => d.classList.toggle('active', i <= currentIdx));
+    const v = valuesData[currentIdx];
+    valueTitle.textContent = v.title;
+    valueDesc.textContent = v.desc;
+  }
+
+  let valuesTicking = false;
+  function updateValues(){
+    valuesTicking = false;
+    const rect = valuesScroll.getBoundingClientRect();
+    const total = rect.height - window.innerHeight;
+    if(total <= 0) return;
+    const scrolled = Math.min(Math.max(-rect.top, 0), total);
+    const progress = scrolled / total;
+    
+    const count = Math.min(valuesData.length, Math.floor(progress * valuesData.length) + 1);
+    setStacked(count);
+  }
+  
+  window.addEventListener('scroll', ()=>{
+    if(!valuesTicking){ valuesTicking = true; requestAnimationFrame(updateValues); }
+  }, {passive:true});
+  
+  updateValues();
+
+  const streams = [
+    { code:"MPC", full:"Mathematics · Physics · Chemistry", color:"linear-gradient(135deg,#FF6A3D,#FF3D81)", photo:"{% static 'images/stream_mpc.jpg' %}",
+      desc:"Built for engineering-bound students. Timetable is paced around JEE Main coverage alongside the board syllabus.",
+      careers:"→ Engineering, architecture, pure sciences" },
+    { code:"BiPC", full:"Biology · Physics · Chemistry", color:"linear-gradient(135deg,#22C77C,#7B5CFF)", photo:"{% static 'images/stream_bipc.jpg' %}",
+      desc:"For students aiming at medicine or life sciences. Weekly wet-lab sessions run alongside NEET-focused problem sets.",
+      careers:"→ Medicine, pharmacy, biotechnology" },
+    { code:"CEC", full:"Commerce · Economics · Civics", color:"linear-gradient(135deg,#7B5CFF,#FF3D81)", photo:"{% static 'images/stream_cec.jpg' %}",
+      desc:"Grounding in accounting, business studies and economics for students eyeing CA, CS, or a business degree.",
+      careers:"→ CA/CS, business, economics, law" },
+    { code:"MEC", full:"Mathematics · Economics · Commerce", color:"linear-gradient(135deg,#FF3D81,#FF6A3D)", photo:"{% static 'images/stream_mec.jpg' %}",
+      desc:"Rigorous training in Mathematics, Economics, and Commerce for students targeting CA, CS, Actuarial Science, or top Finance & Data degrees.",
+      careers:"→ CA/CS, Actuarial Science, Data Analytics, Finance & Banking" }
+  ];
+
+  const tabsEl = document.getElementById('streamTabs');
+  const panelEl = document.getElementById('streamPanel');
+
+  function renderPanel(i){
+    const s = streams[i];
+    panelEl.innerHTML = `
+      <h3>${s.code}</h3>
+      <div class="subs">${s.full}</div>
+      <p>${s.desc}</p>
+      <div class="careers">${s.careers}</div>
+    `;
+  }
+
+  streams.forEach((s,i)=>{
+    const btn = document.createElement('button');
+    btn.className = 'stream-tab' + (i===0 ? ' active' : '');
+    btn.textContent = s.code;
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('.stream-tab').forEach(t=>t.classList.remove('active'));
+      btn.classList.add('active');
+      renderPanel(i);
+    });
+    tabsEl.appendChild(btn);
+  });
+  renderPanel(0);
+
+  const courseGrid = document.getElementById('courseGrid');
+  streams.forEach(s=>{
+    const card = document.createElement('div');
+    card.className = 'course-card';
+    card.innerHTML = `
+      <div class="course-photo">
+        <img src="${s.photo}" alt="${s.code} stream at Sri NRI Junior College"
+             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+        <div class="ph-fallback" style="background:${s.color}; display:none;">${s.code}</div>
+      </div>
+      <div class="course-body">
+        <h3>${s.code}</h3>
+        <div class="subs">${s.full}</div>
+        <p>${s.desc}</p>
+        <div class="careers">${s.careers}</div>
+      </div>
+    `;
+    courseGrid.appendChild(card);
+  });
+
+  const toppers = [
+    { name:"B. Neeraj", stream:"JR MPC", score:"466/470", photo:"{% static 'images/toppers/topper1.jpg' %}", color:"linear-gradient(135deg,#FF6A3D,#FF3D81)", init:"BN" },
+    { name:"B. Srinivasu", stream:"JR CEC", score:"452/500", photo:"{% static 'images/toppers/topper2.jpg' %}", color:"linear-gradient(135deg,#22C77C,#7B5CFF)", init:"BS" },
+    { name:"D. Tejaswini", stream:"JR MPC", score:"454/470", photo:"{% static 'images/toppers/topper3.jpg' %}", color:"linear-gradient(135deg,#7B5CFF,#FF3D81)", init:"DT" },
+    { name:"E. Nandhini", stream:"SR MPC", score:"983/1000", photo:"{% static 'images/toppers/topper4.jpg' %}", color:"linear-gradient(135deg,#FF3D81,#FF6A3D)", init:"EN" },
+    { name:"I. Ram Charan", stream:"JR BiPC", score:"423/440", photo:"{% static 'images/toppers/topper5.jpg' %}", color:"linear-gradient(135deg,#7B5CFF,#FF6A3D)", init:"IR" },
+    { name:"K. Chintu", stream:"JR CEC", score:"485/500", photo:"{% static 'images/toppers/topper6.jpg' %}", color:"linear-gradient(135deg,#FF6A3D,#22C77C)", init:"KC" },
+    { name:"M. Maanvitha", stream:"JR MPC", score:"457/470", photo:"{% static 'images/toppers/topper7.jpg' %}", color:"linear-gradient(135deg,#FF3D81,#7B5CFF)", init:"MM" },
+    { name:"M. Rishik Reddy", stream:"SR MPC", score:"972/1000", photo:"{% static 'images/toppers/topper8.jpg' %}", color:"linear-gradient(135deg,#22C77C,#FF3D81)", init:"MR" },
+    { name:"M. Shilpa", stream:"JR MPC", score:"457/470", photo:"{% static 'images/toppers/topper9.jpg' %}", color:"linear-gradient(135deg,#FF6A3D,#7B5CFF)", init:"MS" },
+    { name:"S. Sai Navadeep", stream:"SR MPC", score:"953/1000", photo:"{% static 'images/toppers/topper10.jpg' %}", color:"linear-gradient(135deg,#22C77C,#FF3D81)", init:"SS" },
+    { name:"Y. Vamshi", stream:"JR CEC", score:"462/500", photo:"{% static 'images/toppers/topper11.jpg' %}", color:"linear-gradient(135deg,#7B5CFF,#FF6A3D)", init:"YV" }
+  ];
+  const toppersGrid = document.getElementById('toppersGrid');
+  toppers.forEach((t, i)=>{
+    const card = document.createElement('div');
+    card.className = 'topper-card';
+    card.style.transitionDelay = (i * 90) + 'ms';
+    const [num, den] = t.score.split('/');
+    card.innerHTML = `
+      <div class="topper-photo-wrap">
+        <div class="topper-photo">
+          <img src="${t.photo}" alt="${t.name}"
+               onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+          <div class="ph-fallback" style="background:${t.color}; display:none;">${t.init}</div>
+        </div>
+        <div class="topper-score"><b>${num}</b><span>/ ${den}</span></div>
+      </div>
+      <div class="topper-name">${t.name}</div>
+      <div class="topper-stream">${t.stream}</div>
+    `;
+    toppersGrid.appendChild(card);
+  });
+  
+  const toppersSection = document.getElementById('toppers');
+  const toppersIo = new IntersectionObserver((entries)=>{
+    entries.forEach(e=>{
+      if(e.isIntersecting){
+        toppersSection.querySelectorAll('.topper-card').forEach(c=> c.classList.add('in'));
+        toppersIo.unobserve(e.target);
+      }
+    });
+  }, {threshold:0.2});
+  toppersIo.observe(toppersSection);
+
+  const faculty = [
+    {name:"Dr. Radhika Menon", role:"HOD, Physics", dept:"22 years teaching · PhD, Applied Physics", init:"RM", color:"linear-gradient(135deg,#FF6A3D,#FF3D81)"},
+    {name:"K. Srinivas Rao", role:"HOD, Mathematics", dept:"18 years teaching · Former JEE trainer", init:"SR", color:"linear-gradient(135deg,#22C77C,#7B5CFF)"},
+    {name:"Dr. Anitha Reddy", role:"HOD, Biology", dept:"15 years teaching · NEET mentor, class of '24 topper", init:"AR", color:"linear-gradient(135deg,#7B5CFF,#FF3D81)"},
+    {name:"M. Fathima Begum", role:"HOD, Commerce", dept:"12 years teaching · Chartered Accountant", init:"FB", color:"linear-gradient(135deg,#FF3D81,#FF6A3D)"}
+  ];
+  const facGrid = document.getElementById('facGrid');
+  faculty.forEach(f=>{
+    const card = document.createElement('div');
+    card.className = 'fac-card reveal';
+    card.innerHTML = `
+      <div class="fac-avatar" style="background:${f.color};">${f.init}</div>
+      <h4>${f.name}</h4>
+      <div class="role">${f.role}</div>
+      <div class="dept">${f.dept}</div>
+    `;
+    facGrid.appendChild(card);
+    io.observe(card);
+  });
+
+  const parents = [
+    { name:"Lakshmi Prasad", child:"Parent of Aarav, MPC", photo:"photos/parents/1.jpg", color:"linear-gradient(135deg,#FF6A3D,#FF3D81)", init:"LP",
+      quote:"His teacher noticed his marks slipping before we did, and called us in that same week." },
+    { name:"Ravi Kumar Naidu", child:"Parent of Sanjana, BiPC", photo:"photos/parents/2.jpg", color:"linear-gradient(135deg,#22C77C,#7B5CFF)", init:"RN",
+      quote:"The lab sessions aren't just demos on a screen — she comes home actually talking about the experiment." },
+    { name:"Fathima Kausar", child:"Parent of Imran, CEC", photo:"photos/parents/3.jpg", color:"linear-gradient(135deg,#7B5CFF,#FF3D81)", init:"FK",
+      quote:"He was quiet in every school we tried. Here, his mentor teacher got him talking in a month." },
+    { name:"Sunitha Reddy", child:"Parent of Keerthana, MPC", photo:"photos/parents/4.jpg", color:"linear-gradient(135deg,#FF3D81,#FF6A3D)", init:"SR",
+      quote:"The weekly progress note is short, but it's specific — not just a percentage." },
+    { name:"Mahesh Varma", child:"Parent of Rohit, BiPC", photo:"photos/parents/5.jpg", color:"linear-gradient(135deg,#22C77C,#FF3D81)", init:"MV",
+      quote:"NEET prep didn't feel bolted on. It was just part of how physics was already being taught." },
+    { name:"Anjali Deshmukh", child:"Parent of Priya, MEC", photo:"photos/parents/6.jpg", color:"linear-gradient(135deg,#7B5CFF,#FF6A3D)", init:"AD",
+      quote:"She picked MEC to prepare for Chartered Accountancy. The faculty backed her choice and the guidance paid off." }
+  ];
+  const parentsGrid = document.getElementById('parentsGrid');
+  parents.forEach(p=>{
+    const card = document.createElement('div');
+    card.className = 'parent-card reveal';
+    card.innerHTML = `
+      <p class="parent-quote">${p.quote}</p>
+      <div class="parent-who">
+        <div class="parent-photo">
+          <img src="${p.photo}" alt="${p.name}"
+               onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+          <div class="ph-fallback" style="background:${p.color}; display:none;">${p.init}</div>
+        </div>
+        <div>
+          <div class="parent-name">${p.name}</div>
+          <div class="parent-child">${p.child}</div>
+        </div>
+      </div>
+    `;
+    parentsGrid.appendChild(card);
+    io.observe(card);
+  });
+
+  const gtiles = [
+    {c:"g1", label:"Freshers Party 2K26 — Aarambh@15", img:"{% static 'images/freshers_party_2k26.jpg' %}", fallbackImg:"/static/freshers_party_2k26.jpg", grad:"linear-gradient(135deg,#FF6A3D,#FF3D81)"},
+    {c:"g2", label:"Chemistry lab", grad:"linear-gradient(135deg,#7B5CFF,#FF3D81)"},
+    {c:"g3", label:"Library block", grad:"linear-gradient(135deg,#22C77C,#7B5CFF)"},
+    {c:"g4", label:"Sports ground & Quad", grad:"linear-gradient(135deg,#FF3D81,#7B5CFF)"},
+    {c:"g5", label:"Annual Fest Celebration", grad:"linear-gradient(135deg,#FF6A3D,#22C77C)"},
+    {c:"g6", label:"Physics & Robotics Lab", grad:"linear-gradient(135deg,#7B5CFF,#FF6A3D)"},
+    {c:"g7", label:"Orientation & Academic Honor Day", grad:"linear-gradient(135deg,#22C77C,#FF3D81)"}
+  ];
+  const galleryGrid = document.getElementById('galleryGrid');
+  gtiles.forEach(g=>{
+    const div = document.createElement('div');
+    div.className = 'g-item ' + g.c;
+    div.style.background = g.grad;
+    if (g.img) {
+      div.innerHTML = `
+        <img src="${g.img}" alt="${g.label}" style="width:100%;height:100%;object-fit:cover;display:block;"
+             onerror="this.src='${g.fallbackImg}';">
+        <div style="position:absolute;inset:0;background:linear-gradient(180deg,transparent 30%,rgba(15,23,42,0.85) 100%);"></div>
+        <span style="z-index:2;font-size:13px;font-weight:700;letter-spacing:0.02em;">${g.label}</span>
+      `;
+    } else {
+      div.innerHTML = `<span>${g.label}</span>`;
+    }
+    galleryGrid.appendChild(div);
+  });
+</script>
+
+</body>
+</html>

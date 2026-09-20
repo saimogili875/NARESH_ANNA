@@ -1,0 +1,306 @@
+{% extends 'base.html' %}
+{% load dict_filters %}
+{% block title %}Miscellaneous — Exam Info{% endblock %}
+{% block page_title %}Miscellaneous — IPE / EAMCET / JEE{% endblock %}
+
+{% block content %}
+
+{# ── FILTER BAR ────────────────────────────────────────────────────────── #}
+<form method="get" action="{% url 'misc_sheet' %}">
+  <input type="hidden" name="tab" value="{{ tab }}">
+  <div class="card border-0 shadow-sm mb-3">
+    <div class="card-body py-2">
+      <div class="row g-2 align-items-end">
+        <div class="col-md-4">
+          <label class="form-label small fw-500 mb-1">Groups</label>
+          <select name="groups" multiple class="form-select form-select-sm" style="height:90px">
+            {% for g in groups %}
+            <option value="{{ g.id }}" {% if g.id|stringformat:"s" in sel_groups %}selected{% endif %}>
+              {{ g.name }} ({{ g.code }})
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-5">
+          <label class="form-label small fw-500 mb-1">Sections</label>
+          <select name="sections" multiple class="form-select form-select-sm" style="height:90px">
+            {% for sec in sections %}
+            <option value="{{ sec.id }}" {% if sec.id|stringformat:"s" in sel_sections %}selected{% endif %}>
+              {{ sec.group.code }} — {{ sec.get_year_display }} — Sec {{ sec.name }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3 d-flex gap-2">
+          <button type="submit" class="btn btn-primary btn-sm flex-fill">
+            <i class="bi bi-funnel"></i> Filter
+          </button>
+          <a href="{% url 'misc_sheet' %}?tab={{ tab }}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-x"></i> Clear
+          </a>
+        </div>
+      </div>
+      <div class="mt-1 text-muted small">Hold Ctrl / Cmd to select multiple groups or sections</div>
+    </div>
+  </div>
+</form>
+
+{# ── TABS + EXPORT ─────────────────────────────────────────────────────── #}
+<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+  <ul class="nav nav-pills gap-1">
+    <li class="nav-item">
+      <a href="?tab=ipe{% for g in sel_groups %}&groups={{ g }}{% endfor %}{% for s in sel_sections %}&sections={{ s }}{% endfor %}"
+         class="nav-link {% if tab == 'ipe' %}active{% endif %} py-1 px-3">
+        <i class="bi bi-journal-text"></i> IPE
+      </a>
+    </li>
+    <li class="nav-item">
+      <a href="?tab=eamcet{% for g in sel_groups %}&groups={{ g }}{% endfor %}{% for s in sel_sections %}&sections={{ s }}{% endfor %}"
+         class="nav-link {% if tab == 'eamcet' %}active{% endif %} py-1 px-3">
+        <i class="bi bi-mortarboard"></i> EAMCET
+      </a>
+    </li>
+    <li class="nav-item">
+      <a href="?tab=jee{% for g in sel_groups %}&groups={{ g }}{% endfor %}{% for s in sel_sections %}&sections={{ s }}{% endfor %}"
+         class="nav-link {% if tab == 'jee' %}active{% endif %} py-1 px-3">
+        <i class="bi bi-calculator"></i> JEE Main
+      </a>
+    </li>
+  </ul>
+  <div class="d-flex gap-2 align-items-center">
+    <span class="badge bg-secondary">{{ students|length }} students</span>
+    <a href="{% url 'misc_export' %}?tab={{ tab }}{% for g in sel_groups %}&groups={{ g }}{% endfor %}{% for s in sel_sections %}&sections={{ s }}{% endfor %}"
+       class="btn btn-sm btn-success">
+      <i class="bi bi-file-earmark-excel"></i> Export Excel
+    </a>
+  </div>
+</div>
+
+{# ── IPE legend ─────────────────────────────────────────────────────────── #}
+{% if tab == 'ipe' %}
+<div class="alert alert-info py-2 mb-3" style="font-size:.8rem">
+  <strong>Sub 3 / 4 / 5 / 6 by Group:</strong>
+  MPIC → Physics, Chemistry, Maths &nbsp;|&nbsp;
+  BPIC → Biology, Zoology, Chemistry &nbsp;|&nbsp;
+  CEC → Civics, Economics, Commerce, Sanskrit &nbsp;|&nbsp;
+  MEC → Mathematics, Economics, Commerce, Sanskrit
+</div>
+{% endif %}
+
+{% if students %}
+
+<form method="post" action="{% url 'misc_save' %}">
+  {% csrf_token %}
+  <input type="hidden" name="tab" value="{{ tab }}">
+  <input type="hidden" name="next_qs" value="tab={{ tab }}{% for g in sel_groups %}&groups={{ g }}{% endfor %}{% for s in sel_sections %}&sections={{ s }}{% endfor %}">
+  {% for s in students %}<input type="hidden" name="student_ids" value="{{ s.id }}">{% endfor %}
+
+  <div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+
+      {# ══════════════════════════════════════════ IPE #}
+      {% if tab == 'ipe' %}
+      <table class="table table-bordered table-hover mb-0 align-middle" style="font-size:.76rem;min-width:1700px">
+        <thead>
+          <tr class="text-center" style="background:#0f172a;color:#fff">
+            <th rowspan="2" style="width:34px">#</th>
+            <th rowspan="2" style="min-width:140px">Name</th>
+            <th rowspan="2">Sec</th>
+            <th rowspan="2" style="min-width:105px">Phone</th>
+            <th rowspan="2" style="min-width:105px">DOB</th>
+            <th rowspan="2" style="min-width:130px">Parent Name</th>
+            <th rowspan="2" style="min-width:130px">IPE Hall Ticket</th>
+            <th rowspan="2" style="min-width:72px">10th Total</th>
+            <th colspan="7" style="background:#1e40af">1st Year IPE</th>
+            <th colspan="7" style="background:#065f46">2nd Year IPE</th>
+          </tr>
+          <tr class="text-center" style="font-size:.7rem">
+            <th style="background:#bfdbfe">Telugu</th>
+            <th style="background:#bfdbfe">English</th>
+            <th style="background:#bfdbfe">Sub 3</th>
+            <th style="background:#bfdbfe">Sub 4</th>
+            <th style="background:#bfdbfe">Sub 5</th>
+            <th style="background:#bfdbfe">Sub 6</th>
+            <th style="background:#93c5fd;font-weight:700">Total</th>
+            <th style="background:#a7f3d0">Telugu</th>
+            <th style="background:#a7f3d0">English</th>
+            <th style="background:#a7f3d0">Sub 3</th>
+            <th style="background:#a7f3d0">Sub 4</th>
+            <th style="background:#a7f3d0">Sub 5</th>
+            <th style="background:#a7f3d0">Sub 6</th>
+            <th style="background:#6ee7b7;font-weight:700">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in students %}
+          {% with inf=s.exam_info %}
+          <tr>
+            <td class="text-center text-muted small">{{ forloop.counter }}</td>
+            <td class="fw-500">{{ s.name }}<br><small class="text-muted">{{ s.section.group.code|default:"" }}</small></td>
+            <td class="text-center">{{ s.section.name|default:"—" }}</td>
+            <td><span class="form-control-sm d-block">{{ s.mobile }}</span></td>
+            <td><input type="date" name="dob_{{ s.id }}" class="form-control form-control-sm"
+                value="{% if s.date_of_birth %}{{ s.date_of_birth|date:'Y-m-d' }}{% endif %}"></td>
+            <td class="text-muted small">{{ s.father_name }}</td>
+            <td><input type="text" name="ipe_ht_{{ s.id }}" class="form-control form-control-sm"
+                value="{{ inf.ipe_hall_ticket|default:'' }}"></td>
+            <td class="text-center fw-bold text-primary">{{ s.marks_total|default:"—" }}</td>
+            {# 1st year #}
+            <td><input type="number" name="ipe_1st_telugu_{{ s.id }}" class="form-control form-control-sm ipe-inp" data-sid="{{ s.id }}" data-yr="1st"
+                value="{{ inf|attr:'ipe_1st_telugu' }}" min="0" max="100" step="0.01" style="min-width:70px"></td>
+            <td><input type="number" name="ipe_1st_english_{{ s.id }}" class="form-control form-control-sm ipe-inp" data-sid="{{ s.id }}" data-yr="1st"
+                value="{{ inf|attr:'ipe_1st_english' }}" min="0" max="100" step="0.01" style="min-width:70px"></td>
+            <td><input type="number" name="ipe_1st_s3_{{ s.id }}" class="form-control form-control-sm ipe-inp" data-sid="{{ s.id }}" data-yr="1st"
+                value="{{ inf|attr:'ipe_1st_s3' }}" min="0" max="100" step="0.01" style="min-width:70px"></td>
+            <td><input type="number" name="ipe_1st_s4_{{ s.id }}" class="form-control form-control-sm ipe-inp" data-sid="{{ s.id }}" data-yr="1st"
+                value="{{ inf|attr:'ipe_1st_s4' }}" min="0" max="100" step="0.01" style="min-width:70px"></td>
+            <td><input type="number" name="ipe_1st_s5_{{ s.id }}" class="form-control form-control-sm ipe-inp" data-sid="{{ s.id }}" data-yr="1st"
+                value="{{ inf|attr:'ipe_1st_s5' }}" min="0" max="100" step="0.01" style="min-width:70px"></td>
+            <td><input type="number" name="ipe_1st_s6_{{ s.id }}" class="form-control form-control-sm ipe-inp" data-sid="{{ s.id }}" data-yr="1st"
+                value="{{ inf|attr:'ipe_1st_s6' }}" min="0" max="100" step="0.01" style="min-width:70px"></td>
+            <td><input type="number" name="ipe_1st_total_{{ s.id }}" class="form-control form-control-sm fw-bold" id="tot1st_{{ s.id }}"
+                value="{{ inf|attr:'ipe_1st_total' }}" min="0" step="0.01" style="min-width:70px;background:#eff6ff"></td>
+            {# 2nd year #}
+            <td><input type="number" name="ipe_2nd_telugu_{{ s.id }}" class="form-control form-control-sm ipe-inp" data-sid="{{ s.id }}" data-yr="2nd"
+                value="{{ inf|attr:'ipe_2nd_telugu' }}" min="0" max="100" step="0.01" style="min-width:70px"></td>
+            <td><input type="number" name="ipe_2nd_english_{{ s.id }}" class="form-control form-control-sm ipe-inp" data-sid="{{ s.id }}" data-yr="2nd"
+                value="{{ inf|attr:'ipe_2nd_english' }}" min="0" max="100" step="0.01" style="min-width:70px"></td>
+            <td><input type="number" name="ipe_2nd_s3_{{ s.id }}" class="form-control form-control-sm ipe-inp" data-sid="{{ s.id }}" data-yr="2nd"
+                value="{{ inf|attr:'ipe_2nd_s3' }}" min="0" max="100" step="0.01" style="min-width:70px"></td>
+            <td><input type="number" name="ipe_2nd_s4_{{ s.id }}" class="form-control form-control-sm ipe-inp" data-sid="{{ s.id }}" data-yr="2nd"
+                value="{{ inf|attr:'ipe_2nd_s4' }}" min="0" max="100" step="0.01" style="min-width:70px"></td>
+            <td><input type="number" name="ipe_2nd_s5_{{ s.id }}" class="form-control form-control-sm ipe-inp" data-sid="{{ s.id }}" data-yr="2nd"
+                value="{{ inf|attr:'ipe_2nd_s5' }}" min="0" max="100" step="0.01" style="min-width:70px"></td>
+            <td><input type="number" name="ipe_2nd_s6_{{ s.id }}" class="form-control form-control-sm ipe-inp" data-sid="{{ s.id }}" data-yr="2nd"
+                value="{{ inf|attr:'ipe_2nd_s6' }}" min="0" max="100" step="0.01" style="min-width:70px"></td>
+            <td><input type="number" name="ipe_2nd_total_{{ s.id }}" class="form-control form-control-sm fw-bold" id="tot2nd_{{ s.id }}"
+                value="{{ inf|attr:'ipe_2nd_total' }}" min="0" step="0.01" style="min-width:70px;background:#f0fdf4"></td>
+          </tr>
+          {% endwith %}
+          {% endfor %}
+        </tbody>
+      </table>
+
+      {# ══════════════════════════════════════ EAMCET #}
+      {% elif tab == 'eamcet' %}
+      <table class="table table-bordered table-hover mb-0 align-middle" style="font-size:.8rem;min-width:1050px">
+        <thead class="text-center" style="background:#0f172a;color:#fff">
+          <tr>
+            <th style="width:34px">#</th>
+            <th style="min-width:155px">Name</th>
+            <th>Sec</th>
+            <th style="min-width:110px">Phone No</th>
+            <th style="min-width:108px">DOB</th>
+            <th style="min-width:110px">Parents No</th>
+            <th style="min-width:155px">EAMCET Hall Ticket</th>
+            <th style="min-width:155px">Password</th>
+            <th style="min-width:118px">Date of Exam</th>
+            <th style="min-width:85px">Marks</th>
+            <th style="min-width:95px">Rank</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in students %}
+          {% with inf=s.exam_info %}
+          <tr>
+            <td class="text-center text-muted small">{{ forloop.counter }}</td>
+            <td class="fw-500">{{ s.name }}</td>
+            <td class="text-center">{{ s.section.name|default:"—" }}</td>
+            <td class="text-muted small">{{ s.mobile }}</td>
+            <td><input type="date" name="dob_{{ s.id }}" class="form-control form-control-sm"
+                value="{% if s.date_of_birth %}{{ s.date_of_birth|date:'Y-m-d' }}{% endif %}"></td>
+            <td class="text-muted small">{{ s.mobile }}</td>
+            <td><input type="text" name="eamcet_ht_{{ s.id }}" class="form-control form-control-sm"
+                value="{{ inf.eamcet_hall_ticket|default:'' }}"></td>
+            <td><input type="text" name="eamcet_pwd_{{ s.id }}" class="form-control form-control-sm"
+                value="{{ inf.eamcet_password|default:'' }}"></td>
+            <td><input type="date" name="eamcet_date_{{ s.id }}" class="form-control form-control-sm"
+                value="{% if inf.eamcet_date_of_exam %}{{ inf.eamcet_date_of_exam|date:'Y-m-d' }}{% endif %}"></td>
+            <td><input type="number" name="eamcet_marks_{{ s.id }}" class="form-control form-control-sm"
+                value="{{ inf.eamcet_marks|default:'' }}" min="0" step="0.01"></td>
+            <td><input type="text" name="eamcet_rank_{{ s.id }}" class="form-control form-control-sm"
+                value="{{ inf.eamcet_rank|default:'' }}"></td>
+          </tr>
+          {% endwith %}
+          {% endfor %}
+        </tbody>
+      </table>
+
+      {# ══════════════════════════════════════ JEE MAIN #}
+      {% elif tab == 'jee' %}
+      <table class="table table-bordered table-hover mb-0 align-middle" style="font-size:.8rem;min-width:870px">
+        <thead class="text-center" style="background:#0f172a;color:#fff">
+          <tr>
+            <th style="width:34px">#</th>
+            <th style="min-width:175px">Name</th>
+            <th>Sec</th>
+            <th style="min-width:108px">DOB</th>
+            <th style="min-width:115px">Parents No</th>
+            <th style="min-width:175px">JEE Hall Ticket</th>
+            <th style="min-width:175px">Password</th>
+            <th style="min-width:118px">Date of Exam</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in students %}
+          {% with inf=s.exam_info %}
+          <tr>
+            <td class="text-center text-muted small">{{ forloop.counter }}</td>
+            <td class="fw-500">{{ s.name }}</td>
+            <td class="text-center">{{ s.section.name|default:"—" }}</td>
+            <td><input type="date" name="dob_{{ s.id }}" class="form-control form-control-sm"
+                value="{% if s.date_of_birth %}{{ s.date_of_birth|date:'Y-m-d' }}{% endif %}"></td>
+            <td class="text-muted small">{{ s.mobile }}</td>
+            <td><input type="text" name="jee_ht_{{ s.id }}" class="form-control form-control-sm"
+                value="{{ inf.jee_hall_ticket|default:'' }}"></td>
+            <td><input type="text" name="jee_pwd_{{ s.id }}" class="form-control form-control-sm"
+                value="{{ inf.jee_password|default:'' }}"></td>
+            <td><input type="date" name="jee_date_{{ s.id }}" class="form-control form-control-sm"
+                value="{% if inf.jee_date_of_exam %}{{ inf.jee_date_of_exam|date:'Y-m-d' }}{% endif %}"></td>
+          </tr>
+          {% endwith %}
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
+
+      </div>
+    </div>
+    <div class="card-footer bg-white d-flex justify-content-end py-2">
+      <button type="submit" class="btn btn-primary px-4">
+        <i class="bi bi-save"></i> Save All
+      </button>
+    </div>
+  </div>
+</form>
+
+{% else %}
+<div class="card border-0 shadow-sm">
+  <div class="text-center text-muted py-5">
+    <i class="bi bi-people fs-1 d-block mb-2"></i>
+    No students found. Use the filter above to select groups or sections.
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Auto-sum IPE totals when sub-marks change
+document.addEventListener('input', function(e) {
+  var inp = e.target;
+  if (!inp.classList.contains('ipe-inp')) return;
+  var sid = inp.dataset.sid;
+  var yr  = inp.dataset.yr;  // '1st' or '2nd'
+  var total = 0;
+  ['telugu','english','s3','s4','s5','s6'].forEach(function(sub) {
+    var el = document.querySelector('[name="ipe_' + yr + '_' + sub + '_' + sid + '"]');
+    if (el && el.value !== '') total += parseFloat(el.value) || 0;
+  });
+  var totEl = document.getElementById('tot' + yr + '_' + sid);
+  if (totEl) totEl.value = total > 0 ? total.toFixed(2) : '';
+});
+</script>
+{% endblock %}

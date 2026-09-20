@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+{% block title %}Manage Fee Types{% endblock %}
+{% block page_title %}Manage Fee Types{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="{% url 'fee_list' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left"></i> Back to Fee Dashboard
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-md-5">
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-primary text-white border-0 py-3">
+                <h6 class="mb-0"><i class="bi bi-plus-circle me-2"></i>Create New Fee Type</h6>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Academic Year <span class="text-danger">*</span></label>
+                        <select name="academic_year" class="form-select">
+                            {% for ay in active_years %}
+                            <option value="{{ ay.id }}" {% if ay == active_year %}selected{% endif %}>{{ ay.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Fee Name <span class="text-danger">*</span></label>
+                        <input type="text" name="name" id="feeNameInput" class="form-control" placeholder="e.g. Books Fee, Bus Fee, Lab Fee" required>
+                    </div>
+                    <div class="mb-3">
+                        <div class="small fw-bold text-muted mb-2">Quick Suggestions:</div>
+                        <div class="d-flex flex-wrap gap-1">
+                            <button type="button" class="btn btn-sm btn-outline-secondary py-0" onclick="setFeeName('Books Fee')">+ Books Fee</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary py-0" onclick="setFeeName('Bus Fee')">+ Bus Fee</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary py-0" onclick="setFeeName('Lab Fee')">+ Lab Fee</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary py-0" onclick="setFeeName('Hostel Fee')">+ Hostel Fee</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary py-0" onclick="setFeeName('Exam Fee')">+ Exam Fee</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary py-0" onclick="setFeeName('Uniform Fee')">+ Uniform Fee</button>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Create Fee Type</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-7">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-list-ul me-2"></i>Active Fee Types</h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light text-secondary" style="font-size: 0.85rem">
+                            <tr>
+                                <th>FEE NAME</th>
+                                <th>ASSIGNED</th>
+                                <th>COLLECTED</th>
+                                <th>PENDING</th>
+                                <th>ACTIONS</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Core Tuition Fee Row -->
+                            <tr class="table-primary-subtle">
+                                <td class="fw-bold text-primary">
+                                    <i class="bi bi-star-fill text-warning me-1"></i> {{ tuition_stats.name }}
+                                </td>
+                                <td class="fw-bold">₹{{ tuition_stats.total_assigned|floatformat:0 }}</td>
+                                <td class="text-success fw-bold">₹{{ tuition_stats.total_paid|floatformat:0 }}</td>
+                                <td class="text-danger fw-bold">₹{{ tuition_stats.total_pending|floatformat:0 }}</td>
+                                <td class="text-nowrap">
+                                    <a href="{% url 'fee_set_bulk' %}" class="btn btn-sm btn-primary me-1" title="Bulk Assign Tuition Fee to Sections">
+                                        <i class="bi bi-people-fill"></i> Bulk Assign Tuition
+                                    </a>
+                                </td>
+                            </tr>
+                            {% for ft in fee_types %}
+                            <tr>
+                                <td class="fw-bold">
+                                    {{ ft.name }}
+                                    <span class="badge bg-secondary-subtle text-dark border ms-1" style="font-size: 0.75rem;">{{ ft.academic_year.name }}</span>
+                                </td>
+                                <td>₹{{ ft.total_assigned|floatformat:0 }}</td>
+                                <td class="text-success">₹{{ ft.total_paid|floatformat:0 }}</td>
+                                <td class="text-danger">₹{{ ft.total_pending|floatformat:0 }}</td>
+                                <td class="text-nowrap">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary me-1" data-bs-toggle="modal" data-bs-target="#editModal{{ ft.pk }}" title="Edit / Rename Fee Type">
+                                        <i class="bi bi-pencil"></i> Edit Name
+                                    </button>
+                                    <a href="{% url 'fee_type_assign' ft.pk %}" class="btn btn-sm btn-outline-primary me-1" title="Same amount for whole section(s)">
+                                        <i class="bi bi-people-fill"></i> Assign / Re-assign
+                                    </a>
+                                    <a href="{% url 'fee_type_assign_individual' ft.pk %}" class="btn btn-sm btn-outline-info me-1" title="Different amount typed by hand for each student">
+                                        <i class="bi bi-pencil-square"></i> Student Level
+                                    </a>
+                                    <a href="{% url 'fee_type_delete' ft.pk %}" class="btn btn-sm btn-outline-danger" title="Delete Fee Type">
+                                        <i class="bi bi-trash"></i> Delete
+                                    </a>
+
+                                    <!-- Edit Name Modal -->
+                                    <div class="modal fade text-start" id="editModal{{ ft.pk }}" tabindex="-1" aria-hidden="true">
+                                      <div class="modal-dialog">
+                                        <div class="modal-content">
+                                          <form method="post" action="{% url 'fee_type_edit' ft.pk %}">
+                                            {% csrf_token %}
+                                            <div class="modal-header">
+                                              <h5 class="modal-title"><i class="bi bi-pencil me-2"></i>Edit Fee Type Name</h5>
+                                              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                            </div>
+                                            <div class="modal-body text-normal">
+                                              <div class="mb-3">
+                                                <label class="form-label fw-bold">Fee Type Name <span class="text-danger">*</span></label>
+                                                <input type="text" name="name" class="form-control" value="{{ ft.name }}" required>
+                                              </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                              <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                                              <button type="submit" class="btn btn-primary">Save Changes</button>
+                                            </div>
+                                          </form>
+                                        </div>
+                                      </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center py-3 text-muted small">No custom fee types created yet. Click suggestions above to add.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function setFeeName(name) {
+    document.getElementById('feeNameInput').value = name;
+    document.getElementById('feeNameInput').focus();
+}
+</script>
+{% endblock %}

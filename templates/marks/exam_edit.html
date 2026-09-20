@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+{% block title %}Edit Exam — {{ exam.display_name }}{% endblock %}
+{% block page_title %}Edit Exam{% endblock %}
+{% block content %}
+
+<div class="mb-3">
+  <a href="{% url 'exam_list' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left"></i> Back to Exams
+  </a>
+</div>
+
+<div class="card border-0 shadow-sm" style="max-width:580px">
+  <div class="card-body p-4">
+    <h5 class="fw-bold mb-3"><i class="bi bi-pencil-square text-primary me-2"></i>Edit {{ exam.display_name }}</h5>
+    <p class="text-muted small mb-3">
+      Group: <strong>{{ exam.group.name }}</strong> | Category: <strong>{{ exam.category.name }}</strong>
+    </p>
+
+    <form method="post">
+      {% csrf_token %}
+
+      <div class="mb-3">
+        <label class="form-label fw-bold">Specific Exam Title / Number <span class="text-muted small">(Optional)</span></label>
+        <input type="text" name="custom_name" class="form-control" value="{{ exam.custom_name }}" placeholder="e.g. Weekly Test 1, Unit Test 2">
+        <div class="form-text">Enter a specific title or number for this exam. If left blank, defaults to {{ exam.exam_type.name }}.</div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label fw-bold">Exam Date <span class="text-danger">*</span></label>
+        <input type="date" name="date" class="form-control" value="{{ exam.date|date:'Y-m-d' }}" required>
+      </div>
+
+      {% if not exam.category.is_fixed_marks and subjects %}
+      <div class="mb-3">
+        <label class="form-label fw-bold">Subjects & Maximum Marks</label>
+        <div class="alert alert-info py-1 px-2 small mb-2">
+          <i class="bi bi-info-circle me-1"></i>Click <strong>- Omit</strong> if a subject was not conducted for this specific exam instance.
+        </div>
+        <div class="p-2 border rounded bg-light">
+          {% for sub in subjects %}
+          <div class="row align-items-center mb-2 p-2 rounded border bg-white subject-edit-row {% if sub.id in excluded_subject_ids %}subject-excluded{% endif %}" id="edit_sub_row_{{ sub.id }}">
+            <div class="col-6">
+              <div class="fw-bold sub-name-title">{{ sub.name }}</div>
+              <span class="badge bg-danger-subtle text-danger border border-danger ex-badge" style="{% if sub.id not in excluded_subject_ids %}display:none;{% endif %} font-size:0.7rem;">Not Conducted This Exam</span>
+            </div>
+            <div class="col-4">
+              <input type="number" name="subject_max_{{ sub.name }}" class="form-control form-control-sm subject-max-input"
+                     value="{% for s_id, val in existing_max_marks.items %}{% if s_id == sub.id %}{{ val }}{% endif %}{% endfor %}"
+                     placeholder="100" min="1" {% if sub.id in excluded_subject_ids %}disabled{% endif %}>
+            </div>
+            <div class="col-2 text-end">
+              <button type="button" class="btn btn-sm {% if sub.id in excluded_subject_ids %}btn-outline-success{% else %}btn-outline-danger{% endif %} py-0 px-2 btn-toggle-omit"
+                      onclick="toggleEditSubjectExclude(this, '{{ sub.id }}')">
+                {% if sub.id in excluded_subject_ids %}
+                <i class="bi bi-plus-circle me-1"></i>+ Include
+                {% else %}
+                <i class="bi bi-dash-circle me-1"></i>- Omit
+                {% endif %}
+              </button>
+              <input type="checkbox" name="excluded_subjects" value="{{ sub.id }}" id="chk_ex_{{ sub.id }}" style="display:none;" {% if sub.id in excluded_subject_ids %}checked{% endif %}>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="d-flex gap-2 mt-4">
+        <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Save Changes</button>
+        <a href="{% url 'exam_list' %}" class="btn btn-outline-secondary">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<style>
+.subject-excluded .sub-name-title { text-decoration: line-through; color: #9ca3af !important; }
+.subject-excluded .ex-badge { display: inline-block !important; }
+.subject-excluded { background-color: #fef2f2 !important; border-color: #fca5a5 !important; }
+</style>
+
+<script>
+function toggleEditSubjectExclude(btn, subId) {
+  const row = document.getElementById('edit_sub_row_' + subId);
+  const chk = document.getElementById('chk_ex_' + subId);
+  const maxInput = row.querySelector('.subject-max-input');
+
+  if (row.classList.contains('subject-excluded')) {
+    row.classList.remove('subject-excluded');
+    btn.className = 'btn btn-sm btn-outline-danger py-0 px-2 btn-toggle-omit';
+    btn.innerHTML = '<i class="bi bi-dash-circle me-1"></i>- Omit';
+    if (chk) chk.checked = false;
+    if (maxInput) { maxInput.disabled = false; }
+  } else {
+    row.classList.add('subject-excluded');
+    btn.className = 'btn btn-sm btn-outline-success py-0 px-2 btn-toggle-omit';
+    btn.innerHTML = '<i class="bi bi-plus-circle me-1"></i>+ Include';
+    if (chk) chk.checked = true;
+    if (maxInput) { maxInput.disabled = true; }
+  }
+}
+</script>
+
+{% endblock %}

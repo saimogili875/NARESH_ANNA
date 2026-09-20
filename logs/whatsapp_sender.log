@@ -1,0 +1,22 @@
+[2026-09-20 13:25:12] [ERROR] [whatsapp_sender]: Error querying pending messages: database table is locked: whatsapp_pendingmessage
+[2026-09-20 13:26:04] [ERROR] [whatsapp_sender]: Error querying pending messages: database table is locked: whatsapp_pendingmessage
+[2026-09-20 14:23:16] [ERROR] [whatsapp_sender]: Error querying pending messages: database table is locked: whatsapp_pendingmessage
+[2026-09-20 14:23:16] [INFO] [whatsapp_sender]: GEMINI_API_KEY not set. Returning original text for language te.
+[2026-09-20 14:23:16] [INFO] [whatsapp_sender]: Sending template 'absence_alert' to 919876543210 with 3 params, lang=en
+[2026-09-20 14:23:16] [INFO] [whatsapp_sender]: Template 'absence_alert' (en) sent to 919876543210: wamid.HBgL
+[2026-09-20 14:23:16] [INFO] [whatsapp_sender]: Sending template 'absence_alert' to 919876543210 with 3 params, lang=hi
+[2026-09-20 14:23:18] [INFO] [whatsapp_sender]: Template 'absence_alert' (hi) sent to 919876543210: wamid.HBgL123
+[2026-09-20 14:23:18] [INFO] [whatsapp_sender]: Done: 1 sent, 0 failed out of 1.
+[2026-09-20 14:23:18] [INFO] [whatsapp_sender]: GEMINI_API_KEY not set. Returning original English text for trilingual request.
+[2026-09-20 14:23:18] [INFO] [whatsapp_sender]: Message wamid.TEST12345 status: delivered
+[2026-09-20 14:23:18] [INFO] [whatsapp_sender]: Message wamid.TEST12345 status: read
+[2026-09-20 14:23:59] [ERROR] [whatsapp_sender]: Error querying pending messages: database table is locked: whatsapp_pendingmessage
+[2026-09-20 14:23:59] [INFO] [whatsapp_sender]: GEMINI_API_KEY not set. Returning original text for language te.
+[2026-09-20 14:23:59] [INFO] [whatsapp_sender]: Sending template 'absence_alert' to 919876543210 with 3 params, lang=en
+[2026-09-20 14:23:59] [INFO] [whatsapp_sender]: Template 'absence_alert' (en) sent to 919876543210: wamid.HBgL
+[2026-09-20 14:23:59] [INFO] [whatsapp_sender]: Sending template 'absence_alert' to 919876543210 with 3 params, lang=hi
+[2026-09-20 14:24:01] [INFO] [whatsapp_sender]: Template 'absence_alert' (hi) sent to 919876543210: wamid.HBgL123
+[2026-09-20 14:24:01] [INFO] [whatsapp_sender]: Done: 1 sent, 0 failed out of 1.
+[2026-09-20 14:24:01] [INFO] [whatsapp_sender]: GEMINI_API_KEY not set. Returning original English text for trilingual request.
+[2026-09-20 14:24:01] [INFO] [whatsapp_sender]: Message wamid.TEST12345 status: delivered
+[2026-09-20 14:24:01] [INFO] [whatsapp_sender]: Message wamid.TEST12345 status: read

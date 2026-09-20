@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="card border-0 shadow-sm" style="max-width:600px">
+  <div class="card-body p-4">
+    <form method="post">
+      {% csrf_token %}
+      {% if not obj %}
+      <div class="mb-3">
+        <label class="form-label">User Account</label>
+        <select name="user" class="form-select" required>
+          <option value="">-- Select User --</option>
+          {% for u in users %}
+          <option value="{{ u.pk }}">{{ u.username }} ({{ u.get_full_name|default:u.username }})</option>
+          {% endfor %}
+        </select>
+        <small class="text-muted">Must be a Faculty role user. <a href="{% url 'user_add' %}">Create one</a> if needed.</small>
+      </div>
+      {% endif %}
+      <div class="mb-3">
+        <label class="form-label">Employee ID</label>
+        <input type="text" name="employee_id" class="form-control" value="{{ obj.employee_id|default:'' }}" required>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Full Name</label>
+        <input type="text" name="name" class="form-control" value="{{ obj.name|default:'' }}" required>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Subject</label>
+        <input type="text" name="subject" class="form-control" value="{{ obj.subject|default:'' }}" required>
+      </div>
+      <div class="row g-3 mb-3">
+        <div class="col-md-6">
+          <label class="form-label">Phone</label>
+          <input type="text" name="phone" class="form-control" value="{{ obj.phone|default:'' }}" required>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Email</label>
+          <input type="email" name="email" class="form-control" value="{{ obj.email|default:'' }}" required>
+        </div>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Date of Joining</label>
+        <input type="date" name="date_of_joining" class="form-control" value="{{ obj.date_of_joining|default:'' }}" required>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Address</label>
+        <textarea name="address" class="form-control" rows="2">{{ obj.address|default:'' }}</textarea>
+      </div>
+
+      <!-- Assigned Sections -->
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Assigned Sections</label>
+        <small class="text-muted d-block mb-2">Select sections this faculty can access for attendance.</small>
+        <div class="border rounded p-3" style="max-height:220px;overflow-y:auto;background:#f8f9fa">
+          {% for s in sections %}
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="assigned_sections"
+                   value="{{ s.pk }}" id="sec_{{ s.pk }}"
+                   {% if s.pk in assigned_ids %}checked{% endif %}>
+            <label class="form-check-label" for="sec_{{ s.pk }}">
+              {{ s }}
+            </label>
+          </div>
+          {% empty %}
+          <span class="text-muted">No sections available.</span>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Assigned Subjects -->
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Assigned Subjects (Marks Entry)</label>
+        <small class="text-muted d-block mb-2">Select subjects this faculty can enter marks for.</small>
+        <div class="border rounded p-3" style="max-height:220px;overflow-y:auto;background:#f8f9fa">
+          {% for sub in all_subjects %}
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="assigned_subjects"
+                   value="{{ sub.pk }}" id="sub_{{ sub.pk }}"
+                   {% if sub.pk in assigned_subject_ids %}checked{% endif %}>
+            <label class="form-check-label" for="sub_{{ sub.pk }}">
+              {{ sub.name }}
+            </label>
+          </div>
+          {% empty %}
+          <span class="text-muted">No subjects available.</span>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">Save</button>
+        <a href="{% url 'faculty_list' %}" class="btn btn-outline-secondary">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

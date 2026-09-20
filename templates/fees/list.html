@@ -1,0 +1,236 @@
+{% extends 'base.html' %}
+{% block title %}Fees — Sri NRI Junior College{% endblock %}
+{% block page_title %}Fee Management{% endblock %}
+{% block content %}
+
+<!-- Top Metric Cards -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background: rgba(197,160,89,0.14); color: var(--sf-gold); border: 1px solid rgba(197,160,89,0.25);">
+        <i class="bi bi-people-fill"></i>
+      </div>
+      <div>
+        <div class="value num">{{ fee_data|length }}</div>
+        <div class="label">Total Students</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background: rgba(90,200,250,0.14); color: #5AC8FA; border: 1px solid rgba(90,200,250,0.25);">
+        <i class="bi bi-cash-stack"></i>
+      </div>
+      <div>
+        <div class="value num">₹{{ total_fees|floatformat:0 }}</div>
+        <div class="label">Total Fee Assigned</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background: rgba(48,209,88,0.14); color: #30D158; border: 1px solid rgba(48,209,88,0.25);">
+        <i class="bi bi-cash-coin"></i>
+      </div>
+      <div>
+        <div class="value num">₹{{ total_collected|floatformat:0 }}</div>
+        <div class="label">Total Collected</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background: rgba(255,69,58,0.14); color: #FF453A; border: 1px solid rgba(255,69,58,0.25);">
+        <i class="bi bi-exclamation-circle-fill"></i>
+      </div>
+      <div>
+        <div class="value num">₹{{ total_pending|floatformat:0 }}</div>
+        <div class="label">Total Pending</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Prominent Search & Filters Bar -->
+<div class="card border-0 shadow-sm mb-3 p-3">
+  <form method="get" id="feeFilterForm">
+    <!-- Prominent Search Input -->
+    <div class="position-relative mb-3">
+      <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted fs-6"></i>
+      <input type="text" name="q" id="feeSearchInput" value="{{ q }}"
+             class="form-control ps-5 pe-5 rounded-pill shadow-sm"
+             placeholder="Search by student name, admission number, or section... (Press '/' to focus)" autocomplete="off">
+      {% if q %}
+      <a href="{% url 'fee_list' %}" class="btn btn-link text-muted position-absolute top-50 end-0 translate-middle-y me-2 p-0 text-decoration-none">
+        <i class="bi bi-x-circle-fill fs-5"></i>
+      </a>
+      {% endif %}
+    </div>
+
+    <!-- Secondary Filters Row -->
+    <div class="row g-2 align-items-center">
+      <div class="col-12 col-sm-6 col-md-3">
+        <select name="section" class="form-select form-select-sm" onchange="this.form.submit()">
+          <option value="">All Sections</option>
+          {% for s in sections %}
+          <option value="{{ s.id }}" {% if section_filter == s.id|stringformat:'s' %}selected{% endif %}>
+            {{ s.group.name }} - Yr{{ s.year }} - {{ s.name }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-12 col-sm-6 col-md-3">
+        <select name="fee_type" class="form-select form-select-sm" onchange="this.form.submit()">
+          <option value="">All Fee Types</option>
+          <option value="tuition" {% if fee_type_filter == 'tuition' %}selected{% endif %}>Tuition Fee (Core Fee)</option>
+          {% for ft in fee_types %}
+          <option value="{{ ft.id }}" {% if fee_type_filter == ft.id|stringformat:'s' %}selected{% endif %}>{{ ft.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-12 col-sm-6 col-md-3">
+        <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
+          <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending Fees</option>
+          <option value="not_started" {% if status_filter == 'not_started' %}selected{% endif %}>Not Started</option>
+          <option value="partial" {% if status_filter == 'partial' %}selected{% endif %}>Partial Paid</option>
+          <option value="paid" {% if status_filter == 'paid' %}selected{% endif %}>Fully Paid</option>
+          <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All Fees</option>
+        </select>
+      </div>
+      <div class="col-12 col-sm-6 col-md-3 text-end d-flex gap-2 justify-content-end">
+        <button type="submit" class="btn btn-primary btn-sm px-3">Search</button>
+        <a href="{% url 'fee_list' %}" class="btn btn-outline-secondary btn-sm">Clear</a>
+      </div>
+    </div>
+  </form>
+
+  <!-- Quick Action Buttons -->
+  <div class="d-flex flex-wrap gap-2 mt-3 pt-3 border-top justify-content-between align-items-center">
+    <div class="d-flex gap-2 flex-wrap">
+      <a href="{% url 'fee_set_bulk' %}" class="btn btn-outline-primary btn-sm rounded-pill"><i class="bi bi-people-fill me-1"></i>Bulk Assign Tuition</a>
+      <a href="{% url 'fee_type_manage' %}" class="btn btn-outline-primary btn-sm rounded-pill"><i class="bi bi-gear me-1"></i>Manage Fee Types</a>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+      <a href="{% url 'fee_export' %}?fmt=pdf&section={{ section_filter }}&fee_type={{ fee_type_filter }}&status={{ status_filter }}&q={{ q }}" class="btn btn-outline-danger btn-sm rounded-pill"><i class="bi bi-file-earmark-pdf me-1"></i>Export PDF</a>
+      <a href="{% url 'fee_export' %}?fmt=excel&section={{ section_filter }}&fee_type={{ fee_type_filter }}&status={{ status_filter }}&q={{ q }}" class="btn btn-outline-success btn-sm rounded-pill"><i class="bi bi-file-earmark-excel me-1"></i>Export Excel</a>
+    </div>
+  </div>
+</div>
+
+<!-- Main Table Card -->
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0 align-middle" id="feeTable">
+        <thead>
+          <tr>
+            <th style="min-width:180px">STUDENT</th>
+            <th>SECTION</th>
+            <th>TUITION ASSIGNED</th>
+            <th>TUITION PAID</th>
+            <th>TUITION PENDING</th>
+            {% for ft in fee_types %}
+            <th>{{ ft.name|upper }} <div class="text-muted fw-normal" style="font-size:0.68rem">(Paid / Pending)</div></th>
+            {% endfor %}
+            <th style="min-width:110px">% PAID</th>
+            <th>OVERALL STATUS</th>
+            <th class="text-center">ACTIONS</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in fee_data %}
+          {% with sf=item.student_fee charges=item.charges %}
+          <tr class="fee-row" data-name="{{ sf.student.name|lower }}" data-adm="{{ sf.student.admission_number|lower }}" data-sec="{{ sf.student.section|default:''|lower }}">
+            <td>
+              <div class="fw-bold text-white d-flex align-items-center gap-2">
+                {% include '_avatar.html' with student=sf.student size=32 %}
+                <div>
+                  <div>{{ sf.student.name }}</div>
+                  <div class="small text-muted num" style="font-size:0.7rem">{{ sf.student.admission_number }}</div>
+                </div>
+              </div>
+            </td>
+            <td class="small">{{ sf.student.section|default:"—" }}</td>
+            <td class="fw-bold num">₹{{ sf.total_fee|floatformat:0 }}</td>
+            <td class="text-success fw-bold num">₹{{ sf.total_paid|floatformat:0 }}</td>
+            <td class="text-danger fw-bold num">₹{{ sf.total_pending|floatformat:0 }}</td>
+            
+            {% for charge in charges %}
+              {% if charge %}
+              <td class="small num">
+                <span class="text-success fw-bold">₹{{ charge.total_paid|floatformat:0 }}</span> / 
+                <span class="{% if charge.total_pending > 0 %}text-danger fw-bold{% else %}text-muted{% endif %}">₹{{ charge.total_pending|floatformat:0 }}</span>
+              </td>
+              {% else %}
+              <td class="small text-muted">—</td>
+              {% endif %}
+            {% endfor %}
+
+            <!-- % Paid Column -->
+            <td>
+              {% if sf.total_fee > 0 %}
+                {% with pct=sf.payment_percentage %}
+                <div class="d-flex align-items-center gap-2" style="min-width: 100px;">
+                  <div class="progress flex-grow-1" style="height: 6px; background: rgba(255,255,255,0.1);">
+                    <div class="progress-bar {% if pct == 100 %}bg-success{% elif pct >= 50 %}bg-warning{% else %}bg-danger{% endif %}"
+                         role="progressbar" style="width: {{ pct }}%;"></div>
+                  </div>
+                  <span class="badge num {% if pct == 100 %}bg-success{% elif pct >= 50 %}bg-warning text-dark{% else %}bg-danger{% endif %}" style="font-size: 0.72rem;">
+                    {{ pct }}%
+                  </span>
+                </div>
+                {% endwith %}
+              {% else %}
+                <span class="text-muted small">—</span>
+              {% endif %}
+            </td>
+
+            <td>
+              {% if item.overall_status == 'paid' or item.overall_status == 'Paid' %}
+                <span class="badge bg-success">Paid</span>
+              {% elif item.overall_status == 'partial' or item.overall_status == 'Partial' %}
+                <span class="badge bg-warning text-dark">Partial</span>
+              {% elif item.overall_status == 'not_started' %}
+                <span class="badge bg-secondary-subtle text-secondary border">Not Started</span>
+              {% else %}
+                <span class="badge bg-danger">Pending</span>
+              {% endif %}
+            </td>
+
+            <td class="text-center">
+              <div class="d-inline-flex gap-1">
+                <a href="{% url 'fee_detail' sf.student.pk %}" class="btn btn-sm btn-outline-secondary px-2" title="View Detail"><i class="bi bi-eye"></i></a>
+                <a href="{% url 'fee_set' sf.student.pk %}" class="btn btn-sm btn-outline-secondary px-2" title="Set Fee"><i class="bi bi-pencil"></i></a>
+                <a href="{% url 'fee_collect' sf.student.pk %}" class="btn btn-sm btn-primary px-3 fw-bold" title="Collect Fee">Collect</a>
+              </div>
+            </td>
+          </tr>
+          {% endwith %}
+          {% empty %}
+          <tr>
+            <td colspan="{{ fee_types|length|add:'8' }}" class="text-center text-muted py-5">
+              <i class="bi bi-search fs-2 d-block mb-1"></i>
+              No fee records found. <a href="{% url 'student_list' %}">Go to Students</a>.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const searchInput = document.getElementById('feeSearchInput');
+  if (searchInput) {
+    document.addEventListener('keydown', function(e) {
+      if (e.key === '/' && document.activeElement !== searchInput) {
+        e.preventDefault();
+        searchInput.focus();
+      }
+    });
+  }
+});
+</script>
+{% endblock %}
