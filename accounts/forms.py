@@ -28,6 +28,17 @@ class UserForm(forms.ModelForm):
         self.fields['role'].widget.attrs['class'] = 'form-select'
         self.fields['role'].choices = [('faculty', 'Faculty'), ('accounts', 'Accounts')]
 
+    def clean_password(self):
+        pw = self.cleaned_data.get('password')
+        if pw:
+            from django.contrib.auth.password_validation import validate_password
+            from django.core.exceptions import ValidationError
+            try:
+                validate_password(pw, self.instance)
+            except ValidationError as e:
+                raise forms.ValidationError(e.messages)
+        return pw
+
     def save(self, commit=True):
         user = super().save(commit=False)
         pw = self.cleaned_data.get('password')
@@ -40,6 +51,7 @@ class UserForm(forms.ModelForm):
         if commit:
             user.save()
         return user
+
 
 
 class GroupForm(forms.ModelForm):

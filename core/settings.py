@@ -146,7 +146,7 @@ if HAS_STORAGES and AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY and AWS_STORAGE_
     AWS_S3_OBJECT_PARAMETERS = {
         'CacheControl': 'max-age=86400',
     }
-    AWS_QUERYSTRING_AUTH = False
+    AWS_QUERYSTRING_AUTH = True
     
     DEFAULT_FILE_STORAGE = 'storages.backends.s3.S3Storage'
     
@@ -160,9 +160,10 @@ if HAS_STORAGES and AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY and AWS_STORAGE_
                 "region_name": AWS_S3_REGION_NAME,
                 "location": AWS_LOCATION,
                 "custom_domain": AWS_S3_CUSTOM_DOMAIN or None,
-                "querystring_auth": False,
+                "querystring_auth": True,
             },
         },
+
         "staticfiles": {
             "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
         },
@@ -278,7 +279,7 @@ AXES_COOLOFF_TIME = config('AXES_COOLOFF_TIME', default=1, cast=float)  # hours
 AXES_LOCKOUT_PARAMETERS = [["ip_address", "username"]]
 AXES_RESET_ON_SUCCESS = True
 AXES_LOCKOUT_TEMPLATE = None  # We handle lockout in the login view
-AXES_WHITELIST_CALLABLE = 'accounts.views.axes_admin_whitelist'
+
 
 # --- Email (for lockout alerts) ---
 EMAIL_BACKEND = os.environ.get(

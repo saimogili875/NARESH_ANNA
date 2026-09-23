@@ -16,3 +16,7 @@ To enable durable cloud media storage on Render (so uploaded student photos surv
 ### Behavior:
 - When `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, and `AWS_STORAGE_BUCKET_NAME` are set in Render, Django automatically routes all file uploads (student photos, lab reports, etc.) to AWS S3 using `django-storages`.
 - When these credentials are not set (such as in local development), Django automatically falls back to local disk file storage (`FileSystemStorage`), and WhiteNoise / Django URL routing serves media seamlessly.
+
+## Admin Superuser Management
+Initial superuser accounts must be created manually using `python manage.py createsuperuser` or via environment-variable-driven setup scripts (`python manage.py bootstrap_admins`). Hardcoded credentials should never be committed to git.
+

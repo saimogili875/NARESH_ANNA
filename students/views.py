@@ -522,3 +522,15 @@ def student_import_excel(request):
             messages.warning(request, f'{len(errors)} rows had errors.')
         return redirect('student_list')
     return render(request, 'students/import.html')
+
+
+@all_roles_required
+def student_photo(request, pk):
+    allowed_sections = _get_faculty_sections(request.user)
+    student = get_object_or_404(Student.objects.filter(section__in=allowed_sections), pk=pk)
+    if not student.photo:
+        return HttpResponse("Photo not found", status=404)
+    try:
+        return HttpResponse(student.photo.read(), content_type="image/jpeg")
+    except Exception:
+        return HttpResponse("Photo not found", status=404)

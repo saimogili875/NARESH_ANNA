@@ -87,24 +87,9 @@ def get_cooloff_message(request, username=None):
 
 
 def axes_admin_whitelist(request, credentials=None):
-    """
-    Callable for AXES_WHITELIST_CALLABLE.
-    Returns True if the attempted login is for an admin user,
-    exempting them from django-axes lockout rules.
-    """
-    username = None
-    if credentials and 'username' in credentials:
-        username = credentials['username']
-    elif request and request.method == 'POST':
-        username = request.POST.get('username')
-    
-    if username:
-        try:
-            user = User.objects.get(username=username)
-            return user.role == 'admin'
-        except User.DoesNotExist:
-            pass
+    """Admin accounts follow standard axes lockout rules."""
     return False
+
 
 def landing_view(request):
     """Public Entrance / Landing Page for Sri NRI Junior College."""
@@ -133,10 +118,8 @@ def login_view(request):
             return render(request, 'accounts/login.html', {'form': LoginForm()})
 
         # --- Admin manual block check (independent of axes) ---
-        is_admin_attempt = False
         try:
             target_user = User.objects.get(username=username)
-            is_admin_attempt = target_user.role == 'admin'
             if target_user.is_blocked_by_admin:
                 msg = 'Your account has been blocked by admin. Contact admin for more details.'
                 if target_user.blocked_reason:
@@ -151,10 +134,10 @@ def login_view(request):
         except User.DoesNotExist:
             pass  # Let axes/authenticate handle unknown usernames
 
-        # Check if already locked out by axes (exempt admins)
+        # Check if already locked out by axes
         from axes.helpers import get_client_ip_address
         from axes.handlers.proxy import AxesProxyHandler
-        if not is_admin_attempt and AxesProxyHandler.is_locked(request, credentials={'username': username}):
+        if AxesProxyHandler.is_locked(request, credentials={'username': username}):
             LoginLog.objects.create(
                 username=username, status='FAILED', failure_reason='Locked out due to repeated failed attempts',
                 ip_address=ip_addr, device_info=device_str, user_agent_raw=ua_raw
@@ -168,16 +151,16 @@ def login_view(request):
                 for error in form.errors.as_data().get('captcha', []):
                     logger.error(f"reCAPTCHA Error - Code: {error.code}, Message: {error.message}, Params: {error.params}")
 
-            # Captcha or field validation failed — count toward lockout (exempt admins)
+            # Captcha or field validation failed — count toward lockout
             from django.contrib.auth.signals import user_login_failed
-            if not is_admin_attempt:
-                user_login_failed.send(
-                    sender=__name__,
-                    credentials={'username': username},
-                    request=request,
-                )
+            user_login_failed.send(
+                sender=__name__,
+                credentials={'username': username},
+                request=request,
+            )
             LoginLog.objects.create(
                 username=username, status='FAILED', failure_reason='reCAPTCHA or form validation failed',
+
                 ip_address=ip_addr, device_info=device_str, user_agent_raw=ua_raw
             )
             # Re-check lockout after this failure

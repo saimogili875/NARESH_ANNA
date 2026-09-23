@@ -143,7 +143,18 @@ def attendance_mark(request):
             messages.error(request, "Invalid date format.")
             return redirect('attendance_list')
 
+        # Check if attendance is already marked for this section and date
+        is_already_marked = Attendance.objects.filter(section=section, date=selected_date).exists()
+        if is_already_marked and not (request.user.is_superuser or request.user.role in ['admin', 'accounts']):
+            messages.error(
+                request,
+                f'Attendance for {section} on {selected_date.strftime("%d %b %Y")} is already marked and locked. Only admins can modify locked attendance.'
+            )
+            return redirect(f"/attendance/?section={section.pk}&date={selected_date.strftime('%Y-%m-%d')}")
+
+
         students = Student.objects.filter(section=section, is_active=True)
+
 
         _reason_labels = {
             'health': 'Health Issue',
@@ -424,7 +435,12 @@ def attendance_yearly(request):
             messages.error(request, 'You do not have access to that section.')
             return redirect('attendance_yearly')
         selected_section = get_object_or_404(Section, pk=section_id)
-        yr = int(year_val)
+        try:
+            yr = int(year_val)
+        except (ValueError, TypeError):
+            yr = timezone.localdate().year
+
+
         students = Student.objects.filter(section=selected_section, is_active=True)
         records = Attendance.objects.filter(
             student__in=students,

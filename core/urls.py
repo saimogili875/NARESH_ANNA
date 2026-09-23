@@ -19,6 +19,6 @@ urlpatterns = [
     path('misc/', include('misc.urls')),
     path('whatsapp/', include('whatsapp.urls')),
     path('captcha/', include('captcha.urls')),
-    re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
-] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+]
+
 

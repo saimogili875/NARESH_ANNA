@@ -1,5 +1,7 @@
 import json
 import logging
+import hmac
+import hashlib
 from django.shortcuts import render
 from django.http import JsonResponse, HttpResponse
 from django.views import View
@@ -27,6 +29,19 @@ def meta_webhook(request):
         return HttpResponse("Forbidden", status=403)
 
     if request.method == "POST":
+        app_secret = getattr(settings, 'META_APP_SECRET', '')
+        if app_secret:
+            signature_header = request.headers.get("X-Hub-Signature-256") or request.META.get("HTTP_X_HUB_SIGNATURE_256", "")
+            if not signature_header or not signature_header.startswith("sha256="):
+                logger.warning("Missing or invalid X-Hub-Signature-256 header")
+                return HttpResponse("Forbidden", status=403)
+
+            expected_hash = hmac.new(app_secret.encode('utf-8'), request.body, hashlib.sha256).hexdigest()
+            expected_header = f"sha256={expected_hash}"
+            if not hmac.compare_digest(signature_header, expected_header):
+                logger.warning("X-Hub-Signature-256 signature verification failed")
+                return HttpResponse("Forbidden", status=403)
+
         try:
             data = json.loads(request.body)
             entries = data.get("entry", [])
@@ -81,7 +96,6 @@ def meta_webhook(request):
 
 @method_decorator(login_required, name="dispatch")
 @method_decorator(admin_required, name="dispatch")
-@method_decorator(csrf_exempt, name="dispatch")
 class SendMessageView(View):
     def post(self, request):
         try:
@@ -100,7 +114,8 @@ class SendMessageView(View):
             return JsonResponse({"error": "Invalid JSON body"}, status=400)
 
 
-@method_decorator(csrf_exempt, name="dispatch")
+@method_decorator(login_required, name="dispatch")
+@method_decorator(admin_required, name="dispatch")
 class SendTemplateView(View):
     def post(self, request):
         try:
@@ -124,7 +139,8 @@ class SendTemplateView(View):
             return JsonResponse({"error": "Invalid JSON body"}, status=400)
 
 
-@csrf_exempt
+@login_required
+@admin_required
 def trigger_batch_webhook(request):
     from whatsapp.models import PendingMessage
     from .services import send_whatsapp_text, send_whatsapp_template, build_template_components
@@ -185,7 +201,8 @@ def trigger_batch_webhook(request):
     })
 
 
-@csrf_exempt
+@login_required
+@admin_required
 def retry_failed_messages(request):
     from whatsapp.models import PendingMessage
     from .services import dispatch_pending_messages_async
@@ -209,6 +226,7 @@ def retry_failed_messages(request):
         "message": f"Reset {reset_count} failed messages. Dispatching in background.",
         "reset": reset_count,
     })
+
 
 
 @login_required

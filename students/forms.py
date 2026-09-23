@@ -53,8 +53,11 @@ class StudentForm(forms.ModelForm):
 
     def _clean_mobile_field(self, field_name):
         value = self.cleaned_data.get(field_name, '')
-        if value and not value.isdigit():
-            raise ValidationError('Mobile number must contain digits only.')
+        if value:
+            if not value.isdigit():
+                raise ValidationError('Mobile number must contain digits only.')
+            if len(value) != 10:
+                raise ValidationError('Mobile number must be exactly 10 digits.')
         return value
 
     def clean_mobile(self):
@@ -68,6 +71,16 @@ class StudentForm(forms.ModelForm):
 
     def clean_fourth_mobile(self):
         return self._clean_mobile_field('fourth_mobile')
+
+    def clean_aadhaar(self):
+        value = self.cleaned_data.get('aadhaar', '')
+        if value:
+            if not value.isdigit():
+                raise ValidationError('Aadhaar number must contain digits only.')
+            if len(value) != 12:
+                raise ValidationError('Aadhaar number must be exactly 12 digits.')
+        return value
+
 
     def clean_photo(self):
         photo = self.cleaned_data.get('photo')

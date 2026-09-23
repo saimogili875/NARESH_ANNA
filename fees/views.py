@@ -593,6 +593,21 @@ def fee_collect(request, pk):
         else:
             target_fee_charge = get_object_or_404(StudentFeeCharge, pk=fee_head_id, student=student)
 
+        # Double-submit protection: reject identical submission within 5 seconds
+        recent_window = timezone.now() - timezone.timedelta(seconds=5)
+        recent_duplicate = FeePayment.objects.filter(
+            amount=amount,
+            created_at__gte=recent_window,
+        )
+        if target_student_fee:
+            recent_duplicate = recent_duplicate.filter(student_fee=target_student_fee)
+        elif target_fee_charge:
+            recent_duplicate = recent_duplicate.filter(fee_charge=target_fee_charge)
+
+        if recent_duplicate.exists():
+            messages.warning(request, 'A payment with identical amount and fee head was just processed. Duplicate submission prevented.')
+            return redirect('fee_detail', pk=pk)
+
         FeePayment.objects.create(
             student_fee=target_student_fee,
             fee_charge=target_fee_charge,
@@ -604,10 +619,13 @@ def fee_collect(request, pk):
             remarks=remarks,
         )
         messages.success(request, f'₹{amount} collected! Receipt: {receipt_number}')
+
+        from django.utils.http import url_has_allowed_host_and_scheme
         next_url = request.POST.get('next', '').strip()
-        if next_url:
+        if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
             return redirect(next_url)
         return redirect('fee_detail', pk=pk)
+
 
     return render(request, 'fees/collect.html', {
         'student': student, 'student_fee': student_fee,
@@ -641,10 +659,14 @@ def payment_edit(request, pk, payment_id):
 
         try:
             amount = float(raw_amount)
+            if amount <= 0:
+                messages.error(request, 'Payment amount must be greater than zero.')
+                return redirect('payment_edit', pk=pk, payment_id=payment_id)
             payment.amount = amount
         except ValueError:
             messages.error(request, 'Invalid amount value.')
             return redirect('payment_edit', pk=pk, payment_id=payment_id)
+
 
         if payment_date_str:
             try:

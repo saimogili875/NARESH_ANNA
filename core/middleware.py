@@ -29,16 +29,30 @@ class IPWhitelistMiddleware:
         return networks
 
     def _get_client_ip(self, request):
-        # Render sets HTTP_TRUE_CLIENT_IP via Cloudflare
-        ip = request.META.get("HTTP_TRUE_CLIENT_IP", "").strip()
-        if ip:
-            return ip
-        # Fall back to first entry in X-Forwarded-For
-        xff = request.META.get("HTTP_X_FORWARDED_FOR", "")
-        if xff:
-            return xff.split(",")[0].strip()
-        # Local / dev fallback
-        return request.META.get("REMOTE_ADDR", "")
+        remote_addr = request.META.get("REMOTE_ADDR", "").strip()
+        trusted_proxies = getattr(settings, "TRUSTED_PROXY_IPS", [])
+
+        # TODO: Needs infra-level confirmation for Render/Cloudflare trusted proxy IP ranges.
+        # Only trust HTTP_TRUE_CLIENT_IP / X-Forwarded-For if REMOTE_ADDR is a confirmed trusted proxy.
+        if trusted_proxies:
+            is_trusted = False
+            try:
+                remote_ip = ipaddress.ip_address(remote_addr)
+                is_trusted = any(remote_ip in ipaddress.ip_network(p, strict=False) for p in trusted_proxies)
+            except ValueError:
+                is_trusted = False
+
+            if is_trusted:
+                ip = request.META.get("HTTP_TRUE_CLIENT_IP", "").strip()
+                if ip:
+                    return ip
+                xff = request.META.get("HTTP_X_FORWARDED_FOR", "")
+                if xff:
+                    return xff.split(",")[0].strip()
+
+        # Fallback to REMOTE_ADDR when immediate connecting peer cannot be confirmed as a trusted proxy
+        return remote_addr
+
 
     def __call__(self, request):
         # Skip if no whitelist configured (open access, e.g. local dev)

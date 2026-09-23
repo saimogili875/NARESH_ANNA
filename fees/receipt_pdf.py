@@ -251,17 +251,20 @@ def generate_receipt_pdf(payment):
     return pdf_bytes
 
 
+import uuid
+
+
 def save_receipt_pdf(payment):
     """
-    Generate the receipt PDF and save it locally under MEDIA_ROOT/receipts/.
-    Returns (relative_media_path, pdf_bytes), e.g. ('receipts/RCP1234.pdf', b'...').
+    Generate the receipt PDF and save it under MEDIA_ROOT/receipts/ using a random unguessable token.
+    Returns (relative_media_path, pdf_bytes), e.g. ('receipts/receipt_a1b2c3d4.pdf', b'...').
     """
     pdf_bytes = generate_receipt_pdf(payment)
 
     receipts_dir = os.path.join(settings.MEDIA_ROOT, 'receipts')
     os.makedirs(receipts_dir, exist_ok=True)
 
-    filename = f"{payment.receipt_number}.pdf"
+    filename = f"receipt_{uuid.uuid4().hex}.pdf"
     file_path = os.path.join(receipts_dir, filename)
 
     with open(file_path, 'wb') as f:
@@ -269,3 +272,4 @@ def save_receipt_pdf(payment):
 
     relative_path = f"receipts/{filename}"
     return relative_path, pdf_bytes
+
