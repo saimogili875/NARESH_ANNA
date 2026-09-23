@@ -9,7 +9,8 @@ from django.conf import settings
 # Fixed-Duration Session Expiry Middleware
 # ---------------------------------------------------------------------------
 # Must run AFTER AuthenticationMiddleware, BEFORE FacultyAccessMiddleware.
-# Faculty: 30 min from login. All others: 60 min from login.
+# Faculty: 120 min from login. All others: 120 min from login.
+
 # Not idle-based — expires regardless of activity.
 
 _EXPIRY_SKIP_PREFIXES = ('/static/', '/media/', '/login/', '/logout/', '/admin/')

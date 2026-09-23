@@ -196,9 +196,10 @@ def login_view(request):
                     username=form.cleaned_data['username'], user=target_user, status='FAILED', failure_reason=reason,
                     ip_address=ip_addr, device_info=device_str, user_agent_raw=ua_raw
                 )
-                if not is_admin_attempt and AxesProxyHandler.is_locked(request, credentials={'username': form.cleaned_data['username']}):
+                if AxesProxyHandler.is_locked(request, credentials={'username': form.cleaned_data['username']}):
                     messages.error(request, get_cooloff_message(request, form.cleaned_data['username']))
                     return render(request, 'accounts/login.html', {'form': LoginForm()})
+
                 messages.error(request, 'Invalid username or password.')
     return render(request, 'accounts/login.html', {'form': form})
 

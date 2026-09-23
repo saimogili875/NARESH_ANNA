@@ -304,5 +304,5 @@ SESSION_EXPIRY_OTHER_MINUTES = 120     # Admin / accounts / superuser (2 hours)
 SESSION_COOKIE_AGE = 7200              # 2 hours (7200 seconds)
 
 # --- WhatsApp Batch Sender ---
-WHATSAPP_BATCH_SIZE = config('WHATSAPP_BATCH_SIZE', default=50, cast=int)
+
 
