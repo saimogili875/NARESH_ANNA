@@ -21,9 +21,8 @@ REPORT_TITLE = "Student Weekly & Monthly Performance Report"
 def get_logo_image(width=45, height=45):
     """Attempt to locate official SRI NRI logo and return a ReportLab Image component."""
     possible_paths = [
-        os.path.join(settings.BASE_DIR, 'static', 'srinri_logo.png'),
         os.path.join(settings.BASE_DIR, 'static', 'images', 'sri_nri_logo.png'),
-        os.path.join(settings.BASE_DIR, 'static', 'images', 'srinri_logo.png'),
+        os.path.join(settings.BASE_DIR, 'static', 'sri_nri_logo.png'),
     ]
     for p in possible_paths:
         if os.path.exists(p):

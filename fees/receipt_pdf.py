@@ -20,7 +20,7 @@ def get_logo_path():
     primary = os.path.join(settings.BASE_DIR, "static", "images", "sri_nri_logo.png")
     if os.path.exists(primary):
         return primary
-    fallback = os.path.join(settings.BASE_DIR, "static", "srinri_logo.png")
+    fallback = os.path.join(settings.BASE_DIR, "static", "sri_nri_logo.png")
     if os.path.exists(fallback):
         return fallback
     return None
