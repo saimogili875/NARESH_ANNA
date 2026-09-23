@@ -2,6 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.views.decorators.http import require_POST
 from accounts.decorators import admin_required, all_roles_required, superuser_required
 from django.utils import timezone
 from django.db.models import Sum, Count, Q
@@ -326,6 +327,7 @@ def group_list(request):
     from attendance.models import Attendance
 
     today = timezone.localdate()
+    q = request.GET.get('q', '').strip()
     date_str = request.GET.get('date', '')
     try:
         selected_date = Date.fromisoformat(date_str) if date_str else today
@@ -355,7 +357,15 @@ def group_list(request):
             Section.objects.get_or_create(group=grp, year='1', name='A', defaults={'academic_year': active_year})
             Section.objects.get_or_create(group=grp, year='2', name='A', defaults={'academic_year': active_year})
 
-    groups = Group.objects.prefetch_related('sections').all().order_by('id')
+    groups_qs = Group.objects.prefetch_related('sections').all()
+    if q:
+        groups_qs = groups_qs.filter(
+            Q(name__icontains=q) |
+            Q(code__icontains=q) |
+            Q(sections__name__icontains=q) |
+            Q(sections__year__icontains=q)
+        ).distinct()
+    groups = groups_qs.order_by('id')
     total_faculty = Faculty.objects.filter(is_active=True).count()
     total_sections = Section.objects.count()
     total_students = Student.objects.filter(is_active=True).count()
@@ -466,6 +476,7 @@ def group_list(request):
         'total_faculty': total_faculty,
         'selected_date': selected_date,
         'today': today,
+        'q': q,
     })
 
 @admin_required
@@ -488,9 +499,27 @@ def group_edit(request, pk):
     return render(request, 'accounts/group_form.html', {'form': form, 'title': 'Edit Group'})
 
 @admin_required
+@require_POST
 def group_delete(request, pk):
-    get_object_or_404(Group, pk=pk).delete()
-    messages.success(request, 'Group deleted.')
+    group = get_object_or_404(Group, pk=pk)
+    sections = group.sections.all()
+    section_count = sections.count()
+    student_count = Student.objects.filter(section__group=group).count()
+
+    if student_count > 0:
+        messages.error(
+            request,
+            f'Cannot delete group "{group.name}": {student_count} student(s) across {section_count} section(s) '
+            f'are assigned to this group. Please reassign or remove the students first.'
+        )
+        return redirect('group_list')
+
+    group_name = group.name
+    try:
+        group.delete()
+        messages.success(request, f'Group "{group_name}" deleted successfully.')
+    except Exception as e:
+        messages.error(request, f'Could not delete group "{group_name}": {e}')
     return redirect('group_list')
 
 @admin_required
@@ -513,9 +542,20 @@ def section_edit(request, pk):
     return render(request, 'accounts/section_form.html', {'form': form, 'title': 'Edit Section'})
 
 @admin_required
+@require_POST
 def section_delete(request, pk):
     sec = get_object_or_404(Section, pk=pk)
     sec_name = str(sec)
+    student_count = Student.objects.filter(section=sec).count()
+
+    if student_count > 0:
+        messages.error(
+            request,
+            f'Cannot delete section "{sec_name}": {student_count} student(s) '
+            f'are assigned to this section. Please reassign or remove the students first.'
+        )
+        return redirect('group_list')
+
     try:
         sec.delete()
         messages.success(request, f'Section "{sec_name}" deleted successfully.')

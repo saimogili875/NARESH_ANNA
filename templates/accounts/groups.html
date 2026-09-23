@@ -106,14 +106,22 @@
 
 <!-- Top bar: date picker + actions -->
 <div class="d-flex gap-2 justify-content-between align-items-center mb-4 flex-wrap">
-  <form method="get" class="d-flex align-items-center gap-2">
+  <form method="get" class="d-flex align-items-center gap-2 flex-wrap">
     <i class="bi bi-calendar3 text-primary fs-5"></i>
     <input type="date" name="date" value="{{ selected_date|date:'Y-m-d' }}"
-           class="form-control form-control-sm" style="width:160px;"
+           class="form-control form-control-sm" style="width:150px;"
            onchange="this.form.submit()" id="groupDatePicker">
     {% if selected_date|date:'Y-m-d' != today|date:'Y-m-d' %}
-    <a href="{% url 'group_list' %}" class="btn btn-outline-secondary btn-sm">Today</a>
+    <a href="{% url 'group_list' %}{% if q %}?q={{ q|urlencode }}{% endif %}" class="btn btn-outline-secondary btn-sm">Today</a>
     {% endif %}
+
+    <div class="input-group input-group-sm ms-md-2" style="width: 220px;">
+      <span class="input-group-text bg-transparent border-end-0 text-muted"><i class="bi bi-search"></i></span>
+      <input type="text" name="q" value="{{ q }}" placeholder="Search group/section…" class="form-control border-start-0 ps-0">
+      {% if q %}
+      <a href="{% url 'group_list' %}{% if selected_date|date:'Y-m-d' != today|date:'Y-m-d' %}?date={{ selected_date|date:'Y-m-d' }}{% endif %}" class="btn btn-outline-secondary" title="Clear search"><i class="bi bi-x"></i></a>
+      {% endif %}
+    </div>
   </form>
   <div class="d-flex gap-2 align-items-center flex-wrap">
     <span class="text-muted small">
@@ -259,10 +267,13 @@
               <a href="{% url 'section_edit' sec.pk %}" class="text-white-50 opacity-75 hover-gold" title="Edit Section" style="font-size: 0.75rem; text-decoration: none;">
                 <i class="bi bi-pencil"></i>
               </a>
-              <a href="{% url 'section_delete' sec.pk %}" class="text-danger opacity-75 hover-bright" title="Delete Section" style="font-size: 0.75rem; text-decoration: none;"
-                 onclick="return confirm('Delete section {{ sec }}? All students in this section will be permanently removed.');">
-                <i class="bi bi-x-circle-fill"></i>
-              </a>
+              <form method="post" action="{% url 'section_delete' sec.pk %}" class="d-inline"
+                    onsubmit="return confirm('Delete section {{ sec }}?');">
+                {% csrf_token %}
+                <button type="submit" class="p-0 border-0 bg-transparent text-danger opacity-75 hover-bright" title="Delete Section" style="font-size: 0.75rem; line-height: 1;">
+                  <i class="bi bi-x-circle-fill"></i>
+                </button>
+              </form>
             </div>
           </div>
           {% empty %}
@@ -292,9 +303,15 @@
                 <li><a class="dropdown-item" href="{% url 'section_add' %}"><i class="bi bi-plus me-2"></i>Add Section</a></li>
                 <li><a class="dropdown-item" href="{% url 'group_edit' gd.group.pk %}"><i class="bi bi-pencil me-2"></i>Edit Group</a></li>
                 <li><hr class="dropdown-divider"></li>
-                <li><a class="dropdown-item text-danger" href="{% url 'group_delete' gd.group.pk %}"
-                       onclick="return confirm('Delete {{ gd.group.name }}? This will PERMANENTLY delete all {{ gd.student_count }} student(s), and all their attendance/marks/fee records, in every section under this group. This cannot be undone.')">
-                  <i class="bi bi-trash me-2"></i>Delete Group</a></li>
+                <li>
+                  <form method="post" action="{% url 'group_delete' gd.group.pk %}"
+                        onsubmit="return confirm('Delete {{ gd.group.name }}? This will delete the group if no students are assigned.');">
+                    {% csrf_token %}
+                    <button type="submit" class="dropdown-item text-danger border-0 bg-transparent w-100 text-start">
+                      <i class="bi bi-trash me-2"></i>Delete Group
+                    </button>
+                  </form>
+                </li>
               </ul>
             </div>
           </div>
