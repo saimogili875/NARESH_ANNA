@@ -71,6 +71,8 @@
 </head>
 <body>
     <video id="welcome-video" autoplay muted playsinline>
+        <source src="{% static 'welcome.mp4' %}" type="video/mp4">
+        <source src="{% static 'video2.mp4' %}" type="video/mp4">
         <source src="{% static 'video.mov' %}" type="video/quicktime">
         Your browser does not support HTML5 video.
     </video>
