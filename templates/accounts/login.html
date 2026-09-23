@@ -268,7 +268,80 @@
     box-shadow:0 0 0 3px rgba(15,82,87,0.15);
   }
 
-  .captcha-row{ display:flex; align-items:center; gap:12px; margin-top:4px; }
+  .captcha-field-hdr {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+  }
+  .captcha-field-hdr label {
+    margin-bottom: 0 !important;
+  }
+  .captcha-refresh-btn {
+    background: rgba(15, 82, 87, 0.08);
+    border: 1px solid rgba(15, 82, 87, 0.22);
+    color: var(--peacock);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: all 0.2s ease;
+  }
+  .captcha-refresh-btn:hover {
+    background: var(--peacock);
+    color: var(--ivory);
+    border-color: var(--peacock);
+  }
+  .captcha-refresh-btn .spin-icon {
+    display: inline-block;
+    transition: transform 0.4s ease;
+  }
+  .captcha-refresh-btn.refreshing .spin-icon {
+    animation: rotateSpin 0.6s linear infinite;
+  }
+  @keyframes rotateSpin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  .captcha-row {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 4px;
+  }
+  .captcha-row img.captcha {
+    height: 44px;
+    border-radius: 6px;
+    border: 1.5px solid #D9CBAE;
+    cursor: pointer;
+    background: #FFFDF7;
+    transition: opacity 0.2s ease, border-color 0.2s ease;
+    align-self: flex-start;
+  }
+  .captcha-row img.captcha:hover {
+    opacity: 0.85;
+    border-color: var(--peacock);
+  }
+  .captcha-row input[type="text"] {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1.5px solid #D9CBAE;
+    background: #FFFDF7;
+    border-radius: 8px;
+    font-family: 'Hind', sans-serif;
+    font-size: 15px;
+    color: var(--ink);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  .captcha-row input[type="text"]:focus {
+    outline: none;
+    border-color: var(--peacock);
+    box-shadow: 0 0 0 3px rgba(15,82,87,0.15);
+  }
 
   .row-between{
     display:flex; align-items:center; justify-content:space-between;
@@ -415,10 +488,20 @@
 
       {% if form.captcha %}
       <div class="field">
-        <label>Security Check</label>
+        <div class="captcha-field-hdr">
+          <label for="id_captcha_1">Security Check</label>
+          <button type="button" id="refreshCaptchaBtn" class="captcha-refresh-btn" title="Click to get another captcha">
+            <i class="bi bi-arrow-clockwise spin-icon"></i> Try another captcha
+          </button>
+        </div>
         <div class="captcha-row">{{ form.captcha }}</div>
+        <div style="font-size:11.5px; color:#7A6A54; margin-top:5px;">
+          <i class="bi bi-info-circle me-1"></i>Type the code from the image. Click image or "Try another captcha" if unclear.
+        </div>
         {% if form.captcha.errors %}
-          <div style="color:#DC2626;font-size:12px;margin-top:5px;">{{ form.captcha.errors.0 }}</div>
+          <div style="color:#DC2626;font-size:12.5px;margin-top:5px;font-weight:500;">
+            <i class="bi bi-exclamation-circle-fill me-1"></i>{{ form.captcha.errors.0 }}
+          </div>
         {% endif %}
       </div>
       {% endif %}
@@ -508,6 +591,64 @@
       if (pField) pField.value = '';
     }
   }, 100);
+
+  // --- Captcha Refresh Functionality ---
+  function doCaptchaRefresh() {
+    const btn = document.getElementById('refreshCaptchaBtn');
+    const img = document.querySelector('img.captcha');
+    const keyInput = document.querySelector('input[name="captcha_0"]') || document.getElementById('id_captcha_0');
+    const textInput = document.getElementById('id_captcha_1');
+
+    if (btn) {
+      btn.classList.add('refreshing');
+      btn.disabled = true;
+    }
+
+    fetch('/captcha/refresh/', {
+      headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+      if (img && data.image_url) {
+        img.src = data.image_url;
+      }
+      if (keyInput && data.key) {
+        keyInput.value = data.key;
+      }
+      if (textInput) {
+        textInput.value = '';
+        textInput.focus();
+      }
+    })
+    .catch(function(err) {
+      console.error('Captcha refresh failed:', err);
+    })
+    .finally(function() {
+      if (btn) {
+        setTimeout(function() {
+          btn.classList.remove('refreshing');
+          btn.disabled = false;
+        }, 400);
+      }
+    });
+  }
+
+  const refreshBtn = document.getElementById('refreshCaptchaBtn');
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      doCaptchaRefresh();
+    });
+  }
+
+  const captchaImg = document.querySelector('img.captcha');
+  if (captchaImg) {
+    captchaImg.title = 'Click image to load another captcha';
+    captchaImg.addEventListener('click', function(e) {
+      e.preventDefault();
+      doCaptchaRefresh();
+    });
+  }
 })();
 </script>
 
