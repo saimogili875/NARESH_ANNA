@@ -13,14 +13,14 @@ from reportlab.lib.enums import TA_CENTER, TA_LEFT
 COLLEGE_NAME = "Sri NRI Junior College"
 COLLEGE_SUBTITLE = "Fee Payment Receipt"
 COLLEGE_ADDRESS = "Behind Bharath Petrol Pump, B N Reddy Nagar, Hyderabad - 500079 | Ph: 9248078999, 9848426562"
-LOGO_PATH = os.path.join(settings.BASE_DIR, "static", "images", "sri_nri_logo.png")
+LOGO_PATH = os.path.join(settings.BASE_DIR, "static", "sri_nri_logo.png")
 
 
 def get_logo_path():
-    primary = os.path.join(settings.BASE_DIR, "static", "images", "sri_nri_logo.png")
+    primary = os.path.join(settings.BASE_DIR, "static", "sri_nri_logo.png")
     if os.path.exists(primary):
         return primary
-    fallback = os.path.join(settings.BASE_DIR, "static", "sri_nri_logo.png")
+    fallback = os.path.join(settings.BASE_DIR, "static", "images", "sri_nri_logo.png")
     if os.path.exists(fallback):
         return fallback
     return None
