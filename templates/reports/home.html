@@ -7,7 +7,7 @@
 <div class="row g-3 mb-4">
   <div class="col-6 col-md-3">
     <div class="stat-card">
-      <div class="stat-icon" style="background: rgba(197,160,89,0.14); color: var(--sf-gold); border: 1px solid rgba(197,160,89,0.25);">
+      <div class="stat-icon" style="background: rgba(37,99,235,0.14); color: var(--sf-accent); border: 1px solid rgba(37,99,235,0.25);">
         <i class="bi bi-people-fill"></i>
       </div>
       <div>
@@ -18,7 +18,7 @@
   </div>
   <div class="col-6 col-md-3">
     <div class="stat-card">
-      <div class="stat-icon" style="background: rgba(48,209,88,0.14); color: #30D158; border: 1px solid rgba(48,209,88,0.25);">
+      <div class="stat-icon" style="background: rgba(22,163,74,0.14); color: #16a34a; border: 1px solid rgba(22,163,74,0.25);">
         <i class="bi bi-cash-coin"></i>
       </div>
       <div>
@@ -29,7 +29,7 @@
   </div>
   <div class="col-6 col-md-3">
     <div class="stat-card">
-      <div class="stat-icon" style="background: rgba(255,69,58,0.14); color: #FF453A; border: 1px solid rgba(255,69,58,0.25);">
+      <div class="stat-icon" style="background: rgba(220,38,38,0.14); color: #dc2626; border: 1px solid rgba(220,38,38,0.25);">
         <i class="bi bi-exclamation-circle-fill"></i>
       </div>
       <div>
@@ -40,7 +40,7 @@
   </div>
   <div class="col-6 col-md-3">
     <div class="stat-card">
-      <div class="stat-icon" style="background: rgba(197,160,89,0.18); color: var(--sf-gold); border: 1px solid rgba(197,160,89,0.3);">
+      <div class="stat-icon" style="background: rgba(37,99,235,0.14); color: var(--sf-accent); border: 1px solid rgba(37,99,235,0.25);">
         <i class="bi bi-cash-stack"></i>
       </div>
       <div>
@@ -53,17 +53,17 @@
 
 <!-- ── Attendance breakdown ── -->
 <div class="card border-0 mb-4">
-  <div class="card-header bg-transparent py-3" style="border-bottom: 1px solid rgba(255,255,255,0.08);">
+  <div class="card-header bg-transparent py-3">
     <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-      <span class="fw-bold fs-6 text-white d-flex align-items-center gap-2">
-        <i class="bi bi-calendar-check text-gold"></i>Attendance — Section-wise
+      <span class="fw-bold fs-6 d-flex align-items-center gap-2">
+        <i class="bi bi-calendar-check text-primary"></i>Attendance — Section-wise
       </span>
       <form method="get" class="d-flex align-items-center gap-2">
         <input type="date" name="date" value="{{ selected_date|date:'Y-m-d' }}"
                class="form-control form-control-sm" style="width:160px;"
                onchange="this.form.submit()">
         {% if selected_date != today %}
-        <a href="?" class="btn btn-outline-light btn-sm rounded-pill px-3">Today</a>
+        <a href="?" class="btn btn-outline-secondary btn-sm rounded-pill px-3">Today</a>
         {% endif %}
       </form>
     </div>
@@ -73,20 +73,20 @@
   <div class="px-3 pt-3 pb-2">
     <div class="row g-2 text-center">
       <div class="col-4">
-        <div class="rounded-3 py-2" style="background: rgba(48,209,88,0.12); border: 1px solid rgba(48,209,88,0.25);">
-          <div class="fs-4 fw-bold" style="color: #30D158; font-family: var(--font-mono);">{{ total_present }}</div>
-          <div class="small" style="color: rgba(255,255,255,0.6);">Present</div>
+        <div class="rounded-3 py-2" style="background: rgba(22,163,74,0.12); border: 1px solid rgba(22,163,74,0.25);">
+          <div class="fs-4 fw-bold" style="color: #16a34a; font-family: var(--font-mono);">{{ total_present }}</div>
+          <div class="small text-muted">Present</div>
         </div>
       </div>
       <div class="col-4">
-        <div class="rounded-3 py-2" style="background: rgba(255,69,58,0.12); border: 1px solid rgba(255,69,58,0.25);">
-          <div class="fs-4 fw-bold" style="color: #FF453A; font-family: var(--font-mono);">{{ total_absent }}</div>
-          <div class="small" style="color: rgba(255,255,255,0.6);">Absent</div>
+        <div class="rounded-3 py-2" style="background: rgba(220,38,38,0.12); border: 1px solid rgba(220,38,38,0.25);">
+          <div class="fs-4 fw-bold" style="color: #dc2626; font-family: var(--font-mono);">{{ total_absent }}</div>
+          <div class="small text-muted">Absent</div>
         </div>
       </div>
       <div class="col-4">
-        <div class="rounded-3 py-2" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12);">
-          <div class="fs-4 fw-bold text-white-50" style="font-family: var(--font-mono);">{{ total_not_marked }}</div>
+        <div class="rounded-3 py-2" style="background: rgba(0,0,0,0.04); border: 1px solid var(--sf-border);">
+          <div class="fs-4 fw-bold text-muted" style="font-family: var(--font-mono);">{{ total_not_marked }}</div>
           <div class="small text-muted">Not Marked</div>
         </div>
       </div>
@@ -97,10 +97,10 @@
   {% if group_summary %}
   <div class="px-3 pb-2 d-flex flex-wrap gap-2">
     {% for grp_name, gs in group_summary.items %}
-    <span class="badge rounded-pill fw-normal px-3 py-2"
-          style="background: rgba(197,160,89,0.12); color: #F5F5F7; border: 1px solid rgba(197,160,89,0.25); font-size: 0.78rem;">
-      <strong style="color: var(--sf-gold);">{{ grp_name }}</strong>
-      &nbsp;✅ <span style="color:#30D158;">{{ gs.present }}</span> &nbsp;❌ <span style="color:#FF453A;">{{ gs.absent }}</span>
+    <span class="badge rounded-pill fw-normal px-3 py-2 bg-secondary-subtle text-body border"
+          style="font-size: 0.78rem;">
+      <strong class="text-primary">{{ grp_name }}</strong>
+      &nbsp;✅ <span style="color:#16a34a;">{{ gs.present }}</span> &nbsp;❌ <span style="color:#dc2626;">{{ gs.absent }}</span>
       &nbsp;<span class="opacity-75">/ {{ gs.total }}</span>
     </span>
     {% endfor %}
@@ -111,34 +111,34 @@
   <div class="table-responsive">
     <table class="table table-hover align-middle mb-0" style="font-size:0.875rem;">
       <thead>
-        <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
-          <th style="color: #86868B;">Section</th>
-          <th class="text-center" style="color: #86868B;">Total</th>
-          <th class="text-center" style="color: #30D158;">Present</th>
-          <th class="text-center" style="color: #FF453A;">Absent</th>
-          <th class="text-center" style="color: #86868B;">Not Marked</th>
-          <th class="text-center" style="color: var(--sf-gold);">Attendance %</th>
+        <tr>
+          <th>Section</th>
+          <th class="text-center">Total</th>
+          <th class="text-center" style="color: #16a34a;">Present</th>
+          <th class="text-center" style="color: #dc2626;">Absent</th>
+          <th class="text-center">Not Marked</th>
+          <th class="text-center" style="color: var(--sf-accent);">Attendance %</th>
         </tr>
       </thead>
       <tbody>
         {% for row in section_attendance %}
-        <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+        <tr>
           <td>
-            <div class="fw-semibold text-white">{{ row.section.group.code }}-Yr{{ row.section.year }}-{{ row.section.name }}</div>
+            <div class="fw-semibold">{{ row.section.group.code }}-Yr{{ row.section.year }}-{{ row.section.name }}</div>
             <div class="text-muted" style="font-size:0.75rem;">{{ row.section.group.name }}</div>
           </td>
           <td class="text-center">
-            <span class="badge" style="background: rgba(255,255,255,0.1); color: #F5F5F7;">{{ row.total }}</span>
+            <span class="badge bg-secondary-subtle text-body border">{{ row.total }}</span>
           </td>
           <td class="text-center">
-            <span class="badge" style="background: rgba(48,209,88,0.15); color: #30D158; border: 1px solid rgba(48,209,88,0.25);">{{ row.present }}</span>
+            <span class="badge bg-success-subtle text-success border border-success-subtle">{{ row.present }}</span>
           </td>
           <td class="text-center">
-            <span class="badge" style="background: rgba(255,69,58,0.15); color: #FF453A; border: 1px solid rgba(255,69,58,0.25);">{{ row.absent }}</span>
+            <span class="badge bg-danger-subtle text-danger border border-danger-subtle">{{ row.absent }}</span>
           </td>
           <td class="text-center">
             {% if row.not_marked %}
-            <span class="badge" style="background: rgba(255,255,255,0.08); color: #86868B;">{{ row.not_marked }}</span>
+            <span class="badge bg-secondary-subtle text-muted border">{{ row.not_marked }}</span>
             {% else %}
             <span class="text-muted small">—</span>
             {% endif %}
@@ -146,11 +146,11 @@
           <td class="text-center">
             {% if row.pct is not None %}
               {% if row.pct >= 75 %}
-                <span class="badge" style="background: rgba(48,209,88,0.2); color: #30D158; border: 1px solid rgba(48,209,88,0.3); font-family: var(--font-mono);">{{ row.pct }}%</span>
+                <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-family: var(--font-mono);">{{ row.pct }}%</span>
               {% elif row.pct >= 50 %}
-                <span class="badge" style="background: rgba(255,159,10,0.2); color: #FF9F0A; border: 1px solid rgba(255,159,10,0.3); font-family: var(--font-mono);">{{ row.pct }}%</span>
+                <span class="badge bg-warning-subtle text-warning border border-warning-subtle" style="font-family: var(--font-mono);">{{ row.pct }}%</span>
               {% else %}
-                <span class="badge" style="background: rgba(255,69,58,0.2); color: #FF453A; border: 1px solid rgba(255,69,58,0.3); font-family: var(--font-mono);">{{ row.pct }}%</span>
+                <span class="badge bg-danger-subtle text-danger border border-danger-subtle" style="font-family: var(--font-mono);">{{ row.pct }}%</span>
               {% endif %}
             {% else %}
               <span class="text-muted small">—</span>
@@ -167,21 +167,21 @@
 
 <!-- ── Quick links ── -->
 <div class="card border-0">
-  <div class="card-header bg-transparent fw-bold py-3 text-white" style="border-bottom: 1px solid rgba(255,255,255,0.08);">
-    <i class="bi bi-lightning-charge me-2 text-gold"></i>Quick Analytics Links
+  <div class="card-header bg-transparent fw-bold py-3">
+    <i class="bi bi-lightning-charge me-2 text-primary"></i>Quick Analytics Links
   </div>
   <div class="card-body">
     <div class="d-flex flex-wrap gap-2">
-      <a href="{% url 'attendance_report' %}" class="btn btn-outline-gold btn-sm rounded-pill px-3">
+      <a href="{% url 'attendance_report' %}" class="btn btn-outline-primary btn-sm rounded-pill px-3">
         <i class="bi bi-calendar-check me-1"></i> Attendance Report
       </a>
-      <a href="{% url 'marks_report' %}" class="btn btn-outline-gold btn-sm rounded-pill px-3">
+      <a href="{% url 'marks_report' %}" class="btn btn-outline-primary btn-sm rounded-pill px-3">
         <i class="bi bi-journal-text me-1"></i> Marks Report
       </a>
-      <a href="{% url 'fee_list' %}" class="btn btn-outline-gold btn-sm rounded-pill px-3">
+      <a href="{% url 'fee_list' %}" class="btn btn-outline-primary btn-sm rounded-pill px-3">
         <i class="bi bi-cash-stack me-1"></i> Fee Report
       </a>
-      <a href="{% url 'student_list' %}" class="btn btn-outline-gold btn-sm rounded-pill px-3">
+      <a href="{% url 'student_list' %}" class="btn btn-outline-primary btn-sm rounded-pill px-3">
         <i class="bi bi-people me-1"></i> Student List
       </a>
     </div>

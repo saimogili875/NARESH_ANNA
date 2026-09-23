@@ -1,59 +1,22 @@
 {% extends 'base.html' %}
 {% block title %}Exams & Marks — Sri NRI Junior College{% endblock %}
-{% block page_title %}Exams & Marks{% endblock %}
+{% block page_title %}Exams & Marks Directory{% endblock %}
+
 {% block content %}
-
-<!-- Header & Quick Actions -->
-<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
-  <div>
-    <h5 class="mb-1 fw-bold">Exam Categories & Management</h5>
-    <span class="text-muted small"><i class="bi bi-calendar-range me-1"></i>Academic Year: <strong>{{ active_year|default:"Not set" }}</strong></span>
-  </div>
-  <div class="d-flex gap-2">
-    <a href="{% url 'marks_report' %}" class="btn btn-outline-primary btn-sm px-3 fw-bold rounded-pill">
-      <i class="bi bi-bar-chart-line me-1"></i>View Reports
-    </a>
-    <a href="{% url 'exam_add' %}" class="btn btn-primary btn-sm px-3 fw-bold rounded-pill">
-      <i class="bi bi-plus-lg me-1"></i>Add New Exam
-    </a>
-  </div>
-</div>
-
 <style>
 .exam-row-card {
   position: relative;
-  z-index: 1;
-  background: rgba(22, 22, 28, 0.85);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--sf-surface);
+  border: 1px solid var(--sf-border);
   border-radius: 14px;
   padding: 1rem 1.25rem;
   margin-bottom: 0.75rem;
-  transition: transform 0.2s ease, border-color 0.2s ease;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
-
-.exam-row-card::before {
-  content: "";
-  position: absolute;
-  inset: -1.5px;
-  border-radius: inherit;
-  padding: 1.5px;
-  background: conic-gradient(from var(--gold-angle), transparent 35%, rgba(197, 160, 89, 0.4) 65%, #D4AF37 85%, #FFFFFF 95%, transparent 100%);
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  opacity: 0.85; /* Continuous non-stop gold border rotation */
-  pointer-events: none;
-  transition: opacity 0.35s ease, filter 0.35s ease;
-  z-index: 2;
-  animation: rotateGoldBorder 3s linear infinite !important;
-}
-
-.exam-row-card:hover::before {
-  opacity: 1 !important;
-  filter: drop-shadow(0 0 8px rgba(197, 160, 89, 0.8)) !important;
-  animation: rotateGoldBorder 1.5s linear infinite !important;
+.exam-row-card:hover {
+  transform: translateY(-1px);
+  border-color: var(--sf-accent);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
 }
 </style>
 
@@ -64,20 +27,19 @@
     <div class="card border-0 h-100" style="border-radius: 18px; overflow: hidden;">
 
       <!-- Box header -->
-      <div class="card-header bg-transparent py-3 px-4 d-flex align-items-center justify-content-between"
-           style="border-bottom: 1px solid rgba(255,255,255,0.08);">
+      <div class="card-header bg-transparent py-3 px-4 d-flex align-items-center justify-content-between">
         <div class="d-flex align-items-center gap-3">
           <div class="rounded-circle d-flex align-items-center justify-content-center"
-               style="width:40px; height:40px; background: rgba(197,160,89,0.15); color: var(--sf-gold); border: 1px solid rgba(197,160,89,0.3);">
+               style="width:40px; height:40px; background: rgba(37,99,235,0.12); color: var(--sf-accent); border: 1px solid rgba(37,99,235,0.25);">
             <i class="bi {{ box.icon }} fs-5"></i>
           </div>
           <div>
-            <span class="fw-bold fs-6 text-white d-block">{{ box.label }}</span>
+            <span class="fw-bold fs-6 d-block">{{ box.label }}</span>
             <span class="text-muted" style="font-size: 0.75rem;">Category Examination Box</span>
           </div>
         </div>
-        <span class="badge rounded-pill px-3 py-2 fw-bold"
-              style="background: rgba(197,160,89,0.18); color: var(--sf-gold); border: 1px solid rgba(197,160,89,0.3); font-size: 0.8rem; font-family: var(--font-mono);">
+        <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-2 fw-bold"
+              style="font-size: 0.8rem; font-family: var(--font-mono);">
           {{ box.exams|length }} Exam{{ box.exams|length|pluralize }}
         </span>
       </div>
@@ -90,65 +52,56 @@
           <div class="exam-row-card">
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
               <div>
-                <div class="fw-bold fs-6 text-white">{{ exam.display_name }}</div>
+                <div class="fw-bold fs-6">{{ exam.display_name }}</div>
                 <div class="d-flex gap-2 mt-1 align-items-center flex-wrap">
                   {% if exam.group %}
-                  <span class="badge px-2 py-1 fw-bold" style="background: rgba(197,160,89,0.15); color: var(--sf-gold); border: 1px solid rgba(197,160,89,0.25); font-size: 0.72rem;">
+                  <span class="badge bg-secondary-subtle text-body border fw-bold" style="font-size: 0.72rem;">
                     {{ exam.group.code }}
                   </span>
                   {% else %}
-                  <span class="badge px-2 py-1" style="background: rgba(255,255,255,0.08); color: #86868B; font-size: 0.72rem;">
+                  <span class="badge bg-secondary-subtle text-muted border" style="font-size: 0.72rem;">
                     All Groups
                   </span>
                   {% endif %}
-                  <span class="text-muted small">
-                    <i class="bi bi-calendar3 me-1"></i>{{ exam.date|date:"d M Y" }}
+
+                  {% if exam.year %}
+                  <span class="badge bg-secondary-subtle text-body border fw-bold" style="font-size: 0.72rem;">
+                    {{ exam.get_year_display }}
                   </span>
-                  <span class="text-muted small">
-                    <i class="bi bi-trophy me-1" style="color: var(--sf-gold);"></i>Max: <strong style="color: #F5F5F7; font-family: var(--font-mono);">{{ exam.max_marks }}</strong>
+                  {% else %}
+                  <span class="badge bg-secondary-subtle text-muted border" style="font-size: 0.72rem;">
+                    All Years
                   </span>
+                  {% endif %}
+
+                  <span class="text-muted" style="font-size: 0.75rem;"><i class="bi bi-calendar-event me-1"></i>{{ exam.exam_date|date:"d M Y" }}</span>
                 </div>
               </div>
-              <div class="d-flex gap-2 align-items-center flex-wrap">
-                <a href="{% url 'marks_entry' exam.pk %}"
-                   class="btn btn-sm btn-gold px-3 rounded-pill fw-semibold" title="Enter Student Marks">
-                  <i class="bi bi-pencil-square me-1"></i>Marks
+
+              <div class="d-flex align-items-center gap-2">
+                <a href="{% url 'exam_edit' exam.pk %}" class="btn btn-sm btn-outline-secondary rounded-pill px-3" title="Edit Max Marks">
+                  <i class="bi bi-pencil me-1"></i>Edit
                 </a>
-                {% if request.user.role|lower == 'admin' or request.user.role|lower == 'accounts' or request.user.is_staff or request.user.is_superuser %}
-                <a href="{% url 'exam_edit' exam.pk %}"
-                   class="btn btn-sm btn-outline-gold px-2 rounded-pill" title="Edit Exam Details">
-                  <i class="bi bi-gear"></i>
+                <a href="{% url 'marks_entry' exam.pk %}" class="btn btn-sm btn-primary rounded-pill px-3">
+                  <i class="bi bi-pencil-square me-1"></i>Enter Marks
                 </a>
-                <a href="{% url 'marks_whatsapp_send' exam.pk %}"
-                   class="btn btn-sm btn-outline-success px-3 rounded-pill fw-semibold" title="Send Marks on WhatsApp">
+                <a href="{% url 'marks_whatsapp_send' exam.pk %}" class="btn btn-sm btn-outline-success rounded-pill px-3" title="Send WhatsApp Notifications">
                   <i class="bi bi-whatsapp me-1"></i>Send
                 </a>
-                <a href="{% url 'exam_delete' exam.pk %}"
-                   class="btn btn-sm btn-outline-danger px-2 rounded-pill"
-                   onclick="return confirm('Delete exam {{ exam.display_name }}? All marks will be removed.');"
-                   title="Delete Exam">
-                  <i class="bi bi-trash"></i>
-                </a>
-                {% endif %}
               </div>
             </div>
           </div>
           {% endfor %}
         </div>
         {% else %}
-        <div class="text-center text-muted py-5 px-3">
-          <i class="bi bi-inbox fs-2 d-block mb-2 opacity-50 text-gold"></i>
-          <span class="fw-semibold text-white-50">No {{ box.label }} exams created yet</span>
-          <div class="mt-2">
-            <a href="{% url 'exam_add' %}" class="btn btn-sm btn-outline-gold rounded-pill px-3">Create {{ box.label }}</a>
-          </div>
+        <div class="text-center py-4 text-muted">
+          <i class="bi bi-inbox fs-2 d-block mb-2 opacity-50"></i>
+          No exams found in this category
         </div>
         {% endif %}
       </div>
-
     </div>
   </div>
   {% endfor %}
 </div>
-
 {% endblock %}

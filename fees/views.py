@@ -1029,3 +1029,121 @@ def _fee_export_pdf(fee_rows, active_year, section_name='All Sections', year_lab
     response = HttpResponse(buf, content_type='application/pdf')
     response['Content-Disposition'] = 'attachment; filename=fee_report.pdf'
     return response
+
+
+@all_roles_required
+def fee_classifier(request):
+    """
+    Dedicated Fee Classifier View:
+    Filter students by Academic Year, Year/Course, Group, Section,
+    and find students whose fee paid percentage is STRICTLY LESS THAN (<) a specified threshold.
+    """
+    from accounts.models import Group, Section
+    academic_years = AcademicYear.objects.all().order_by('-start_date')
+    active_year = AcademicYear.objects.filter(is_active=True).first()
+
+    groups = Group.objects.all().order_by('name')
+    sections = Section.objects.select_related('group', 'academic_year').all()
+
+    ay_id = request.GET.get('academic_year', '')
+    year_val = request.GET.get('year', '')
+    group_id = request.GET.get('group', '')
+    section_id = request.GET.get('section', '')
+    threshold_raw = request.GET.get('threshold', '70').strip()
+
+    submitted = request.GET.get('search') == '1'
+    error_msg = None
+    threshold = None
+
+    if submitted:
+        try:
+            threshold = float(threshold_raw)
+            if threshold < 0 or threshold > 100:
+                error_msg = 'Threshold percentage must be a number between 0 and 100.'
+        except ValueError:
+            error_msg = 'Please enter a valid numeric threshold percentage.'
+
+    results = []
+    criteria_summary = None
+
+    if submitted and not error_msg:
+        students = Student.objects.filter(is_active=True).select_related('section__group', 'academic_year')
+
+        if ay_id and ay_id.isdigit():
+            students = students.filter(academic_year_id=int(ay_id))
+        if year_val in ['1', '2']:
+            students = students.filter(section__year=year_val)
+        if group_id and group_id.isdigit():
+            students = students.filter(section__group_id=int(group_id))
+        if section_id and section_id.isdigit():
+            students = students.filter(section_id=int(section_id))
+
+        student_list = list(students)
+        student_ids = [s.pk for s in student_list]
+
+        if student_ids:
+            existing_fees = {
+                sf.student_id: sf
+                for sf in StudentFee.objects.filter(student_id__in=student_ids).prefetch_related('payments')
+            }
+            charges_by_student = {}
+            for c in StudentFeeCharge.objects.filter(student_id__in=student_ids).prefetch_related('payments'):
+                charges_by_student.setdefault(c.student_id, []).append(c)
+
+            for s in student_list:
+                sf = existing_fees.get(s.pk)
+                tuition_fee = sf.total_fee if sf else 0
+                tuition_paid = sf.total_paid if sf else 0
+
+                charges = charges_by_student.get(s.pk, [])
+                charges_fee = sum(c.amount_assigned for c in charges)
+                charges_paid = sum(c.total_paid for c in charges)
+
+                total_fee = float(tuition_fee + charges_fee)
+                total_paid = float(tuition_paid + charges_paid)
+                total_due = total_fee - total_paid
+
+                if total_fee > 0:
+                    paid_pct = round((total_paid / total_fee) * 100, 2)
+                else:
+                    paid_pct = 0.0
+
+                # STRICTLY LESS THAN THRESHOLD (<)
+                if total_fee > 0 and paid_pct < threshold:
+                    results.append({
+                        'student': s,
+                        'total_fee': total_fee,
+                        'total_paid': total_paid,
+                        'total_due': total_due,
+                        'paid_pct': paid_pct,
+                    })
+
+        # Criteria summary
+        selected_ay = AcademicYear.objects.filter(pk=ay_id).first() if ay_id.isdigit() else None
+        selected_grp = Group.objects.filter(pk=group_id).first() if group_id.isdigit() else None
+        selected_sec = Section.objects.filter(pk=section_id).first() if section_id.isdigit() else None
+
+        criteria_summary = {
+            'academic_year': selected_ay.name if selected_ay else 'All Academic Years',
+            'year': f'{year_val}st/nd Year' if year_val else 'All Years',
+            'group': selected_grp.name if selected_grp else 'All Groups',
+            'section': str(selected_sec) if selected_sec else 'All Sections',
+            'threshold': threshold,
+        }
+
+    return render(request, 'fees/classifier.html', {
+        'academic_years': academic_years,
+        'active_year': active_year,
+        'groups': groups,
+        'sections': sections,
+        'ay_id': ay_id,
+        'year_val': year_val,
+        'group_id': group_id,
+        'section_id': section_id,
+        'threshold_raw': threshold_raw,
+        'submitted': submitted,
+        'error_msg': error_msg,
+        'results': results,
+        'criteria_summary': criteria_summary,
+    })
+

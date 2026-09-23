@@ -1159,3 +1159,106 @@ def enqueue_section_absent_whatsapp(request):
     if referer:
         return redirect(referer)
     return redirect('attendance_review')
+
+
+@all_roles_required
+def attendance_classifier(request):
+    """
+    Dedicated Attendance Classifier View:
+    Filter students by Academic Year, Year/Course, Group, Section,
+    and find students whose attendance percentage is STRICTLY LESS THAN (<) a specified threshold.
+    """
+    from accounts.models import AcademicYear, Group, Section
+
+    academic_years = AcademicYear.objects.all().order_by('-start_date')
+    active_year = AcademicYear.objects.filter(is_active=True).first()
+
+    allowed_sections = _get_faculty_sections(request.user)
+    groups = Group.objects.all().order_by('name')
+    sections = allowed_sections.select_related('group', 'academic_year')
+
+    ay_id = request.GET.get('academic_year', '')
+    year_val = request.GET.get('year', '')
+    group_id = request.GET.get('group', '')
+    section_id = request.GET.get('section', '')
+    threshold_raw = request.GET.get('threshold', '70').strip()
+
+    submitted = request.GET.get('search') == '1'
+    error_msg = None
+    threshold = None
+
+    if submitted:
+        try:
+            threshold = float(threshold_raw)
+            if threshold < 0 or threshold > 100:
+                error_msg = 'Threshold percentage must be a number between 0 and 100.'
+        except ValueError:
+            error_msg = 'Please enter a valid numeric threshold percentage.'
+
+    results = []
+    criteria_summary = None
+
+    if submitted and not error_msg:
+        students = Student.objects.filter(
+            is_active=True,
+            section__in=allowed_sections
+        ).select_related('section__group', 'academic_year').annotate(
+            present_count=Count('attendance_records', filter=Q(attendance_records__status='P')),
+            absent_count=Count('attendance_records', filter=Q(attendance_records__status='A')),
+        ).order_by('name')
+
+        if ay_id and ay_id.isdigit():
+            students = students.filter(academic_year_id=int(ay_id))
+        if year_val in ['1', '2']:
+            students = students.filter(section__year=year_val)
+        if group_id and group_id.isdigit():
+            students = students.filter(section__group_id=int(group_id))
+        if section_id and section_id.isdigit():
+            students = students.filter(section_id=int(section_id))
+
+        for s in students:
+            total_days = s.present_count + s.absent_count
+            if total_days > 0:
+                att_pct = round((s.present_count / total_days) * 100, 2)
+            else:
+                att_pct = 0.0
+
+            # STRICTLY LESS THAN THRESHOLD (<)
+            if total_days > 0 and att_pct < threshold:
+                results.append({
+                    'student': s,
+                    'present_count': s.present_count,
+                    'absent_count': s.absent_count,
+                    'total_days': total_days,
+                    'att_pct': att_pct,
+                })
+
+        # Criteria summary
+        selected_ay = AcademicYear.objects.filter(pk=ay_id).first() if ay_id.isdigit() else None
+        selected_grp = Group.objects.filter(pk=group_id).first() if group_id.isdigit() else None
+        selected_sec = Section.objects.filter(pk=section_id).first() if section_id.isdigit() else None
+
+        criteria_summary = {
+            'academic_year': selected_ay.name if selected_ay else 'All Academic Years',
+            'year': f'{year_val}st/nd Year' if year_val else 'All Years',
+            'group': selected_grp.name if selected_grp else 'All Groups',
+            'section': str(selected_sec) if selected_sec else 'All Sections',
+            'threshold': threshold,
+        }
+
+    return render(request, 'attendance/classifier.html', {
+        'academic_years': academic_years,
+        'active_year': active_year,
+        'groups': groups,
+        'sections': sections,
+        'ay_id': ay_id,
+        'year_val': year_val,
+        'group_id': group_id,
+        'section_id': section_id,
+        'threshold_raw': threshold_raw,
+        'submitted': submitted,
+        'error_msg': error_msg,
+        'results': results,
+        'criteria_summary': criteria_summary,
+    })
+

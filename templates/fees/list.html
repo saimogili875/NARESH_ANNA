@@ -6,7 +6,7 @@
 <div class="row g-3 mb-4">
   <div class="col-6 col-md-3">
     <div class="stat-card">
-      <div class="stat-icon" style="background: rgba(197,160,89,0.14); color: var(--sf-gold); border: 1px solid rgba(197,160,89,0.25);">
+      <div class="stat-icon" style="background: rgba(37,99,235,0.14); color: var(--sf-accent); border: 1px solid rgba(37,99,235,0.25);">
         <i class="bi bi-people-fill"></i>
       </div>
       <div>
@@ -86,7 +86,8 @@
         <button class="btn btn-primary btn-sm">Filter</button>
         <a href="{% url 'fee_list' %}" class="btn btn-outline-secondary btn-sm">Clear</a>
       </div>
-      <div class="col-auto ms-auto d-flex gap-2">
+      <div class="col-auto ms-auto d-flex gap-2 flex-wrap">
+        <a href="{% url 'fee_classifier' %}" class="btn btn-primary btn-sm"><i class="bi bi-funnel-fill me-1"></i> Fee Classifier</a>
         <a href="{% url 'fee_set_bulk' %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-people-fill"></i> Bulk Assign Tuition</a>
         <a href="{% url 'fee_type_manage' %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-gear"></i> Manage Fee Types</a>
         <a href="{% url 'fee_export' %}?fmt=pdf&section={{ section_filter }}&fee_type={{ fee_type_filter }}&status={{ status_filter }}&q={{ q }}" class="btn btn-danger btn-sm"><i class="bi bi-file-earmark-pdf"></i> Export PDF</a>

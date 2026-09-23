@@ -1,0 +1,189 @@
+{% extends 'base.html' %}
+{% block title %}Attendance Classifier — Sri NRI Junior College{% endblock %}
+{% block page_title %}Attendance Classifier{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+  <div>
+    <h5 class="fw-bold mb-1"><i class="bi bi-funnel-fill text-primary me-2"></i>Attendance Classifier</h5>
+    <p class="text-muted small mb-0">Identify students whose attendance percentage is strictly below your specified threshold.</p>
+  </div>
+  <a href="{% url 'attendance_list' %}" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
+    <i class="bi bi-arrow-left me-1"></i>Back to Attendance
+  </a>
+</div>
+
+<!-- Selection Filter Card -->
+<div class="card border-0 mb-4 shadow-sm">
+  <div class="card-body p-3">
+    <form method="get" id="classifierForm" class="row g-3 align-items-end">
+      <input type="hidden" name="search" value="1">
+      
+      <div class="col-12 col-sm-6 col-md-3">
+        <label class="form-label small fw-semibold text-muted mb-1">Academic Year</label>
+        <select name="academic_year" id="aySelect" class="form-select form-select-sm">
+          <option value="">All Academic Years</option>
+          {% for ay in academic_years %}
+          <option value="{{ ay.pk }}" {% if ay_id == ay.pk|stringformat:'s' or not ay_id and ay == active_year %}selected{% endif %}>
+            {{ ay.name }} {% if ay == active_year %}(Active){% endif %}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-6 col-sm-6 col-md-2">
+        <label class="form-label small fw-semibold text-muted mb-1">Year / Course</label>
+        <select name="year" id="yearSelect" class="form-select form-select-sm">
+          <option value="">All Years</option>
+          <option value="1" {% if year_val == '1' %}selected{% endif %}>1st Year</option>
+          <option value="2" {% if year_val == '2' %}selected{% endif %}>2nd Year</option>
+        </select>
+      </div>
+
+      <div class="col-6 col-sm-6 col-md-2">
+        <label class="form-label small fw-semibold text-muted mb-1">Group</label>
+        <select name="group" id="groupSelect" class="form-select form-select-sm">
+          <option value="">All Groups</option>
+          {% for g in groups %}
+          <option value="{{ g.pk }}" {% if group_id == g.pk|stringformat:'s' %}selected{% endif %}>{{ g.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-12 col-sm-6 col-md-3">
+        <label class="form-label small fw-semibold text-muted mb-1">Section</label>
+        <select name="section" id="sectionSelect" class="form-select form-select-sm">
+          <option value="">All Sections</option>
+          {% for s in sections %}
+          <option value="{{ s.pk }}" data-group="{{ s.group.pk }}" data-year="{{ s.year }}" {% if section_id == s.pk|stringformat:'s' %}selected{% endif %}>
+            {{ s }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-12 col-sm-6 col-md-2">
+        <label class="form-label small fw-semibold text-muted mb-1">Attendance % Less Than</label>
+        <div class="input-group input-group-sm">
+          <input type="number" name="threshold" step="0.1" min="0" max="100" class="form-control form-control-sm"
+                 placeholder="75" value="{{ threshold_raw }}" required>
+          <span class="input-group-text">%</span>
+        </div>
+      </div>
+
+      <div class="col-12 d-flex justify-content-end gap-2 mt-2">
+        <a href="{% url 'attendance_classifier' %}" class="btn btn-outline-secondary btn-sm rounded-pill px-3">Reset Filters</a>
+        <button type="submit" class="btn btn-primary btn-sm rounded-pill px-4">
+          <i class="bi bi-search me-1"></i>Find Students
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% if error_msg %}
+<div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+  <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ error_msg }}
+  <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+{% if submitted and not error_msg %}
+<div class="card border-0 shadow-sm">
+  <div class="card-header bg-transparent py-3 px-3 d-flex align-items-center justify-content-between flex-wrap gap-2 border-bottom">
+    <span class="fw-bold fs-6 text-body">
+      Students Below {{ criteria_summary.threshold }}% Attendance
+      <span class="badge bg-danger-subtle text-danger border border-danger-subtle ms-2">{{ results|length }} Student{{ results|length|pluralize }}</span>
+    </span>
+    <span class="small text-muted">
+      Criteria: {{ criteria_summary.academic_year }} &bull; {{ criteria_summary.group }} &bull; {{ criteria_summary.section }}
+    </span>
+  </div>
+
+  <div class="card-body p-0">
+    {% if results %}
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0" style="font-size: 0.875rem;">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Student Name</th>
+            <th>Admission No</th>
+            <th>Group</th>
+            <th>Section</th>
+            <th class="text-center">Present Days</th>
+            <th class="text-center">Total Days</th>
+            <th class="text-center">Attendance %</th>
+            <th class="text-end pe-3">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in results %}
+          <tr>
+            <td class="small text-muted">{{ forloop.counter }}</td>
+            <td class="fw-bold">{{ r.student.name }}</td>
+            <td class="small text-muted font-monospace">{{ r.student.admission_number }}</td>
+            <td><span class="badge bg-secondary-subtle text-body border fw-normal">{{ r.student.section.group.name|default:'-' }}</span></td>
+            <td><span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-normal">{{ r.student.section|default:'-' }}</span></td>
+            <td class="text-center text-success fw-semibold">{{ r.present_days }}</td>
+            <td class="text-center fw-semibold">{{ r.total_days }}</td>
+            <td class="text-center">
+              <span class="badge bg-danger-subtle text-danger border border-danger-subtle font-monospace px-2 py-1 fs-6">
+                {{ r.attendance_pct }}%
+              </span>
+            </td>
+            <td class="text-end pe-3">
+              <a href="{% url 'student_profile' r.student.pk %}" class="btn btn-xs btn-outline-primary rounded-pill px-3">
+                View Student Profile
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="text-center py-5 px-3">
+      <div class="mb-3">
+        <i class="bi bi-check-circle-fill text-success" style="font-size: 2.5rem;"></i>
+      </div>
+      <h6 class="fw-bold text-body">No students found below this threshold.</h6>
+      <p class="text-muted small max-w-md mx-auto mb-0">
+        All students in <strong>{{ criteria_summary.academic_year }} &bull; {{ criteria_summary.group }} &bull; {{ criteria_summary.section }}</strong> have attendance of <strong>{{ criteria_summary.threshold }}% or higher</strong>.
+      </p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const groupSel = document.getElementById('groupSelect');
+  const yearSel = document.getElementById('yearSelect');
+  const secSel = document.getElementById('sectionSelect');
+
+  function filterSections() {
+    const selectedGroup = groupSel.value;
+    const selectedYear = yearSel.value;
+    Array.from(secSel.options).forEach(opt => {
+      if (!opt.value) return; // Keep "All Sections"
+      const optGroup = opt.getAttribute('data-group');
+      const optYear = opt.getAttribute('data-year');
+      
+      let show = true;
+      if (selectedGroup && optGroup !== selectedGroup) show = false;
+      if (selectedYear && optYear !== selectedYear) show = false;
+      
+      opt.style.display = show ? '' : 'none';
+      opt.disabled = !show;
+    });
+  }
+
+  if (groupSel && yearSel && secSel) {
+    groupSel.addEventListener('change', filterSections);
+    yearSel.addEventListener('change', filterSections);
+  }
+});
+</script>
+{% endblock %}

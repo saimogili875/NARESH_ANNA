@@ -6,7 +6,7 @@
 <div class="row g-3 mb-4">
   <div class="col-6 col-md-3">
     <div class="stat-card">
-      <div class="stat-icon" style="background: rgba(197,160,89,0.14); color: var(--sf-gold); border: 1px solid rgba(197,160,89,0.25);">
+      <div class="stat-icon" style="background: rgba(37,99,235,0.12); color: var(--sf-accent); border: 1px solid rgba(37,99,235,0.25);">
         <i class="bi bi-people-fill"></i>
       </div>
       <div>
@@ -17,7 +17,7 @@
   </div>
   <div class="col-6 col-md-3">
     <div class="stat-card">
-      <div class="stat-icon" style="background: rgba(197,160,89,0.1); color: var(--sf-gold); border: 1px solid rgba(197,160,89,0.2);">
+      <div class="stat-icon" style="background: rgba(37,99,235,0.1); color: var(--sf-accent); border: 1px solid rgba(37,99,235,0.2);">
         <i class="bi bi-1-circle-fill"></i>
       </div>
       <div>
@@ -28,7 +28,7 @@
   </div>
   <div class="col-6 col-md-3">
     <div class="stat-card">
-      <div class="stat-icon" style="background: rgba(90,200,250,0.14); color: #5AC8FA; border: 1px solid rgba(90,200,250,0.25);">
+      <div class="stat-icon" style="background: rgba(2,132,199,0.14); color: #0284c7; border: 1px solid rgba(2,132,199,0.25);">
         <i class="bi bi-2-circle-fill"></i>
       </div>
       <div>
@@ -39,7 +39,7 @@
   </div>
   <div class="col-6 col-md-3">
     <div class="stat-card">
-      <div class="stat-icon" style="background: rgba(48,209,88,0.14); color: #30D158; border: 1px solid rgba(48,209,88,0.25);">
+      <div class="stat-icon" style="background: rgba(22,163,74,0.14); color: #16a34a; border: 1px solid rgba(22,163,74,0.25);">
         <i class="bi bi-calendar-check-fill"></i>
       </div>
       <div>
@@ -53,7 +53,7 @@
 <div class="row g-3 mb-4">
   <div class="col-6 col-md-3">
     <div class="stat-card">
-      <div class="stat-icon" style="background: rgba(255,69,58,0.14); color: #FF453A; border: 1px solid rgba(255,69,58,0.25);">
+      <div class="stat-icon" style="background: rgba(220,38,38,0.14); color: #dc2626; border: 1px solid rgba(220,38,38,0.25);">
         <i class="bi bi-calendar-x-fill"></i>
       </div>
       <div>
@@ -64,7 +64,7 @@
   </div>
   <div class="col-6 col-md-3">
     <div class="stat-card">
-      <div class="stat-icon" style="background: rgba(255,159,10,0.14); color: #FF9F0A; border: 1px solid rgba(255,159,10,0.25);">
+      <div class="stat-icon" style="background: rgba(217,119,6,0.14); color: #d97706; border: 1px solid rgba(217,119,6,0.25);">
         <i class="bi bi-cash-coin"></i>
       </div>
       <div>
@@ -75,7 +75,7 @@
   </div>
   <div class="col-6 col-md-3">
     <div class="stat-card">
-      <div class="stat-icon" style="background: rgba(48,209,88,0.14); color: #30D158; border: 1px solid rgba(48,209,88,0.25);">
+      <div class="stat-icon" style="background: rgba(22,163,74,0.14); color: #16a34a; border: 1px solid rgba(22,163,74,0.25);">
         <i class="bi bi-cash-stack"></i>
       </div>
       <div>
@@ -86,7 +86,7 @@
   </div>
   <div class="col-6 col-md-3">
     <div class="stat-card">
-      <div class="stat-icon" style="background: rgba(197,160,89,0.18); color: var(--sf-gold); border: 1px solid rgba(197,160,89,0.3);">
+      <div class="stat-icon" style="background: rgba(217,119,6,0.14); color: #d97706; border: 1px solid rgba(217,119,6,0.25);">
         <i class="bi bi-exclamation-circle-fill"></i>
       </div>
       <div>
@@ -97,7 +97,7 @@
   </div>
   <div class="col-6 col-md-3">
     <div class="stat-card">
-      <div class="stat-icon" style="background: rgba(197,160,89,0.14); color: var(--sf-gold); border: 1px solid rgba(197,160,89,0.25);">
+      <div class="stat-icon" style="background: rgba(37,99,235,0.14); color: var(--sf-accent); border: 1px solid rgba(37,99,235,0.25);">
         <i class="bi bi-person-plus-fill"></i>
       </div>
       <div>
@@ -113,8 +113,8 @@
   <div class="col-lg-6">
     <div class="card border-0 shadow-sm">
       <div class="card-header border-bottom d-flex justify-content-between align-items-center py-3 bg-transparent">
-        <span class="fw-semibold text-body">Recent Admissions</span>
-        <a href="{% url 'student_list' %}" class="btn btn-sm btn-outline-warning rounded-pill px-3" style="color:var(--sf-gold); border-color:rgba(197,160,89,0.4);">View All</a>
+        <span class="fw-bold">Recent Admissions</span>
+        <a href="{% url 'student_list' %}" class="btn btn-sm btn-outline-primary rounded-pill px-3">View All</a>
       </div>
       <div class="card-body p-0">
         <table class="table table-hover align-middle mb-0">
@@ -125,8 +125,8 @@
             {% for s in recent_students %}
             <tr>
               <td class="small text-muted font-monospace">{{ s.admission_number }}</td>
-              <td class="fw-medium text-light">{{ s.name }}</td>
-              <td><span class="badge bg-dark text-light border border-secondary fw-normal">{{ s.section.group.name|default:'-' }}</span></td>
+              <td class="fw-medium">{{ s.name }}</td>
+              <td><span class="badge bg-secondary-subtle text-body border fw-normal">{{ s.section.group.name|default:'-' }}</span></td>
               <td>{{ s.section|default:'-' }}</td>
               <td class="text-end"><a href="{% url 'student_profile' s.pk %}" class="btn btn-sm btn-outline-secondary rounded-circle px-2 py-1"><i class="bi bi-chevron-right"></i></a></td>
             </tr>
@@ -144,7 +144,7 @@
     <div class="card border-0 shadow-sm">
       <div class="card-header border-bottom py-3 bg-transparent">
         <div class="d-flex justify-content-between align-items-center mb-2">
-          <span class="fw-semibold text-body">Fee Transactions</span>
+          <span class="fw-bold">Fee Transactions</span>
           <span class="badge bg-success-subtle text-success border border-success-subtle px-2.5 py-1.5 fw-medium">₹{{ selected_day_total|floatformat:0 }} on {{ selected_txn_date|date:"d M Y" }}</span>
         </div>
         <form method="get" class="d-flex gap-2 align-items-center">
@@ -164,9 +164,9 @@
             {% for p in selected_day_payments %}
             <tr>
               <td class="small text-muted font-monospace">#{{ p.receipt_number }}</td>
-              <td class="small fw-medium text-light">{{ p.student_fee.student.name }}</td>
+              <td class="small fw-medium">{{ p.student_fee.student.name }}</td>
               <td class="fw-semibold text-success">₹{{ p.amount|floatformat:0 }}</td>
-              <td><span class="badge bg-dark text-light border border-secondary fw-normal">{{ p.get_payment_mode_display }}</span></td>
+              <td><span class="badge bg-secondary-subtle text-body border fw-normal">{{ p.get_payment_mode_display }}</span></td>
             </tr>
             {% empty %}
             <tr><td colspan="4" class="text-center text-muted py-4">No transactions on {{ selected_txn_date|date:"d M Y" }}</td></tr>

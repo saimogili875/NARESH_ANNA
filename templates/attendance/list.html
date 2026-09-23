@@ -20,9 +20,12 @@
       <div class="col-md-3">
         <input type="date" name="date" value="{{ selected_date|date:'Y-m-d' }}" class="form-control form-control-sm" onchange="this.form.submit()">
       </div>
-      <div class="col-auto">
+      <div class="col-auto d-flex gap-2">
         <a href="{% url 'attendance_report' %}" class="btn btn-outline-primary btn-sm">
           <i class="bi bi-bar-chart"></i> Monthly Report
+        </a>
+        <a href="{% url 'attendance_classifier' %}" class="btn btn-primary btn-sm">
+          <i class="bi bi-funnel-fill"></i> Attendance Classifier
         </a>
       </div>
     </form>

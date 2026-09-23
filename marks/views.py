@@ -746,9 +746,11 @@ def marks_report_export_pdf(request):
 @all_roles_required
 def student_marks_export_pdf(request, student_id):
     from .marks_pdf import generate_student_marks_pdf
+    from attendance.models import Attendance
+    from fees.models import StudentFee, FeePayment
 
     student = get_object_or_404(Student, pk=student_id)
-    marks = Mark.objects.filter(student=student).select_related('exam', 'subject').order_by('-exam__date')
+    marks = Mark.objects.filter(student=student).select_related('exam', 'exam__category', 'subject').order_by('-exam__date')
 
     exams_map = {}
     for m in marks:
@@ -770,7 +772,53 @@ def student_marks_export_pdf(request, student_id):
             })
         exam_rows.append({'exam': exam, 'subject_marks': row_marks})
 
-    pdf_bytes = generate_student_marks_pdf(student, exam_rows)
+    # Query Attendance Data
+    att_records = Attendance.objects.filter(student=student).order_by('date')
+    total_work = att_records.count()
+    total_pres = att_records.filter(status='P').count()
+    total_abs = att_records.filter(status='A').count()
+    attd_pct = (total_pres / total_work * 100) if total_work > 0 else 0.0
+
+    months_map = {}
+    for att in att_records:
+        m_key = att.date.strftime('%b-%y')
+        if m_key not in months_map:
+            months_map[m_key] = {'month': m_key, 'work': 0, 'pres': 0, 'abs': 0}
+        months_map[m_key]['work'] += 1
+        if att.status == 'P':
+            months_map[m_key]['pres'] += 1
+        else:
+            months_map[m_key]['abs'] += 1
+
+    for m in months_map.values():
+        m['pct'] = round((m['pres'] / m['work'] * 100), 1) if m['work'] > 0 else 0.0
+
+    attendance_data = {
+        'total_work': total_work,
+        'total_pres': total_pres,
+        'total_abs': total_abs,
+        'attd_pct': attd_pct,
+        'months': list(months_map.values())
+    }
+
+    # Query Fee Data
+    fee_payments = FeePayment.objects.filter(
+        models.Q(student_fee__student=student) | models.Q(fee_charge__student=student)
+    ).select_related('fee_charge__fee_type').order_by('payment_date')
+
+    student_fee = StudentFee.objects.filter(student=student).first()
+    tot_assigned = float(student_fee.total_fee) if student_fee else 0.0
+    tot_paid = float(student_fee.total_paid) if student_fee else 0.0
+    tot_pending = float(student_fee.total_pending) if student_fee else 0.0
+
+    fee_data = {
+        'payments': list(fee_payments),
+        'total_assigned': tot_assigned,
+        'total_paid': tot_paid,
+        'total_pending': tot_pending,
+    }
+
+    pdf_bytes = generate_student_marks_pdf(student, exam_rows, attendance_data, fee_data)
 
     response = HttpResponse(pdf_bytes, content_type='application/pdf')
     filename = f"marks_{student.admission_number}_{student.name}.pdf".replace(' ', '_')
