@@ -22,15 +22,37 @@ def faculty_add(request):
     if request.method == 'POST':
         user_id = request.POST.get('user')
         user = get_object_or_404(User, pk=user_id)
+
+        if user.role != 'faculty' or hasattr(user, 'faculty_profile'):
+            messages.error(request, 'Selected user is not a valid faculty candidate.')
+            return render(request, 'faculty/form.html', {
+                'users': users, 'sections': sections, 'all_subjects': all_subjects, 'title': 'Add Faculty',
+            })
+
+        employee_id = request.POST.get('employee_id', '').strip()
+        if Faculty.objects.filter(employee_id=employee_id).exists():
+            messages.error(request, 'Employee ID already exists.')
+            return render(request, 'faculty/form.html', {
+                'users': users, 'sections': sections, 'all_subjects': all_subjects, 'title': 'Add Faculty',
+            })
+
+        try:
+            dob = Date.fromisoformat(request.POST.get('date_of_joining', ''))
+        except (ValueError, TypeError):
+            messages.error(request, 'Please enter a valid date of joining.')
+            return render(request, 'faculty/form.html', {
+                'users': users, 'sections': sections, 'all_subjects': all_subjects, 'title': 'Add Faculty',
+            })
+
         faculty = Faculty.objects.create(
             user=user,
-            employee_id=request.POST.get('employee_id'),
+            employee_id=employee_id,
             name=request.POST.get('name'),
             subject=request.POST.get('subject'),
             phone=request.POST.get('phone'),
             email=request.POST.get('email'),
             address=request.POST.get('address', ''),
-            date_of_joining=request.POST.get('date_of_joining'),
+            date_of_joining=dob,
         )
         section_ids = request.POST.getlist('assigned_sections')
         faculty.assigned_sections.set(section_ids)
@@ -87,7 +109,6 @@ from attendance.views import parse_date_input, trigger_whatsapp_sender_in_backgr
 from whatsapp.models import PendingMessage
 
 
-
 @all_roles_required
 def faculty_attendance(request):
     today = timezone.localdate()
@@ -113,53 +134,60 @@ def faculty_attendance(request):
         messages.success(request, f'Faculty attendance saved for {selected_date.strftime("%d-%m-%Y")}.')
 
         if send_type in ['absent', 'all'] and (getattr(request.user, 'role', '') == 'admin' or request.user.is_superuser):
-            from whatsapp.services import send_faculty_absence_alert, send_generic_template
+            from django.conf import settings
+            from whatsapp.services import dispatch_pending_messages_async
             target_lang = (request.POST.get('language') or 'en').lower().strip()
-            sent_count = 0
-            failed_count = 0
+            queued_count = 0
             for f in faculty_qs:
                 status = request.POST.get(f'status_{f.pk}', 'P')
                 if send_type == 'absent' and status != 'A':
                     continue
 
                 phone = (f.phone or getattr(f.user, 'phone', '') or '').strip()
-
                 if not phone:
                     continue
 
                 if status == 'A':
-                    result = send_faculty_absence_alert(
-                        faculty_name=f.name,
+                    template_name = getattr(settings, 'META_TEMPLATE_FACULTY_ABSENCE', 'faculty_absence_alert')
+                    msg_text = f"Dear {f.name}, You were marked ABSENT on {selected_date.strftime('%d-%m-%Y')}. - Sri NRI Junior College"
+                    PendingMessage.objects.create(
+                        faculty=f,
                         phone=phone,
-                        date_str=selected_date.strftime('%d-%m-%Y'),
+                        message_type=PendingMessage.TYPE_TEMPLATE,
+                        template_name=template_name,
+                        template_params=[f.name, selected_date.strftime('%d-%m-%Y')],
                         language=target_lang,
+                        message=msg_text,
+                        attendance_date=selected_date,
+                        status=PendingMessage.STATUS_PENDING,
                     )
                 else:
-                    result = send_generic_template(
-                        to_number=phone,
-                        message=(
-                            f"Dear {f.name}, Your attendance has been marked PRESENT for today, "
-                            f"{selected_date.strftime('%d-%m-%Y')}. Have a great day! - Sri NRI Junior College"
-                        ),
-                        language=target_lang,
+                    msg_text = (
+                        f"Dear {f.name}, Your attendance has been marked PRESENT for today, "
+                        f"{selected_date.strftime('%d-%m-%Y')}. Have a great day! - Sri NRI Junior College"
                     )
+                    PendingMessage.objects.create(
+                        faculty=f,
+                        phone=phone,
+                        message_type=PendingMessage.TYPE_TEXT,
+                        language=target_lang,
+                        message=msg_text,
+                        attendance_date=selected_date,
+                        status=PendingMessage.STATUS_PENDING,
+                    )
+                queued_count += 1
 
-                if result.get('success'):
-                    sent_count += 1
-                else:
-                    failed_count += 1
+            if queued_count > 0:
+                dispatch_pending_messages_async()
 
-            messages.success(request, f'WhatsApp alerts sent: {sent_count} delivered, {failed_count} failed for faculty on {selected_date.strftime("%d-%m-%Y")}.')
+            messages.success(request, f'WhatsApp alerts queued: {queued_count} message(s) queued for faculty on {selected_date.strftime("%d-%m-%Y")}.')
 
         return redirect(f'/faculty/attendance/?date={selected_date.isoformat()}')
-
-
-
 
     # Map recent WhatsApp messages for selected date
     msgs = PendingMessage.objects.filter(
         faculty__in=faculty_qs,
-        created_at__date=selected_date
+        attendance_date=selected_date
     ).order_by('-created_at')
     whatsapp_map = {}
     for m in msgs:

@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from django.contrib.auth.decorators import login_required
+from accounts.decorators import admin_accounts_required
 from django.db.models import Sum, Count
 from django.utils import timezone
 from datetime import date as date_type
@@ -9,7 +9,7 @@ from attendance.models import Attendance
 from accounts.models import AcademicYear, Section
 
 
-@login_required
+@admin_accounts_required
 def reports_home(request):
     active_year = AcademicYear.objects.filter(is_active=True).first()
     today = timezone.localdate()

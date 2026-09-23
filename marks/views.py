@@ -430,15 +430,29 @@ def marks_whatsapp_send(request, exam_id):
             messages.warning(request, 'No section selected to send.')
             return redirect(f'/marks/exam/{exam_id}/whatsapp/send/')
 
+        confirm_resend = (request.POST.get('confirm_resend') == '1')
         sec_map = {str(s['section'].id): s for s in statuses}
         target_statuses = []
+        skipped_already_sent = []
+
         for sid in selected_section_ids:
             status = sec_map.get(str(sid))
             if status and status['is_complete']:
-                target_statuses.append(status)
+                if status['is_sent'] and not confirm_resend:
+                    skipped_already_sent.append(str(status['section']))
+                else:
+                    target_statuses.append(status)
+
+        if skipped_already_sent:
+            sec_names = ", ".join(skipped_already_sent)
+            messages.warning(
+                request,
+                f"Skipped section(s) already sent: {sec_names}. Check 'Allow re-sending' if you wish to re-send to them."
+            )
 
         if not target_statuses:
-            messages.warning(request, 'Selected section(s) are incomplete. Please complete marks entry first.')
+            if not skipped_already_sent:
+                messages.warning(request, 'Selected section(s) are incomplete. Please complete marks entry first.')
             return redirect(f'/marks/exam/{exam_id}/whatsapp/send/')
 
         subjects = get_subjects_for_exam(exam)
