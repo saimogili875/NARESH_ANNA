@@ -1,3 +1,4 @@
+from decimal import Decimal, InvalidOperation
 from django.shortcuts import render, redirect, get_object_or_404
 from django.conf import settings
 from django.http import HttpResponse
@@ -114,9 +115,9 @@ def fee_type_assign(request, pk):
         section_ids = request.POST.getlist('sections')
         amount_str = request.POST.get('amount', '0').strip()
         try:
-            amount = float(amount_str)
-        except ValueError:
-            amount = 0
+            amount = Decimal(amount_str)
+        except (InvalidOperation, TypeError, ValueError):
+            amount = Decimal('0')
 
         if not section_ids:
             messages.error(request, 'Please select at least one section.')
@@ -158,8 +159,9 @@ def fee_type_unassign_section(request, pk, section_id):
         deleted_count, _ = charges.delete()
         messages.success(request, f"Unassigned '{fee_type.name}' from {section} ({deleted_count} student record(s) removed).")
 
+    from django.utils.http import url_has_allowed_host_and_scheme
     next_url = request.POST.get('next') or request.GET.get('next')
-    if next_url:
+    if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
         return redirect(next_url)
     return redirect('fee_type_assign', pk=pk)
 
@@ -193,19 +195,19 @@ def fee_type_assign_individual(request, pk):
 
             if raw_amt != '':
                 try:
-                    amount = float(raw_amt)
+                    amount = Decimal(raw_amt)
                     charge, _ = StudentFeeCharge.objects.get_or_create(
                         student=student, fee_type=fee_type, defaults={'amount_assigned': amount}
                     )
                     charge.amount_assigned = amount
                     charge.save()
                     updated += 1
-                except ValueError:
+                except (InvalidOperation, TypeError, ValueError):
                     pass
 
             if raw_pay != '':
                 try:
-                    pay_amount = float(raw_pay)
+                    pay_amount = Decimal(raw_pay)
                     if pay_amount > 0:
                         charge, _ = StudentFeeCharge.objects.get_or_create(
                             student=student, fee_type=fee_type, defaults={'amount_assigned': 0}
@@ -268,7 +270,11 @@ def fee_type_assign_individual(request, pk):
     })
 
 
+from django.views.decorators.http import require_POST
+
+
 @admin_accounts_required
+@require_POST
 def fee_charge_delete(request, pk, charge_id):
     fee_type = get_object_or_404(FeeType, pk=pk)
     charge = get_object_or_404(StudentFeeCharge, pk=charge_id, fee_type=fee_type)
@@ -449,13 +455,23 @@ def fee_set(request, pk):
     if request.method == 'POST':
         raw_fee = request.POST.get('total_fee', '0').strip()
         try:
-            student_fee.total_fee = float(raw_fee) if raw_fee else 0
-        except ValueError:
-            student_fee.total_fee = 0
+            val = Decimal(raw_fee) if raw_fee else Decimal('0')
+            if val < Decimal('0'):
+                messages.error(request, 'Total fee cannot be negative.')
+                return render(request, 'fees/set_fee.html', {
+                    'student': student, 'student_fee': student_fee, 'active_year': active_year,
+                })
+            student_fee.total_fee = val
+        except (InvalidOperation, TypeError, ValueError):
+            messages.error(request, 'Invalid fee amount.')
+            return render(request, 'fees/set_fee.html', {
+                'student': student, 'student_fee': student_fee, 'active_year': active_year,
+            })
         student_fee.save()
         messages.success(request, f'Total fee set to ₹{student_fee.total_fee} for {student.name}.')
+        from django.utils.http import url_has_allowed_host_and_scheme
         next_url = request.POST.get('next', '').strip()
-        if next_url:
+        if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
             return redirect(next_url)
         return redirect('fee_detail', pk=pk)
     return render(request, 'fees/set_fee.html', {
@@ -477,9 +493,9 @@ def fee_set_bulk(request):
         section_ids = request.POST.getlist('sections')
         amount_str = request.POST.get('amount', '0').strip()
         try:
-            amount = float(amount_str)
-        except ValueError:
-            amount = 0
+            amount = Decimal(amount_str)
+        except (InvalidOperation, TypeError, ValueError):
+            amount = Decimal('0')
 
         if not section_ids:
             messages.error(request, 'Please select at least one section.')
@@ -556,9 +572,10 @@ def fee_collect(request, pk):
         fee_head_id = request.POST.get('fee_head', 'tuition')
         raw_amount = request.POST.get('amount', '0').strip()
         try:
-            amount = float(raw_amount) if raw_amount else 0
-        except ValueError:
-            amount = 0
+            amount = Decimal(raw_amount) if raw_amount else Decimal('0')
+        except (InvalidOperation, TypeError, ValueError):
+            amount = Decimal('0')
+        idempotency_key = request.POST.get('idempotency_key', '').strip() or uuid.uuid4().hex
         payment_mode = request.POST.get('payment_mode', 'cash')
         remarks = request.POST.get('remarks', '')
         payment_date_str = request.POST.get('payment_date', str(today))
@@ -593,31 +610,59 @@ def fee_collect(request, pk):
         else:
             target_fee_charge = get_object_or_404(StudentFeeCharge, pk=fee_head_id, student=student)
 
-        # Double-submit protection: reject identical submission within 5 seconds
-        recent_window = timezone.now() - timezone.timedelta(seconds=5)
-        recent_duplicate = FeePayment.objects.filter(
-            amount=amount,
-            created_at__gte=recent_window,
-        )
+        target_pending = Decimal('0')
         if target_student_fee:
-            recent_duplicate = recent_duplicate.filter(student_fee=target_student_fee)
+            target_pending = target_student_fee.total_pending
         elif target_fee_charge:
-            recent_duplicate = recent_duplicate.filter(fee_charge=target_fee_charge)
+            target_pending = target_fee_charge.total_pending
 
-        if recent_duplicate.exists():
+        confirm_overpay = request.POST.get('confirm_overpay', '').strip()
+        if amount > target_pending and confirm_overpay != '1':
+            messages.warning(request, f'This payment of ₹{amount} exceeds the pending balance of ₹{target_pending}. Please confirm to proceed as an advance payment.')
+            return render(request, 'fees/collect.html', {
+                'student': student, 'student_fee': student_fee,
+                'other_charges': unpaid_other_charges,
+                'active_year': active_year, 'payment_modes': FeePayment.PAYMENT_MODES,
+                'today': today, 'idempotency_key': idempotency_key,
+                'overpay_warning': True,
+                'preset_amount': amount,
+                'preset_fee_head': fee_head_id,
+            })
+
+        from django.db import transaction, IntegrityError
+
+        try:
+            with transaction.atomic():
+                # Double-submit protection: reject identical submission within 5 seconds + idempotency check
+                recent_window = timezone.now() - timezone.timedelta(seconds=5)
+                recent_duplicate = FeePayment.objects.select_for_update().filter(
+                    amount=amount,
+                    created_at__gte=recent_window,
+                )
+                if target_student_fee:
+                    recent_duplicate = recent_duplicate.filter(student_fee=target_student_fee)
+                elif target_fee_charge:
+                    recent_duplicate = recent_duplicate.filter(fee_charge=target_fee_charge)
+
+                if (idempotency_key and FeePayment.objects.filter(idempotency_key=idempotency_key).exists()) or recent_duplicate.exists():
+                    messages.warning(request, 'A payment with identical amount and fee head was just processed. Duplicate submission prevented.')
+                    return redirect('fee_detail', pk=pk)
+
+                FeePayment.objects.create(
+                    student_fee=target_student_fee,
+                    fee_charge=target_fee_charge,
+                    amount=amount,
+                    payment_date=payment_date,
+                    payment_mode=payment_mode,
+                    receipt_number=receipt_number,
+                    collected_by=request.user.get_full_name() or request.user.username,
+                    remarks=remarks,
+                    idempotency_key=idempotency_key,
+                )
+        except IntegrityError:
             messages.warning(request, 'A payment with identical amount and fee head was just processed. Duplicate submission prevented.')
             return redirect('fee_detail', pk=pk)
 
-        FeePayment.objects.create(
-            student_fee=target_student_fee,
-            fee_charge=target_fee_charge,
-            amount=amount,
-            payment_date=payment_date,
-            payment_mode=payment_mode,
-            receipt_number=receipt_number,
-            collected_by=request.user.get_full_name() or request.user.username,
-            remarks=remarks,
-        )
         messages.success(request, f'₹{amount} collected! Receipt: {receipt_number}')
 
         from django.utils.http import url_has_allowed_host_and_scheme
@@ -627,11 +672,12 @@ def fee_collect(request, pk):
         return redirect('fee_detail', pk=pk)
 
 
+    idempotency_key = uuid.uuid4().hex
     return render(request, 'fees/collect.html', {
         'student': student, 'student_fee': student_fee,
         'other_charges': unpaid_other_charges,
         'active_year': active_year, 'payment_modes': FeePayment.PAYMENT_MODES,
-        'today': today,
+        'today': today, 'idempotency_key': idempotency_key,
     })
 
 
@@ -658,14 +704,31 @@ def payment_edit(request, pk, payment_id):
             payment.receipt_number = new_receipt_number
 
         try:
-            amount = float(raw_amount)
+            amount = Decimal(raw_amount)
             if amount <= 0:
                 messages.error(request, 'Payment amount must be greater than zero.')
                 return redirect('payment_edit', pk=pk, payment_id=payment_id)
-            payment.amount = amount
-        except ValueError:
+        except (InvalidOperation, TypeError, ValueError):
             messages.error(request, 'Invalid amount value.')
             return redirect('payment_edit', pk=pk, payment_id=payment_id)
+
+        target_pending = Decimal('0')
+        if payment.student_fee:
+            target_pending = payment.student_fee.total_pending + payment.amount
+        elif payment.fee_charge:
+            target_pending = payment.fee_charge.total_pending + payment.amount
+
+        confirm_overpay = request.POST.get('confirm_overpay', '').strip()
+        if amount > target_pending and confirm_overpay != '1':
+            messages.warning(request, f'This payment amount ₹{amount} exceeds the pending balance of ₹{target_pending}. Please confirm to proceed as an advance payment.')
+            return render(request, 'fees/payment_edit.html', {
+                'student': student, 'payment': payment,
+                'payment_modes': FeePayment.PAYMENT_MODES,
+                'overpay_warning': True,
+                'preset_amount': amount,
+            })
+
+        payment.amount = amount
 
 
         if payment_date_str:
@@ -719,9 +782,9 @@ def fee_charge_set(request, pk, charge_id):
     if request.method == 'POST':
         raw_amount = request.POST.get('amount_assigned', '0').strip()
         try:
-            charge.amount_assigned = float(raw_amount) if raw_amount else 0
-        except ValueError:
-            charge.amount_assigned = 0
+            charge.amount_assigned = Decimal(raw_amount) if raw_amount else Decimal('0')
+        except (InvalidOperation, TypeError, ValueError):
+            charge.amount_assigned = Decimal('0')
         charge.save()
         messages.success(request, f"Assigned fee for {charge.fee_type.name} set to ₹{charge.amount_assigned} for {student.name}.")
         return redirect('fee_detail', pk=pk)
@@ -747,9 +810,9 @@ def payment_adjust(request, pk):
         fee_head_id = request.POST.get('fee_head', 'tuition')
         raw_amount = request.POST.get('amount', '0').strip()
         try:
-            amount = float(raw_amount) if raw_amount else 0
-        except ValueError:
-            amount = 0
+            amount = Decimal(raw_amount) if raw_amount else Decimal('0')
+        except (InvalidOperation, TypeError, ValueError):
+            amount = Decimal('0')
 
         remarks = request.POST.get('remarks', 'Manual correction by admin').strip()
         if not remarks:
@@ -801,9 +864,11 @@ def receipt_download(request, pk, payment_id):
     if not (payment.student_fee and payment.student_fee.student == student) and not (payment.fee_charge and payment.fee_charge.student == student):
         return HttpResponse("Unauthorized", status=401)
 
+    from django.utils.text import get_valid_filename
+    safe_receipt = get_valid_filename(payment.receipt_number or str(payment.id))
     pdf_bytes = generate_receipt_pdf(payment)
     response = HttpResponse(pdf_bytes, content_type='application/pdf')
-    response['Content-Disposition'] = f'inline; filename="receipt_{payment.receipt_number}.pdf"'
+    response['Content-Disposition'] = f'inline; filename="receipt_{safe_receipt}.pdf"'
     return response
 
 

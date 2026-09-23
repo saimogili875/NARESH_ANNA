@@ -71,7 +71,6 @@
 </head>
 <body>
     <video id="welcome-video" autoplay muted playsinline>
-        <source src="{% static 'videos/video.mov' %}" type="video/quicktime">
         <source src="{% static 'video.mov' %}" type="video/quicktime">
         Your browser does not support HTML5 video.
     </video>
@@ -80,15 +79,17 @@
         <a href="{{ next_url }}" class="skip-btn">Skip <span style="font-family: sans-serif;">&rarr;</span></a>
     </div>
 
+    {{ next_url|json_script:"next-url-data" }}
     <script>
+        const nextUrl = JSON.parse(document.getElementById('next-url-data').textContent);
         const video = document.getElementById('welcome-video');
         video.addEventListener('ended', () => {
-            window.location.href = "{{ next_url|safe }}";
+            window.location.href = nextUrl;
         });
         
         // Failsafe: if video fails to play, buffer forever, or is too long, redirect after 8 seconds
         setTimeout(() => {
-            window.location.href = "{{ next_url|safe }}";
+            window.location.href = nextUrl;
         }, 8000);
     </script>
 </body>

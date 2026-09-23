@@ -7,7 +7,7 @@ from .models import Exam, Mark, ExamSubjectMaxMark, ExamCategory, ExamType, Grou
 from students.models import Student
 from accounts.models import Section, AcademicYear, Group
 from accounts.decorators import all_roles_required, admin_faculty_required, admin_required
-from accounts.utils import _get_faculty_sections
+from accounts.utils import _get_faculty_sections, _section_allowed
 
 def get_subjects_for_exam(exam):
     """Return the subject list to use for marks entry/report for this exam."""
@@ -131,6 +131,34 @@ def exam_add(request):
             if not GroupCategoryConfig.objects.filter(group=group, category=category).exists():
                 messages.error(request, f'Category "{category.name}" is not configured for group "{group.name}".')
             else:
+                from datetime import date as Date
+                raw_date = request.POST.get('date', '').strip()
+                try:
+                    exam_date = Date.fromisoformat(raw_date)
+                except (ValueError, TypeError):
+                    messages.error(request, 'Invalid or missing exam date.')
+                    return render(request, 'marks/exam_form.html', {
+                        'active_year': active_year, 'exam_types': exam_types,
+                        'groups': groups, 'group_category_options': gco_data,
+                        'category_labels': cl_data, 'subject_sets': ss_data,
+                        'fixed_categories': fc_data, 'exam_types_js': exam_types_js,
+                        'default_max_marks': {str(c.id): 100 for c in categories_qs},
+                        'fixed_subject_max_marks': {str(c.id): {} for c in categories_qs if c.is_fixed_marks},
+                    })
+
+                if Exam.objects.filter(
+                    exam_type=exam_type, academic_year=active_year, group=group, category=category, date=exam_date
+                ).exists():
+                    messages.error(request, 'An exam with these details already exists.')
+                    return render(request, 'marks/exam_form.html', {
+                        'active_year': active_year, 'exam_types': exam_types,
+                        'groups': groups, 'group_category_options': gco_data,
+                        'category_labels': cl_data, 'subject_sets': ss_data,
+                        'fixed_categories': fc_data, 'exam_types_js': exam_types_js,
+                        'default_max_marks': {str(c.id): 100 for c in categories_qs},
+                        'fixed_subject_max_marks': {str(c.id): {} for c in categories_qs if c.is_fixed_marks},
+                    })
+
                 subjects = list(category.subjects.all())
                 if not subjects:
                     messages.error(request, f'Category "{category.name}" has no subjects attached. Please configure subjects in Admin first.')
@@ -153,7 +181,7 @@ def exam_add(request):
                         academic_year=active_year,
                         group=group,
                         category=category,
-                        date=request.POST.get('date'),
+                        date=exam_date,
                         max_marks=overall_max,
                     )
 
@@ -240,10 +268,16 @@ def exam_edit(request, exam_id):
 @admin_required
 def exam_delete(request, exam_id):
     exam = get_object_or_404(Exam, pk=exam_id)
-    name = exam.display_name()
-    exam.delete()
-    messages.success(request, f"Exam '{name}' and all associated marks have been deleted.")
-    return redirect('exam_list')
+    if request.method == 'POST':
+        name = exam.display_name()
+        exam.delete()
+        messages.success(request, f"Exam '{name}' and all associated marks have been deleted.")
+        return redirect('exam_list')
+    mark_count = Mark.objects.filter(exam=exam).count()
+    return render(request, 'marks/exam_confirm_delete.html', {
+        'exam': exam,
+        'mark_count': mark_count,
+    })
 
 
 @admin_required
@@ -262,7 +296,9 @@ def marks_entry_unlock(request, exam_id, section_id, subject_id):
 def marks_entry(request, exam_id):
     exam = get_object_or_404(Exam, pk=exam_id)
     section_id = request.GET.get('section', '')
-    if exam.group_id:
+    if getattr(request.user, 'role', None) == 'faculty' and not request.user.is_superuser:
+        sections = _get_faculty_sections(request.user)
+    elif exam.group_id:
         sections = Section.objects.select_related('group').filter(group=exam.group)
     else:
         sections = Section.objects.select_related('group').all()
@@ -283,6 +319,10 @@ def marks_entry(request, exam_id):
 
     if section_id and str(section_id).isdigit():
         selected_section = get_object_or_404(Section, pk=section_id)
+        if getattr(request.user, 'role', None) == 'faculty' and not request.user.is_superuser:
+            if not _section_allowed(request.user, selected_section.pk):
+                messages.error(request, 'Access denied: You are not assigned to this section.')
+                return redirect('exam_list')
         locks = MarksEntryLock.objects.filter(exam=exam, section=selected_section, subject__in=subjects)
         locked_subject_ids = set(locks.filter(is_locked=True).values_list('subject_id', flat=True))
         locked_map = {sub.id: (sub.id in locked_subject_ids) for sub in subjects}
@@ -290,6 +330,9 @@ def marks_entry(request, exam_id):
     if request.method == 'POST':
         sid = request.POST.get('section_id')
         sec = get_object_or_404(Section, pk=sid)
+        if not _section_allowed(request.user, sid):
+            messages.error(request, 'Access denied: You are not assigned to this section.')
+            return redirect(f'/marks/exam/{exam_id}/entry/')
 
         # Server-side lock check
         locks = MarksEntryLock.objects.filter(exam=exam, section=sec, subject__in=subjects)
@@ -535,7 +578,10 @@ def marks_report(request):
     sort_order = request.GET.get('sort', 'asc')
 
     groups   = Group.objects.all().order_by('name')
-    sections = Section.objects.select_related('group').all()
+    if getattr(request.user, 'role', None) == 'faculty' and not request.user.is_superuser:
+        sections = _get_faculty_sections(request.user)
+    else:
+        sections = Section.objects.select_related('group').all()
     active_year = AcademicYear.objects.filter(is_active=True).first()
     exams = Exam.objects.filter(academic_year=active_year).select_related('group', 'category', 'exam_type').order_by('-date') if active_year else []
     categories_qs = ExamCategory.objects.all()
@@ -543,7 +589,7 @@ def marks_report(request):
     group_category_map = {}
     for config in GroupCategoryConfig.objects.select_related('group', 'category').all():
         group_category_map.setdefault(str(config.group_id), []).append(str(config.category_id))
-    group_category_map_json = json.dumps(group_category_map)
+    group_category_map_json = group_category_map
 
     report_data = []
     selected_section = None
@@ -563,6 +609,10 @@ def marks_report(request):
         nonlocal selected_section, section_label
         if eff_section:
             selected_section = get_object_or_404(Section, pk=eff_section)
+            if getattr(request.user, 'role', None) == 'faculty' and not request.user.is_superuser:
+                if not _section_allowed(request.user, selected_section.pk):
+                    messages.error(request, 'Access denied: You are not assigned to this section.')
+                    return Student.objects.none()
             section_label = str(selected_section)
             return Student.objects.filter(section=selected_section, is_active=True)
         qs = Student.objects.select_related('section').filter(is_active=True)
@@ -653,6 +703,10 @@ def marks_report_export_excel(request):
         return redirect('marks_report')
 
     selected_section = get_object_or_404(Section, pk=section_id)
+    if getattr(request.user, 'role', None) == 'faculty' and not request.user.is_superuser:
+        if not _section_allowed(request.user, selected_section.pk):
+            messages.error(request, 'Access denied: You are not assigned to this section.')
+            return redirect('marks_report')
     selected_exam = get_object_or_404(Exam, pk=exam_id)
     students = Student.objects.filter(section=selected_section, is_active=True)
     marks = Mark.objects.filter(exam=selected_exam, student__in=students).select_related('subject')
@@ -716,6 +770,10 @@ def marks_report_export_pdf(request):
         return redirect('marks_report')
 
     selected_section = get_object_or_404(Section, pk=section_id)
+    if getattr(request.user, 'role', None) == 'faculty' and not request.user.is_superuser:
+        if not _section_allowed(request.user, selected_section.pk):
+            messages.error(request, 'Access denied: You are not assigned to this section.')
+            return redirect('marks_report')
     selected_exam = get_object_or_404(Exam, pk=exam_id)
     students = Student.objects.filter(section=selected_section, is_active=True)
     marks = Mark.objects.filter(exam=selected_exam, student__in=students).select_related('subject')

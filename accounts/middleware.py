@@ -67,6 +67,7 @@ class SessionExpiryMiddleware:
 FACULTY_ALLOWED_PATHS = [
     '/attendance/',
     '/marks/',
+    '/lab/',
     '/logout/',
     '/static/',
 ]
@@ -85,6 +86,7 @@ class FacultyAccessMiddleware:
             path = request.path
             allowed = any(path.startswith(p) for p in FACULTY_ALLOWED_PATHS)
             if not allowed:
+                messages.error(request, "You do not have access to this page.")
                 return redirect('/attendance/')
         return self.get_response(request)
 

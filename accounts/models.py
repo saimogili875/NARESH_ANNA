@@ -43,6 +43,13 @@ class AcademicYear(models.Model):
     start_date = models.DateField()
     end_date = models.DateField()
 
+    def save(self, *args, **kwargs):
+        from django.db import transaction
+        with transaction.atomic():
+            if self.is_active:
+                AcademicYear.objects.filter(is_active=True).exclude(pk=self.pk).update(is_active=False)
+            super().save(*args, **kwargs)
+
     def __str__(self):
         return self.name
 

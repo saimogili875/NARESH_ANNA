@@ -61,8 +61,11 @@ def generate_pdf(request, report_id):
     """Generate and download PDF report."""
     report = get_object_or_404(LabPerformanceReport, id=report_id)
 
-    response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = f'inline; filename="Lab_Report_{report.student.name}_{report.student.admission_number}.pdf"'
+    from django.utils.text import get_valid_filename
+    safe_name = get_valid_filename(report.student.name)
+    safe_adm = get_valid_filename(report.student.admission_number)
+    filename = get_valid_filename(f"Lab_Report_{safe_name}_{safe_adm}.pdf")
+    response['Content-Disposition'] = f'inline; filename="{filename}"'
 
     pdf = canvas.Canvas(response, pagesize=A4)
 

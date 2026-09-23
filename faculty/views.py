@@ -70,7 +70,11 @@ def faculty_edit(request, pk):
     })
 
 
+from django.views.decorators.http import require_POST
+
+
 @admin_required
+@require_POST
 def faculty_delete(request, pk):
     obj = get_object_or_404(Faculty, pk=pk)
     obj.is_active = False

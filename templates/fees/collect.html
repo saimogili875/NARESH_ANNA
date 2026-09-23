@@ -41,6 +41,17 @@
     <form method="post">
       {% csrf_token %}
       <input type="hidden" name="next" value="{{ request.GET.next }}">
+      <input type="hidden" name="idempotency_key" value="{{ idempotency_key }}">
+      {% if overpay_warning %}
+      <div class="alert alert-warning mb-3">
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" name="confirm_overpay" value="1" id="confirmOverpayCheck" required>
+          <label class="form-check-label fw-bold" for="confirmOverpayCheck">
+            Proceed as advance payment (amount exceeds pending balance)
+          </label>
+        </div>
+      </div>
+      {% endif %}
       
       <div class="mb-3">
         <label class="form-label fw-500">Fee Type <span class="text-danger">*</span></label>

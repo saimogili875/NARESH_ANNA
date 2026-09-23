@@ -159,7 +159,7 @@ class FeeManagementFeaturesTest(TestCase):
         fee_type = FeeType.objects.create(name='Uniform Fee', academic_year=self.year)
         charge = StudentFeeCharge.objects.create(student=self.student, fee_type=fee_type, amount_assigned=2500)
 
-        res_delete = self.client.get(reverse('fee_charge_delete', args=[fee_type.pk, charge.pk]))
+        res_delete = self.client.post(reverse('fee_charge_delete', args=[fee_type.pk, charge.pk]))
         self.assertEqual(res_delete.status_code, 302)
         self.assertFalse(StudentFeeCharge.objects.filter(pk=charge.pk).exists())
 
@@ -228,6 +228,72 @@ class FeeManagementFeaturesTest(TestCase):
         charge = StudentFeeCharge.objects.filter(student=new_student, fee_type=ft).first()
         self.assertIsNotNone(charge)
         self.assertEqual(charge.amount_assigned, 1500)
+
+    def test_decimal_amount_precision_no_float_drift(self):
+        from decimal import Decimal
+        self.client.post(reverse('fee_set', args=[self.student.pk]), {'total_fee': '200.00'})
+        sf = StudentFee.objects.get(student=self.student, academic_year=self.year)
+
+        amounts = ['19.90', '29.85', '39.75']
+        for i, amt in enumerate(amounts):
+            self.client.post(reverse('fee_collect', args=[self.student.pk]), {
+                'fee_head': 'tuition',
+                'amount': amt,
+                'payment_mode': 'cash',
+                'receipt_number': f'RCPDEC00{i}',
+                'remarks': f'Decimal test {i}'
+            })
+
+        sf.refresh_from_db()
+        self.assertEqual(sf.total_paid, Decimal('89.50'))
+        self.assertEqual(sf.total_pending, Decimal('110.50'))
+
+    def test_concurrent_duplicate_payment_prevention(self):
+        self.client.post(reverse('fee_set', args=[self.student.pk]), {'total_fee': '50000'})
+
+        idempotency_key = 'IDEMPOTENT_KEY_123'
+        post_data = {
+            'fee_head': 'tuition',
+            'amount': '5000',
+            'payment_mode': 'cash',
+            'receipt_number': 'RCPCONCUR1',
+            'idempotency_key': idempotency_key,
+        }
+
+        res1 = self.client.post(reverse('fee_collect', args=[self.student.pk]), post_data)
+        self.assertEqual(res1.status_code, 302)
+
+        # Second POST with identical idempotency_key / payload is blocked
+        res2 = self.client.post(reverse('fee_collect', args=[self.student.pk]), post_data)
+        self.assertEqual(res2.status_code, 302)
+
+        payments_count = FeePayment.objects.filter(receipt_number='RCPCONCUR1').count()
+        self.assertEqual(payments_count, 1)
+
+    def test_overpay_warning_requires_confirmation(self):
+        self.client.post(reverse('fee_set', args=[self.student.pk]), {'total_fee': '1000'})
+        sf = StudentFee.objects.get(student=self.student, academic_year=self.year)
+
+        res1 = self.client.post(reverse('fee_collect', args=[self.student.pk]), {
+            'fee_head': 'tuition',
+            'amount': '1500',
+            'payment_mode': 'cash',
+        })
+        self.assertEqual(res1.status_code, 200)
+        self.assertContains(res1, 'exceeds the pending balance')
+        sf.refresh_from_db()
+        self.assertEqual(sf.total_paid, 0)
+
+        res2 = self.client.post(reverse('fee_collect', args=[self.student.pk]), {
+            'fee_head': 'tuition',
+            'amount': '1500',
+            'payment_mode': 'cash',
+            'confirm_overpay': '1',
+        })
+        self.assertEqual(res2.status_code, 302)
+        sf.refresh_from_db()
+        self.assertEqual(sf.total_paid, 1500)
+
 
 
 

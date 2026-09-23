@@ -1,5 +1,37 @@
+import base64
+import hashlib
+from cryptography.fernet import Fernet
+from django.conf import settings
 from django.db import models
 from students.models import Student
+
+
+def _get_fernet():
+    secret = getattr(settings, 'SECRET_KEY', 'default_fallback_secret_key')
+    key_bytes = hashlib.sha256(secret.encode()).digest()
+    key = base64.urlsafe_b64encode(key_bytes)
+    return Fernet(key)
+
+
+def encrypt_value(val):
+    if not val:
+        return ''
+    if str(val).startswith('gAAAAA'):
+        return val  # Already encrypted
+    f = _get_fernet()
+    return f.encrypt(val.encode('utf-8')).decode('utf-8')
+
+
+def decrypt_value(val):
+    if not val:
+        return ''
+    if not str(val).startswith('gAAAAA'):
+        return val  # Unencrypted or legacy
+    try:
+        f = _get_fernet()
+        return f.decrypt(val.encode('utf-8')).decode('utf-8')
+    except Exception:
+        return val
 
 
 class StudentExamInfo(models.Model):
@@ -28,17 +60,33 @@ class StudentExamInfo(models.Model):
 
     # ── EAMCET ───────────────────────────────────────────────────────────────
     eamcet_hall_ticket  = models.CharField(max_length=30, blank=True)
-    eamcet_password     = models.CharField(max_length=100, blank=True)
+    eamcet_password     = models.CharField(max_length=255, blank=True)
     eamcet_date_of_exam = models.DateField(null=True, blank=True)
     eamcet_marks        = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
     eamcet_rank         = models.CharField(max_length=20, blank=True)
 
     # ── JEE Main ─────────────────────────────────────────────────────────────
     jee_hall_ticket  = models.CharField(max_length=30, blank=True)
-    jee_password     = models.CharField(max_length=100, blank=True)
+    jee_password     = models.CharField(max_length=255, blank=True)
     jee_date_of_exam = models.DateField(null=True, blank=True)
 
     updated_at = models.DateTimeField(auto_now=True)
 
+    @property
+    def decrypted_eamcet_password(self):
+        return decrypt_value(self.eamcet_password)
+
+    @property
+    def decrypted_jee_password(self):
+        return decrypt_value(self.jee_password)
+
+    def save(self, *args, **kwargs):
+        if self.eamcet_password:
+            self.eamcet_password = encrypt_value(self.eamcet_password)
+        if self.jee_password:
+            self.jee_password = encrypt_value(self.jee_password)
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return f"Exam Info — {self.student.name}"
+

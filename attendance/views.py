@@ -859,7 +859,7 @@ def tap_attendance_view(request, section_id):
         'is_admin_user': is_admin_user,
         'is_locked': is_locked,
         'has_existing': has_existing,
-        'students_json': json.dumps(students_list),
+        'students_json': students_list,
         'students': students_list,
         'total_count': len(students_list),
         'marked_count': len(attendance_map),
@@ -901,14 +901,18 @@ def tap_mark_api(request):
 
         student = get_object_or_404(Student, pk=student_id)
         section = get_object_or_404(Section, pk=section_id)
+
+        if student.section_id != int(section_id):
+            return JsonResponse({'success': False, 'error': 'Student does not belong to the specified section'}, status=403)
+
         today = timezone.localdate()
         selected_date = parse_date_input(date_str, default=today)
 
-        # Time/Lock enforcement: Faculty cannot overwrite submitted attendance
-        if request.user.role == 'faculty' and Attendance.objects.filter(section=section, date=selected_date).exists():
+        # Time/Lock enforcement: Faculty cannot overwrite submitted attendance for a student
+        if request.user.role == 'faculty' and Attendance.objects.filter(section=section, date=selected_date, student=student).exists():
             return JsonResponse({
                 'success': False,
-                'error': f'Attendance for {section} on {selected_date.strftime("%d-%m-%Y")} is submitted and locked.'
+                'error': f'Attendance for {student.name} on {selected_date.strftime("%d-%m-%Y")} is submitted and locked.'
             }, status=403)
 
         # 1. Update/Create Attendance record (Faculty/Admin marking)
@@ -1053,8 +1057,9 @@ def trigger_whatsapp_sender_view(request):
         else:
             messages.info(request, f"No pending or failed messages. Scheduled daily auto-dispatch is at {dispatch_time} AM.")
 
+        from django.utils.http import url_has_allowed_host_and_scheme
         referer = request.META.get('HTTP_REFERER')
-        if referer:
+        if referer and url_has_allowed_host_and_scheme(referer, allowed_hosts={request.get_host()}):
             return redirect(referer)
         return redirect('attendance_review')
     return JsonResponse({'success': False, 'error': 'POST required'}, status=405)
@@ -1106,7 +1111,7 @@ def enqueue_section_absent_whatsapp(request):
         student = record.student
         already_exists = PendingMessage.objects.filter(
             student=student,
-            created_at__date=selected_date,
+            attendance_date=selected_date,
         ).exclude(status=PendingMessage.STATUS_FAILED).exists()
 
         if already_exists:
@@ -1125,6 +1130,7 @@ def enqueue_section_absent_whatsapp(request):
             ]
             PendingMessage.objects.create(
                 student=student,
+                attendance_date=selected_date,
                 phone=phone,
                 message_type=PendingMessage.TYPE_TEMPLATE,
                 template_name=template_name,
@@ -1150,8 +1156,9 @@ def enqueue_section_absent_whatsapp(request):
         return JsonResponse({'success': True, 'enqueued_count': enqueued_count, 'message': msg_text})
 
     messages.success(request, msg_text)
+    from django.utils.http import url_has_allowed_host_and_scheme
     referer = request.META.get('HTTP_REFERER')
-    if referer:
+    if referer and url_has_allowed_host_and_scheme(referer, allowed_hosts={request.get_host()}):
         return redirect(referer)
     return redirect('attendance_review')
 

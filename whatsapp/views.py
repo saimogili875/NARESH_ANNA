@@ -30,17 +30,20 @@ def meta_webhook(request):
 
     if request.method == "POST":
         app_secret = getattr(settings, 'META_APP_SECRET', '')
-        if app_secret:
-            signature_header = request.headers.get("X-Hub-Signature-256") or request.META.get("HTTP_X_HUB_SIGNATURE_256", "")
-            if not signature_header or not signature_header.startswith("sha256="):
-                logger.warning("Missing or invalid X-Hub-Signature-256 header")
-                return HttpResponse("Forbidden", status=403)
+        if not app_secret:
+            logger.error("META_APP_SECRET is not configured in settings — rejecting webhook request")
+            return HttpResponse("Forbidden", status=403)
 
-            expected_hash = hmac.new(app_secret.encode('utf-8'), request.body, hashlib.sha256).hexdigest()
-            expected_header = f"sha256={expected_hash}"
-            if not hmac.compare_digest(signature_header, expected_header):
-                logger.warning("X-Hub-Signature-256 signature verification failed")
-                return HttpResponse("Forbidden", status=403)
+        signature_header = request.headers.get("X-Hub-Signature-256") or request.META.get("HTTP_X_HUB_SIGNATURE_256", "")
+        if not signature_header or not signature_header.startswith("sha256="):
+            logger.warning("Missing or invalid X-Hub-Signature-256 header")
+            return HttpResponse("Forbidden", status=403)
+
+        expected_hash = hmac.new(app_secret.encode('utf-8'), request.body, hashlib.sha256).hexdigest()
+        expected_header = f"sha256={expected_hash}"
+        if not hmac.compare_digest(signature_header, expected_header):
+            logger.warning("X-Hub-Signature-256 signature verification failed")
+            return HttpResponse("Forbidden", status=403)
 
         try:
             data = json.loads(request.body)

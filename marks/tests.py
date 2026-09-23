@@ -307,9 +307,11 @@ class SubjectAllotmentTestCase(TestCase):
         self.exam.refresh_from_db()
         self.assertEqual(str(self.exam.date), '2026-09-15')
 
-        # Test deleting exam
+        # Test deleting exam confirmation page and POST delete
         delete_url = reverse('exam_delete', args=[self.exam.id])
-        res_del = self.client.get(delete_url)
+        res_get = self.client.get(delete_url)
+        self.assertEqual(res_get.status_code, 200)
+        res_del = self.client.post(delete_url)
         self.assertEqual(res_del.status_code, 302)
         self.assertFalse(Exam.objects.filter(pk=self.exam.id).exists())
 
@@ -325,6 +327,49 @@ class SubjectAllotmentTestCase(TestCase):
         res_get = self.client.get(wa_url)
         self.assertEqual(res_get.status_code, 200)
         self.assertContains(res_get, 'Sent (Click to Resend)')
+
+    def test_faculty_section_idor_blocked(self):
+        from faculty.models import Faculty
+        from accounts.models import Section
+        from students.models import Student
+
+        sec_allowed = Section.objects.create(group=self.group, year="1", name="A1", academic_year=self.year)
+        sec_disallowed = Section.objects.create(group=self.group, year="1", name="B1", academic_year=self.year)
+
+        student = Student.objects.create(
+            admission_number="STU-IDOR", name="IDOR Student", father_name="Parent",
+            mobile="9999999999", section=sec_disallowed, academic_year=self.year, is_active=True
+        )
+
+        fac_user = User.objects.create(username="fac_idor_user", role="faculty")
+        fac_user.set_password("pass123")
+        fac_user.save()
+
+        fac_profile = Faculty.objects.create(
+            user=fac_user, employee_id="FAC-IDOR", name="Faculty IDOR Test",
+            subject="Physics", phone="9999999999", email="fac_idor@test.com",
+            date_of_joining=date.today()
+        )
+        fac_profile.assigned_subjects.add(self.subject1)
+        fac_profile.assigned_sections.add(sec_allowed)
+
+        self.client.force_login(fac_user)
+
+        # 1. Attempt POST marks for disallowed section -> blocked, 0 marks created
+        entry_url = reverse('marks_entry', args=[self.exam.id])
+        post_data = {
+            'section_id': sec_disallowed.id,
+            f'mark_{student.pk}_Physics': '95.0',
+        }
+        res = self.client.post(entry_url, post_data)
+        self.assertEqual(res.status_code, 302)
+        self.assertEqual(Mark.objects.filter(student=student).count(), 0)
+
+        # 2. Attempt GET marks_report for disallowed section -> blocked with Access denied
+        report_url = reverse('marks_report') + f"?section={sec_disallowed.id}&exam={self.exam.id}"
+        res_report = self.client.get(report_url, follow=True)
+        self.assertContains(res_report, 'Access denied')
+
 
 
 

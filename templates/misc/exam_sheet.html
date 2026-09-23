@@ -213,8 +213,8 @@
             <td class="text-muted small">{{ s.mobile }}</td>
             <td><input type="text" name="eamcet_ht_{{ s.id }}" class="form-control form-control-sm"
                 value="{{ inf.eamcet_hall_ticket|default:'' }}"></td>
-            <td><input type="text" name="eamcet_pwd_{{ s.id }}" class="form-control form-control-sm"
-                value="{{ inf.eamcet_password|default:'' }}"></td>
+            <td><input type="password" name="eamcet_pwd_{{ s.id }}" class="form-control form-control-sm"
+                value="{{ inf.decrypted_eamcet_password|default:'' }}"></td>
             <td><input type="date" name="eamcet_date_{{ s.id }}" class="form-control form-control-sm"
                 value="{% if inf.eamcet_date_of_exam %}{{ inf.eamcet_date_of_exam|date:'Y-m-d' }}{% endif %}"></td>
             <td><input type="number" name="eamcet_marks_{{ s.id }}" class="form-control form-control-sm"
@@ -254,8 +254,8 @@
             <td class="text-muted small">{{ s.mobile }}</td>
             <td><input type="text" name="jee_ht_{{ s.id }}" class="form-control form-control-sm"
                 value="{{ inf.jee_hall_ticket|default:'' }}"></td>
-            <td><input type="text" name="jee_pwd_{{ s.id }}" class="form-control form-control-sm"
-                value="{{ inf.jee_password|default:'' }}"></td>
+            <td><input type="password" name="jee_pwd_{{ s.id }}" class="form-control form-control-sm"
+                value="{{ inf.decrypted_jee_password|default:'' }}"></td>
             <td><input type="date" name="jee_date_{{ s.id }}" class="form-control form-control-sm"
                 value="{% if inf.jee_date_of_exam %}{{ inf.jee_date_of_exam|date:'Y-m-d' }}{% endif %}"></td>
           </tr>

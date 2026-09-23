@@ -36,7 +36,7 @@ class StudentForm(forms.ModelForm):
         self.fields['section'].widget.attrs['class'] = 'form-select'
         self.fields['academic_year'].widget.attrs['class'] = 'form-select'
         self.fields['photo'].widget.attrs['class'] = 'form-control'
-        self.fields['photo'].help_text = 'Photo must be between 50 KB and 100 KB.'
+        self.fields['photo'].help_text = 'Maximum photo upload size is 10 MB.'
         self.fields['mother_name'].required = False
         for f in ('marks_telugu', 'marks_hindi', 'marks_english', 'marks_maths',
                   'marks_physics', 'marks_biology', 'marks_social', 'marks_total'):
@@ -85,11 +85,9 @@ class StudentForm(forms.ModelForm):
     def clean_photo(self):
         photo = self.cleaned_data.get('photo')
         if isinstance(photo, UploadedFile):
-            size_kb = photo.size / 1024
-            if size_kb < 50:
-                raise ValidationError(f'Photo is too small ({size_kb:.1f} KB). Minimum size is 50 KB.')
-            if size_kb > 100:
-                raise ValidationError(f'Photo is too large ({size_kb:.1f} KB). Maximum size is 100 KB.')
+            size_mb = photo.size / (1024 * 1024)
+            if size_mb > 10:
+                raise ValidationError(f'Photo is too large ({size_mb:.1f} MB). Maximum size is 10 MB.')
         return photo
 
 

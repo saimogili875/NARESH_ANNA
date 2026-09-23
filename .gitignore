@@ -12,6 +12,13 @@ venv/
 media/
 test_*.pdf
 *.pdf
+push_*.sh
+push.log
+*.log
+refactor_script.py
+fix_local_migration_history.py
+*_import_ready.xlsx
+
 
 
 

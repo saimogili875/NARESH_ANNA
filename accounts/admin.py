@@ -10,6 +10,7 @@ from students.models import Student
 @admin.register(AcademicYear)
 class AcademicYearAdmin(admin.ModelAdmin):
     list_display = ('name', 'is_active', 'start_date', 'end_date')
+    list_editable = ('is_active',)
     list_filter = ('is_active',)
 
     def delete_model(self, request, obj):

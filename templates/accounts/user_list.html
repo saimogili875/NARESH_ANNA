@@ -18,7 +18,10 @@
           <td>{% if u.is_active %}<span class="badge bg-success">Active</span>{% else %}<span class="badge bg-danger">Inactive</span>{% endif %}</td>
           <td>
             <a href="{% url 'user_edit' u.pk %}" class="btn btn-xs btn-light"><i class="bi bi-pencil"></i></a>
-            <a href="{% url 'user_toggle' u.pk %}" class="btn btn-xs btn-light"><i class="bi bi-toggle-on"></i></a>
+            <form method="post" action="{% url 'user_toggle' u.pk %}" class="d-inline">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-xs btn-light" title="Toggle Active Status"><i class="bi bi-toggle-on"></i></button>
+            </form>
             <a href="{% url 'user_reset_password' u.pk %}" class="btn btn-xs btn-light"><i class="bi bi-key"></i></a>
           </td>
         </tr>

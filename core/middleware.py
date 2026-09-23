@@ -15,6 +15,12 @@ class IPWhitelistMiddleware:
         self.networks = self._parse_networks(getattr(settings, "ALLOWED_CLIENT_IPS", []))
         self.exempt_paths = set(getattr(settings, "IP_WHITELIST_EXEMPT_PATHS", []))
 
+        if self.networks and not getattr(settings, "TRUSTED_PROXY_IPS", []) and not getattr(settings, "DEBUG", False):
+            logger.warning(
+                "CRITICAL SECURITY WARNING: ALLOWED_CLIENT_IPS is non-empty, but TRUSTED_PROXY_IPS is empty when DEBUG=False. "
+                "IP Whitelisting will fail behind reverse proxies like Render because REMOTE_ADDR is proxy IP."
+            )
+
     @staticmethod
     def _parse_networks(raw_list):
         networks = []

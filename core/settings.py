@@ -262,10 +262,25 @@ SITE_BASE_URL = config('SITE_BASE_URL', default='http://127.0.0.1:8000')
 # --- IP Whitelisting ---
 _raw_ips = os.environ.get('ALLOWED_CLIENT_IPS', '')
 ALLOWED_CLIENT_IPS = [ip.strip() for ip in _raw_ips.split(',') if ip.strip()]
+
+# Render edge proxy IPs or trusted CIDR ranges (e.g. '10.0.0.0/8,100.64.0.0/10').
+# Render routes incoming traffic through internal reverse proxies. Set TRUSTED_PROXY_IPS env var
+# so IPWhitelistMiddleware trusts HTTP_X_FORWARDED_FOR when request originates from these proxies.
+_raw_trusted_proxies = config('TRUSTED_PROXY_IPS', default='')
+TRUSTED_PROXY_IPS = [ip.strip() for ip in _raw_trusted_proxies.split(',') if ip.strip()]
+
 IP_WHITELIST_EXEMPT_PATHS = ['/healthz', '/whatsapp/webhook/']
 
 # Render terminates TLS at its proxy
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# --- Security & HTTPS Enforcement ---
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = not DEBUG
+SECURE_SSL_REDIRECT = not DEBUG
+SECURE_HSTS_SECONDS = 31536000 if not DEBUG else 0
+SECURE_HSTS_INCLUDE_SUBDOMAINS = not DEBUG
+SECURE_HSTS_PRELOAD = not DEBUG
 
 # --- Authentication Backends (axes + default) ---
 AUTHENTICATION_BACKENDS = [
@@ -291,7 +306,7 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER or 'noreply@srinri.edu')
-LOCKOUT_NOTIFY_EMAIL = 'mogilisaikumar875@gmail.com'
+LOCKOUT_NOTIFY_EMAIL = config('LOCKOUT_NOTIFY_EMAIL', default='')
 
 # --- Attendance Time Lock ---
 ATTENDANCE_CUTOFF_HOUR = 18

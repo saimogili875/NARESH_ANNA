@@ -219,7 +219,7 @@ def misc_export(request):
             ws.cell(r,5,s.mobile); ws.cell(r,6,str(s.date_of_birth or ''))
             ws.cell(r,7,s.mobile)
             ws.cell(r,8,inf.eamcet_hall_ticket if inf else '')
-            ws.cell(r,9,inf.eamcet_password if inf else '')
+            ws.cell(r,9,'••••••' if (inf and inf.eamcet_password) else '')
             ws.cell(r,10,str(inf.eamcet_date_of_exam or '') if inf else '')
             ws.cell(r,11,float(inf.eamcet_marks) if inf and inf.eamcet_marks else '')
             ws.cell(r,12,inf.eamcet_rank if inf else '')
@@ -237,7 +237,7 @@ def misc_export(request):
             ws.cell(r,5,str(s.date_of_birth or ''))
             ws.cell(r,6,s.mobile)
             ws.cell(r,7,inf.jee_hall_ticket if inf else '')
-            ws.cell(r,8,inf.jee_password if inf else '')
+            ws.cell(r,8,'••••••' if (inf and inf.jee_password) else '')
             ws.cell(r,9,str(inf.jee_date_of_exam or '') if inf else '')
 
     tab_name = {'ipe': 'IPE', 'eamcet': 'EAMCET', 'jee': 'JEE_Main'}.get(tab, tab)

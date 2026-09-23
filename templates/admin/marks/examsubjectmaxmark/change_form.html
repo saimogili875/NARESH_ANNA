@@ -44,6 +44,6 @@
 {% endblock %}
 
 {% block content %}
-    <script type="application/json" id="exam-subject-map">{{ exam_subject_map_json|safe }}</script>
+    {{ exam_subject_map_json|json_script:"exam-subject-map" }}
     {{ block.super }}
 {% endblock %}

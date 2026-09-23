@@ -32,6 +32,7 @@ class PendingMessage(models.Model):
     template_params = models.JSONField(blank=True, null=True, default=list)
     language = models.CharField(max_length=10, default='en')
     message = models.TextField()  # Fallback or display text preview
+    attendance_date = models.DateField(null=True, blank=True, help_text="Date of attendance associated with this message")
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=STATUS_PENDING)
     error_message = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)

@@ -260,8 +260,10 @@
 
     <div id="toast-notify" class="toast-notify"></div>
 
+    {{ students_json|json_script:"students-data" }}
+
     <script>
-        const students = {{ students_json|safe }};
+        const students = JSON.parse(document.getElementById('students-data').textContent);
         const sectionId = {{ section.id }};
         const selectedDate = "{{ selected_date|date:'Y-m-d' }}";
         let currentIndex = 0;

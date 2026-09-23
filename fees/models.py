@@ -58,6 +58,7 @@ class FeePayment(models.Model):
     receipt_number = models.CharField(max_length=30, unique=True)   # Admin can set custom
     collected_by = models.CharField(max_length=100, blank=True)
     remarks = models.CharField(max_length=200, blank=True)
+    idempotency_key = models.CharField(max_length=64, unique=True, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

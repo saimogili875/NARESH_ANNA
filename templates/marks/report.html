@@ -216,9 +216,11 @@
   </div><!-- end results col -->
 </div><!-- end row -->
 
+{{ group_category_map_json|json_script:"group-category-map-data" }}
+
 <script>
 (function () {
-  const GROUP_CAT_MAP = {{ group_category_map_json|safe }};
+  const GROUP_CAT_MAP = JSON.parse(document.getElementById('group-category-map-data').textContent);
 
   const groupSel    = document.getElementById('groupSel');
   const categorySel = document.getElementById('categorySel');

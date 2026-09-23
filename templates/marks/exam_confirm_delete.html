@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% block title %}Confirm Delete Exam{% endblock %}
+{% block page_title %}Confirm Delete Exam{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-6">
+    <div class="card border-danger shadow-sm">
+      <div class="card-header bg-danger text-white">
+        <h5 class="card-title mb-0"><i class="bi bi-exclamation-triangle-fill"></i> Warning: Delete Exam</h5>
+      </div>
+      <div class="card-body">
+        <p>Are you sure you want to permanently delete the exam <strong>"{{ exam.display_name }}"</strong>?</p>
+        <div class="alert alert-warning">
+          <i class="bi bi-info-circle-fill me-1"></i>
+          This action cannot be undone. This will permanently delete <strong>{{ mark_count }}</strong> associated mark record(s) and all max mark configurations for this exam.
+        </div>
+        <form method="post">
+          {% csrf_token %}
+          <div class="d-flex justify-content-between mt-4">
+            <a href="{% url 'exam_list' %}" class="btn btn-secondary">
+              <i class="bi bi-x-circle"></i> Cancel
+            </a>
+            <button type="submit" class="btn btn-danger">
+              <i class="bi bi-trash"></i> Permanently Delete Exam
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

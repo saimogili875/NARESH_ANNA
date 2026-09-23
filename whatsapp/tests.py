@@ -118,13 +118,31 @@ class WhatsAppMultilingualTestCase(TestCase):
         self.assertEqual(response_empty.status_code, 200)
         self.assertContains(response_empty, "No messages found for 'NonExistent'")
 
+    @override_settings(META_APP_SECRET="")
+    def test_webhook_rejects_unsigned_payload_when_secret_unset(self):
+        payload = {"entry": []}
+        resp = self.client.post('/whatsapp/webhook/', data=payload, content_type='application/json')
+        self.assertEqual(resp.status_code, 403)
+
+    @override_settings(META_APP_SECRET="test_secret")
     def test_webhook_delivery_and_read_status_updates(self):
+        import hmac, hashlib, json
         msg = PendingMessage.objects.create(
             phone="9876543210",
             status=PendingMessage.STATUS_SENT,
             wamid="wamid.TEST12345",
             message="Test tracking"
         )
+
+        def post_signed(payload):
+            body_bytes = json.dumps(payload).encode('utf-8')
+            sig = 'sha256=' + hmac.new(b'test_secret', body_bytes, hashlib.sha256).hexdigest()
+            return self.client.post(
+                '/whatsapp/webhook/',
+                data=body_bytes,
+                content_type='application/json',
+                HTTP_X_HUB_SIGNATURE_256=sig
+            )
 
         # Test 'delivered' webhook payload
         payload_delivered = {
@@ -139,7 +157,7 @@ class WhatsAppMultilingualTestCase(TestCase):
                 }]
             }]
         }
-        resp = self.client.post('/whatsapp/webhook/', data=payload_delivered, content_type='application/json')
+        resp = post_signed(payload_delivered)
         self.assertEqual(resp.status_code, 200)
         msg.refresh_from_db()
         self.assertEqual(msg.status, PendingMessage.STATUS_DELIVERED)
@@ -157,7 +175,7 @@ class WhatsAppMultilingualTestCase(TestCase):
                 }]
             }]
         }
-        resp = self.client.post('/whatsapp/webhook/', data=payload_read, content_type='application/json')
+        resp = post_signed(payload_read)
         self.assertEqual(resp.status_code, 200)
         msg.refresh_from_db()
         self.assertEqual(msg.status, PendingMessage.STATUS_READ)

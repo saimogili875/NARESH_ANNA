@@ -41,6 +41,18 @@ class LoginAuditLogsTestCase(TestCase):
         self.assertIsNotNone(log)
         self.assertEqual(log.failure_reason, 'Invalid password')
 
+    def test_invalid_captcha_returns_200_not_500(self):
+        hashkey = CaptchaStore.generate_key()
+        res = self.client.post(reverse('login'), {
+            'username': 'admin_audit',
+            'password': 'Password123!',
+            'human_typed': 'true',
+            'captcha_0': hashkey,
+            'captcha_1': 'WRONG_CAPTCHA',
+        })
+        self.assertEqual(res.status_code, 200)
+        self.assertContains(res, 'Invalid CAPTCHA')
+
     def test_login_logs_view_accessible_by_admin(self):
         self.client.force_login(self.admin)
         res = self.client.get(reverse('login_logs'))
@@ -101,6 +113,41 @@ class GroupSectionSearchAndDeleteTestCase(TestCase):
         self.assertEqual(res.status_code, 405)
         self.assertTrue(Group.objects.filter(pk=self.grp1.pk).exists())
 
+    def test_user_toggle_get_request_rejected(self):
+        target_user = User.objects.create_user(username='target_toggle', password='Pass123!', role='staff')
+        initial_status = target_user.is_active
+        res = self.client.get(reverse('user_toggle', args=[target_user.pk]))
+        self.assertEqual(res.status_code, 405)
+        target_user.refresh_from_db()
+        self.assertEqual(target_user.is_active, initial_status)
+
+    def test_user_reset_password_blank_invalid_rejected(self):
+        target_user = User.objects.create_user(username='target_reset', password='OldPass123!', role='staff')
+        # Test blank password
+        res_blank = self.client.post(reverse('user_reset_password', args=[target_user.pk]), {'password': '   '})
+        self.assertEqual(res_blank.status_code, 200)
+        self.assertContains(res_blank, 'Password cannot be blank')
+        self.assertTrue(target_user.check_password('OldPass123!'))
+
+        # Test common/weak password (violates Django validation rules)
+        res_weak = self.client.post(reverse('user_reset_password', args=[target_user.pk]), {'password': '123'})
+        self.assertEqual(res_weak.status_code, 200)
+        self.assertTrue(target_user.check_password('OldPass123!'))
+
+    def test_autofill_rejection_no_failed_log_or_axes_lockout(self):
+        anon_client = Client()
+        initial_log_count = LoginLog.objects.filter(username='admin_autofill', status='FAILED').count()
+        res = anon_client.post(reverse('login'), {
+            'username': 'admin_autofill',
+            'password': 'Pass123!_wrong',
+            'human_typed': 'false',
+        })
+        self.assertEqual(res.status_code, 200)
+        self.assertContains(res, 'Please type your credentials manually')
+        new_log_count = LoginLog.objects.filter(username='admin_autofill', status='FAILED').count()
+        self.assertEqual(new_log_count, initial_log_count)
+
+
     def test_section_delete_get_request_rejected(self):
         res = self.client.get(reverse('section_delete', args=[self.sec1.pk]))
         self.assertEqual(res.status_code, 405)
@@ -136,3 +183,35 @@ class GroupSectionSearchAndDeleteTestCase(TestCase):
         res_grp = self.client.post(reverse('group_delete', args=[grp_pk]), follow=True)
         self.assertEqual(res_grp.status_code, 200)
         self.assertFalse(Group.objects.filter(pk=grp_pk).exists())
+
+
+from django.test import override_settings
+
+class IPWhitelistMiddlewareTestCase(TestCase):
+    @override_settings(
+        ALLOWED_CLIENT_IPS=['1.2.3.4'],
+        TRUSTED_PROXY_IPS=['10.0.0.1'],
+        IP_WHITELIST_EXEMPT_PATHS=['/healthz']
+    )
+    def test_ip_whitelisting_behind_trusted_proxy(self):
+        res_allowed = self.client.get('/login/', REMOTE_ADDR='10.0.0.1', HTTP_X_FORWARDED_FOR='1.2.3.4')
+        self.assertEqual(res_allowed.status_code, 200)
+
+        res_blocked = self.client.get('/login/', REMOTE_ADDR='10.0.0.1', HTTP_X_FORWARDED_FOR='5.6.7.8')
+        self.assertEqual(res_blocked.status_code, 403)
+
+
+class SecuritySettingsTestCase(TestCase):
+    @override_settings(
+        DEBUG=False,
+        SESSION_COOKIE_SECURE=True,
+        CSRF_COOKIE_SECURE=True,
+        SECURE_SSL_REDIRECT=False,
+    )
+    def test_secure_cookies_in_production_settings(self):
+        res = self.client.get('/login/', HTTP_X_FORWARDED_PROTO='https')
+        self.assertEqual(res.status_code, 200)
+        self.assertIn('csrftoken', res.cookies)
+        self.assertTrue(res.cookies['csrftoken']['secure'])
+
+

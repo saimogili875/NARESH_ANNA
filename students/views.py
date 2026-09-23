@@ -76,7 +76,11 @@ def student_edit(request, pk):
     return render(request, 'students/form.html', {'form': form, 'title': 'Edit Student', 'student': obj})
 
 
+from django.views.decorators.http import require_POST
+
+
 @admin_accounts_required
+@require_POST
 def student_delete(request, pk):
     obj = get_object_or_404(Student, pk=pk)
     obj.delete()

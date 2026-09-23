@@ -110,11 +110,7 @@ def login_view(request):
 
         # Reject autofilled submissions (JS sets human_typed=true on real keystrokes)
         if request.POST.get('human_typed') != 'true':
-            LoginLog.objects.create(
-                username=username, status='FAILED', failure_reason='Autofill rejected (manual typing required)',
-                ip_address=ip_addr, device_info=device_str, user_agent_raw=ua_raw
-            )
-            messages.error(request, 'Please type your credentials manually. Autofill is not allowed.')
+            messages.warning(request, 'Please type your credentials manually. Autofill is not allowed.')
             return render(request, 'accounts/login.html', {'form': LoginForm()})
 
         # --- Admin manual block check (independent of axes) ---
@@ -164,7 +160,7 @@ def login_view(request):
                 ip_address=ip_addr, device_info=device_str, user_agent_raw=ua_raw
             )
             # Re-check lockout after this failure
-            if not is_admin_attempt and AxesProxyHandler.is_locked(request, credentials={'username': username}):
+            if AxesProxyHandler.is_locked(request, credentials={'username': username}):
                 messages.error(request, get_cooloff_message(request, username))
                 return render(request, 'accounts/login.html', {'form': LoginForm()})
         else:
@@ -572,6 +568,7 @@ def user_edit(request, pk):
     return render(request, 'accounts/user_form.html', {'form': form, 'title': 'Edit User'})
 
 @superuser_required
+@require_POST
 def user_toggle(request, pk):
     obj = get_object_or_404(User, pk=pk)
     obj.is_active = not obj.is_active
@@ -583,7 +580,19 @@ def user_toggle(request, pk):
 def user_reset_password(request, pk):
     obj = get_object_or_404(User, pk=pk)
     if request.method == 'POST':
-        new_pass = request.POST.get('password')
+        new_pass = request.POST.get('password', '').strip()
+        if not new_pass:
+            messages.error(request, 'Password cannot be blank.')
+            return render(request, 'accounts/reset_password.html', {'obj': obj})
+        from django.contrib.auth.password_validation import validate_password
+        from django.core.exceptions import ValidationError
+        try:
+            validate_password(new_pass, user=obj)
+        except ValidationError as e:
+            for err in e.messages:
+                messages.error(request, err)
+            return render(request, 'accounts/reset_password.html', {'obj': obj})
+
         obj.set_password(new_pass)
         obj.save()
         messages.success(request, 'Password reset successfully.')
