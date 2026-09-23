@@ -32,11 +32,11 @@ class Student(models.Model):
     marks_social = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, verbose_name='Social')
     marks_total = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True, verbose_name='Total Marks')
 
-    # CASCADE (not SET_NULL): deleting a Section, Group, or Academic Year must
-    # permanently remove every student that belonged to it — no orphaned
-    # student rows left behind with a blank section/year.
-    section = models.ForeignKey(Section, on_delete=models.CASCADE, null=True, related_name='students')
-    academic_year = models.ForeignKey(AcademicYear, on_delete=models.CASCADE, null=True)
+    # PROTECT: deleting a Section, Group, or Academic Year is refused if
+    # students belong to it — preserving historical student records from accidental deletion.
+    section = models.ForeignKey(Section, on_delete=models.PROTECT, null=True, related_name='students')
+    academic_year = models.ForeignKey(AcademicYear, on_delete=models.PROTECT, null=True)
+
     date_of_admission = models.DateField(auto_now_add=True)
     is_active = models.BooleanField(default=True)
 

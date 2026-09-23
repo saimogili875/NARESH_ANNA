@@ -50,7 +50,7 @@ class AcademicYear(models.Model):
 class Group(models.Model):
     name = models.CharField(max_length=20)  # MPC, BiPC, etc.
     code = models.CharField(max_length=10, unique=True)
-    academic_year = models.ForeignKey(AcademicYear, on_delete=models.CASCADE, null=True)
+    academic_year = models.ForeignKey(AcademicYear, on_delete=models.PROTECT, null=True)
     
     # UI Styling fields
     color = models.CharField(max_length=20, default='#374151')
@@ -68,10 +68,11 @@ class Section(models.Model):
     YEAR_2 = '2'
     YEAR_CHOICES = [(YEAR_1, '1st Year'), (YEAR_2, '2nd Year')]
 
-    group = models.ForeignKey(Group, on_delete=models.CASCADE, related_name='sections')
+    group = models.ForeignKey(Group, on_delete=models.PROTECT, related_name='sections')
     year = models.CharField(max_length=1, choices=YEAR_CHOICES)
     name = models.CharField(max_length=5)  # A, B, C
-    academic_year = models.ForeignKey(AcademicYear, on_delete=models.CASCADE, null=True)
+    academic_year = models.ForeignKey(AcademicYear, on_delete=models.PROTECT, null=True)
+
 
     class Meta:
         unique_together = ['group', 'year', 'name', 'academic_year']

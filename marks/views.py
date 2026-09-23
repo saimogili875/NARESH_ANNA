@@ -7,6 +7,7 @@ from .models import Exam, Mark, ExamSubjectMaxMark, ExamCategory, ExamType, Grou
 from students.models import Student
 from accounts.models import Section, AcademicYear, Group
 from accounts.decorators import all_roles_required, admin_faculty_required, admin_required
+from accounts.utils import _get_faculty_sections
 
 def get_subjects_for_exam(exam):
     """Return the subject list to use for marks entry/report for this exam."""
@@ -749,7 +750,9 @@ def student_marks_export_pdf(request, student_id):
     from attendance.models import Attendance
     from fees.models import StudentFee, FeePayment
 
-    student = get_object_or_404(Student, pk=student_id)
+    allowed_sections = _get_faculty_sections(request.user)
+    student = get_object_or_404(Student.objects.filter(section__in=allowed_sections), pk=student_id)
+
     marks = Mark.objects.filter(student=student).select_related('exam', 'exam__category', 'subject').order_by('-exam__date')
 
     exams_map = {}

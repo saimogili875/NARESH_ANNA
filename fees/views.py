@@ -10,6 +10,7 @@ from .receipt_pdf import generate_receipt_pdf, save_receipt_pdf
 from students.models import Student
 from accounts.models import AcademicYear
 from accounts.decorators import admin_accounts_required, all_roles_required
+from accounts.utils import _get_faculty_sections
 from whatsapp.services import send_whatsapp_media
 
 @admin_accounts_required
@@ -1043,7 +1044,8 @@ def fee_classifier(request):
     active_year = AcademicYear.objects.filter(is_active=True).first()
 
     groups = Group.objects.all().order_by('name')
-    sections = Section.objects.select_related('group', 'academic_year').all()
+    allowed_sections = _get_faculty_sections(request.user)
+    sections = allowed_sections.select_related('group', 'academic_year')
 
     ay_id = request.GET.get('academic_year', '')
     year_val = request.GET.get('year', '')
@@ -1067,7 +1069,8 @@ def fee_classifier(request):
     criteria_summary = None
 
     if submitted and not error_msg:
-        students = Student.objects.filter(is_active=True).select_related('section__group', 'academic_year')
+        students = Student.objects.filter(is_active=True, section__in=allowed_sections).select_related('section__group', 'academic_year')
+
 
         if ay_id and ay_id.isdigit():
             students = students.filter(academic_year_id=int(ay_id))

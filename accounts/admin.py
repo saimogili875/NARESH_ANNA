@@ -4,7 +4,24 @@ from django.contrib.admin.sites import NotRegistered
 from axes.models import AccessAttempt
 from .models import User, AcademicYear, Group, Section, LoginSession, ActivityLog
 
-admin.site.register(AcademicYear)
+from django.contrib import messages
+from students.models import Student
+
+@admin.register(AcademicYear)
+class AcademicYearAdmin(admin.ModelAdmin):
+    list_display = ('name', 'is_active', 'start_date', 'end_date')
+    list_filter = ('is_active',)
+
+    def delete_model(self, request, obj):
+        student_count = Student.objects.filter(academic_year=obj).count()
+        if student_count > 0:
+            self.message_user(
+                request,
+                f'Cannot delete Academic Year "{obj.name}": {student_count} student(s) are assigned to it.',
+                level=messages.ERROR
+            )
+            return
+        super().delete_model(request, obj)
 
 
 @admin.register(Group)
@@ -19,7 +36,34 @@ class GroupAdmin(admin.ModelAdmin):
         }),
     )
 
-admin.site.register(Section)
+    def delete_model(self, request, obj):
+        student_count = Student.objects.filter(section__group=obj).count()
+        if student_count > 0:
+            self.message_user(
+                request,
+                f'Cannot delete Group "{obj.name}": {student_count} student(s) are assigned to it.',
+                level=messages.ERROR
+            )
+            return
+        super().delete_model(request, obj)
+
+
+@admin.register(Section)
+class SectionAdmin(admin.ModelAdmin):
+    list_display = ('__str__', 'group', 'year', 'name', 'academic_year')
+    list_filter = ('year', 'group', 'academic_year')
+
+    def delete_model(self, request, obj):
+        student_count = Student.objects.filter(section=obj).count()
+        if student_count > 0:
+            self.message_user(
+                request,
+                f'Cannot delete Section "{obj}": {student_count} student(s) are assigned to it.',
+                level=messages.ERROR
+            )
+            return
+        super().delete_model(request, obj)
+
 
 
 @admin.register(User)

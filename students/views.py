@@ -9,6 +9,10 @@ from .models import Student
 from .forms import StudentForm, StudentSearchForm
 from accounts.models import Section, AcademicYear
 from accounts.decorators import admin_required, admin_accounts_required, all_roles_required
+from accounts.utils import _get_faculty_sections
+from django.core.paginator import Paginator
+
+
 
 
 @all_roles_required
@@ -32,9 +36,14 @@ def student_list(request):
             Q(aadhaar__icontains=q)
         )
 
+    paginator = Paginator(students, 50)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
     from accounts.models import Group
     context = {
-        'students': students,
+        'students': page_obj,
+        'page_obj': page_obj,
         'groups': Group.objects.all(),
         'sections': Section.objects.all(),
         'total': students.count(),
@@ -43,6 +52,7 @@ def student_list(request):
     if is_ajax:
         return render(request, 'students/_list_table.html', context)
     return render(request, 'students/list.html', context)
+
 
 
 @admin_accounts_required
@@ -248,7 +258,8 @@ def student_inline_bulk_save(request):
 def student_profile(request, pk):
     from marks.views import get_subjects_for_exam, get_subject_max_marks
 
-    student = get_object_or_404(Student, pk=pk)
+    allowed_sections = _get_faculty_sections(request.user)
+    student = get_object_or_404(Student.objects.filter(section__in=allowed_sections), pk=pk)
     attendance = student.attendance_records.all().order_by('-date')
     marks = student.marks.select_related('exam').order_by('-exam__date')
     fees = student.fees.prefetch_related('payments').first()
@@ -273,7 +284,7 @@ def student_profile(request, pk):
             max_val = subject_max_marks.get(sub, exam.max_marks)
             total_max += max_val
             if m:
-                is_abs = m.is_absent or (m.marks_obtained is not None and float(m.marks_obtained) == 0)
+                is_abs = m.is_absent
                 if not is_abs and m.marks_obtained is not None:
                     total_obtained += float(m.marks_obtained)
             row_marks.append({'subject': sub, 'mark': m, 'max': max_val})
@@ -281,6 +292,7 @@ def student_profile(request, pk):
             'exam': exam, 'subject_marks': row_marks,
             'total_obtained': total_obtained, 'total_max': total_max,
         })
+
 
     return render(request, 'students/profile.html', {
         'student': student,

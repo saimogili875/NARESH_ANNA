@@ -314,13 +314,13 @@ def generate_student_marks_pdf(student, exam_rows=None, attendance_data=None, fe
             r_line.append(f"{pct:.1f}%")
             ipe_rows.append(r_line)
     else:
-        ipe_rows.append(["Wk-01", "88", "92", "68", "54", "52", "354", "88.5%"])
-        ipe_rows.append(["Wk-02", "90", "95", "70", "56", "55", "366", "91.5%"])
+        empty_row = ["No marks recorded for this student yet"] + [""] * (len(subject_names) + 2)
+        ipe_rows.append(empty_row)
 
     sub_col_w = 345 / max(1, (len(subject_names) + 3))
     ipe_col_widths = [30] + [sub_col_w] * len(subject_names) + [sub_col_w, sub_col_w]
     ipe_table = Table(ipe_rows, colWidths=ipe_col_widths)
-    ipe_table.setStyle(TableStyle([
+    ipe_table_styles = [
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1e3a8a')),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
         ('FONTSIZE', (0, 0), (-1, -1), 6.5),
@@ -329,7 +329,10 @@ def generate_student_marks_pdf(student, exam_rows=None, attendance_data=None, fe
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
         ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f8fafc')]),
         ('PADDING', (0, 0), (-1, -1), 2),
-    ]))
+    ]
+    if not exam_rows:
+        ipe_table_styles.append(('SPAN', (0, 1), (-1, 1)))
+    ipe_table.setStyle(TableStyle(ipe_table_styles))
 
     combined_att_ipe = Table([[att_table, ipe_table]], colWidths=[175, 370])
     combined_att_ipe.setStyle(TableStyle([
@@ -392,17 +395,77 @@ def generate_student_marks_pdf(student, exam_rows=None, attendance_data=None, fe
     elements.append(perf_title)
     elements.append(Spacer(1, 2))
 
+    # Compute genuine Cumulative IPE % across all exams
+    overall_obtained = 0.0
+    overall_max = 0.0
+    if exam_rows:
+        for er in exam_rows:
+            overall_obtained += float(er.get('total_obtained', 0))
+            overall_max += float(er.get('total_max', 0))
+
+    if overall_max > 0:
+        cum_ipe_pct_val = (overall_obtained / overall_max) * 100.0
+        cum_ipe_str = f"{cum_ipe_pct_val:.1f}%"
+    else:
+        cum_ipe_pct_val = None
+        cum_ipe_str = "N/A"
+
+    # Compute dynamic Performance Grade
+    if cum_ipe_pct_val is not None:
+        if cum_ipe_pct_val >= 90:
+            perf_grade = "EXCELLENT (A+)"
+        elif cum_ipe_pct_val >= 80:
+            perf_grade = "VERY GOOD (A)"
+        elif cum_ipe_pct_val >= 70:
+            perf_grade = "GOOD (B+)"
+        elif cum_ipe_pct_val >= 60:
+            perf_grade = "ABOVE AVERAGE (B)"
+        elif cum_ipe_pct_val >= 50:
+            perf_grade = "AVERAGE (C)"
+        elif cum_ipe_pct_val >= 35:
+            perf_grade = "PASS (D)"
+        else:
+            perf_grade = "NEEDS IMPROVEMENT (F)"
+    else:
+        perf_grade = "N/A"
+
+    # Derive data-backed remarks
+    remarks_parts = []
+    if att_pct >= 85:
+        remarks_parts.append("Attendance is satisfactory.")
+    elif att_pct >= 75:
+        remarks_parts.append("Attendance is acceptable.")
+    else:
+        remarks_parts.append("Attendance is below requirement; regular attendance is strongly advised.")
+
+    if cum_ipe_pct_val is not None:
+        if cum_ipe_pct_val >= 75:
+            remarks_parts.append("Academic progress is good. Maintain focused preparation across subjects.")
+        elif cum_ipe_pct_val >= 50:
+            remarks_parts.append("Academic performance is moderate. Additional revision is recommended.")
+        else:
+            remarks_parts.append("Academic performance needs improvement. Academic support is recommended.")
+    else:
+        remarks_parts.append("No exam marks recorded yet.")
+
+    if tot_pending > 0:
+        remarks_parts.append(f"Fee balance of ₹{tot_pending:,.0f} is pending.")
+    else:
+        remarks_parts.append("Fee accounts are up to date.")
+
+    remarks_text = " ".join(remarks_parts)
+
     perf_headers = ["Attendance Rate", "IPE Cumulative %", "Fee Status", "Performance Grade"]
     perf_values = [
         f"{att_pct:.1f}% ({tot_pres}/{tot_work})",
-        f"{att_pct:.1f}%",
+        cum_ipe_str,
         f"{'PAID' if tot_pending <= 0 else 'PENDING'}",
-        "EXCELLENT (A+)"
+        perf_grade
     ]
     perf_data = [
         perf_headers,
         perf_values,
-        [Paragraph("<b>Remarks:</b> Commendable consistency in academic attendance and performance tests. Maintain focused preparation across all subjects.", small_text), "", "", ""]
+        [Paragraph(f"<b>Remarks:</b> {remarks_text}", small_text), "", "", ""]
     ]
 
     perf_table = Table(perf_data, colWidths=[136.25, 136.25, 136.25, 136.25])
@@ -419,6 +482,7 @@ def generate_student_marks_pdf(student, exam_rows=None, attendance_data=None, fe
         ('PADDING', (0, 0), (-1, -1), 3),
     ]))
     elements.append(perf_table)
+
     # NO SIGNATURES AT THE BOTTOM AS REQUIRED BY RULE 12
 
     doc.build(elements)
