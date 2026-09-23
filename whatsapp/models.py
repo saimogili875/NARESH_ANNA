@@ -4,12 +4,14 @@ from students.models import Student
 
 class PendingMessage(models.Model):
     STATUS_PENDING = 'pending'
+    STATUS_PROCESSING = 'processing'
     STATUS_SENT = 'sent'
     STATUS_DELIVERED = 'delivered'
     STATUS_READ = 'read'
     STATUS_FAILED = 'failed'
     STATUS_CHOICES = [
         (STATUS_PENDING, 'Pending'),
+        (STATUS_PROCESSING, 'Processing'),
         (STATUS_SENT, 'Sent'),
         (STATUS_DELIVERED, 'Delivered'),
         (STATUS_READ, 'Read'),

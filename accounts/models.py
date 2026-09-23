@@ -1,5 +1,6 @@
 import re
 
+from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils import timezone
@@ -141,11 +142,36 @@ def parse_user_agent(ua_string):
 
 
 def get_client_ip(request):
-    """Extract client IP, respecting X-Forwarded-For from reverse proxies (Render, etc.)."""
-    xff = request.META.get('HTTP_X_FORWARDED_FOR')
-    if xff:
-        return xff.split(',')[0].strip()
-    return request.META.get('REMOTE_ADDR', '0.0.0.0')
+    """Extract client IP safely, inspecting trusted proxy configurations before trusting X-Forwarded-For."""
+    trusted_proxies = getattr(settings, "TRUSTED_PROXY_IPS", [])
+    num_proxies = getattr(settings, "NUM_PROXIES", None)
+    remote_addr = request.META.get("REMOTE_ADDR", "0.0.0.0")
+
+    xff = request.META.get("HTTP_X_FORWARDED_FOR")
+    if not xff:
+        return remote_addr
+
+    ips = [ip.strip() for ip in xff.split(',') if ip.strip()]
+    if not ips:
+        return remote_addr
+
+    if trusted_proxies:
+        import ipaddress
+        try:
+            remote_ip = ipaddress.ip_address(remote_addr)
+            is_trusted = any(remote_ip in ipaddress.ip_network(p, strict=False) for p in trusted_proxies)
+            if is_trusted:
+                return ips[0]
+        except ValueError:
+            pass
+        return remote_addr
+
+    if num_proxies and num_proxies > 0:
+        if len(ips) >= num_proxies:
+            return ips[-num_proxies]
+        return ips[0]
+
+    return remote_addr
 
 
 # ---------------------------------------------------------------------------

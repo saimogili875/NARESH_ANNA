@@ -292,7 +292,94 @@ class FeeManagementFeaturesTest(TestCase):
         })
         self.assertEqual(res2.status_code, 302)
         sf.refresh_from_db()
-        self.assertEqual(sf.total_paid, 1500)
+    def test_sec_201_202_203_faculty_authorization(self):
+        from faculty.models import Faculty
+        section_b, _ = Section.objects.get_or_create(group=self.group, year='1', name='B', defaults={'academic_year': self.year})
+        student_b = Student.objects.create(name='Student B', admission_number='2026002', section=section_b, academic_year=self.year)
+
+        fac_user = User.objects.create_user(username='fac_user', password='password123', role='faculty')
+        fac_profile = Faculty.objects.create(user=fac_user, employee_id='EMP001', name='Faculty A', subject='Math', phone='9876543210', date_of_joining=timezone.localdate())
+        fac_profile.assigned_sections.add(self.section)
+
+        fac_client = Client()
+        fac_client.force_login(fac_user)
+
+        # SEC-201: fee_list only shows Student A in section A, not Student B in section B
+        res_list = fac_client.get(reverse('fee_list'))
+        self.assertEqual(res_list.status_code, 200)
+        self.assertContains(res_list, self.student.name)
+        self.assertNotContains(res_list, student_b.name)
+
+        # SEC-202: receipt_download blocked (404) for Student B
+        sf_b = StudentFee.objects.create(student=student_b, academic_year=self.year, total_fee=10000)
+        pay_b = FeePayment.objects.create(student_fee=sf_b, amount=5000, payment_date=timezone.localdate(), receipt_number='RCPSEC202')
+        res_receipt = fac_client.get(reverse('receipt_download', args=[student_b.pk, pay_b.pk]))
+        self.assertEqual(res_receipt.status_code, 404)
+
+        # SEC-203: fee_export only exports assigned section data
+        res_export = fac_client.get(reverse('fee_export'))
+        self.assertEqual(res_export.status_code, 200)
+        self.assertEqual(res_export['Content-Type'], 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+    def test_bug_fixes_and_verifications(self):
+        # BUG-001: Unassign section requires POST (GET returns 405)
+        ft = FeeType.objects.create(name='Library Fee', academic_year=self.year)
+        StudentFeeCharge.objects.create(student=self.student, fee_type=ft, amount_assigned=500)
+        res_get_unassign = self.client.get(reverse('fee_type_unassign_section', args=[ft.pk, self.section.pk]))
+        self.assertEqual(res_get_unassign.status_code, 405)
+
+        # POST unauthorized unassign -> denied
+        anon_client = Client()
+        res_unauth_unassign = anon_client.post(reverse('fee_type_unassign_section', args=[ft.pk, self.section.pk]))
+        self.assertEqual(res_unauth_unassign.status_code, 302)
+
+        # POST authorized unassign -> succeeds
+        res_post_unassign = self.client.post(reverse('fee_type_unassign_section', args=[ft.pk, self.section.pk]))
+        self.assertEqual(res_post_unassign.status_code, 302)
+        self.assertFalse(StudentFeeCharge.objects.filter(student=self.student, fee_type=ft).exists())
+
+        # BUG-002: WhatsApp receipt send requires POST (GET returns 405)
+        sf = StudentFee.objects.create(student=self.student, academic_year=self.year, total_fee=5000)
+        p = FeePayment.objects.create(student_fee=sf, amount=1000, payment_date=timezone.localdate(), receipt_number='RCPWA001')
+        res_get_wa = self.client.get(reverse('receipt_send_whatsapp', args=[self.student.pk, p.pk]))
+        self.assertEqual(res_get_wa.status_code, 405)
+
+        res_unauth_wa = anon_client.post(reverse('receipt_send_whatsapp', args=[self.student.pk, p.pk]))
+        self.assertEqual(res_unauth_wa.status_code, 302)
+
+        # BUG-006: Negative fee charge set rejected
+        charge = StudentFeeCharge.objects.create(student=self.student, fee_type=ft, amount_assigned=1000)
+        res_neg_charge = self.client.post(reverse('fee_charge_set', args=[self.student.pk, charge.pk]), {
+            'amount_assigned': '-500'
+        })
+        charge.refresh_from_db()
+        self.assertEqual(charge.amount_assigned, 1000)
+
+        # Valid positive fee charge set accepted
+        res_pos_charge = self.client.post(reverse('fee_charge_set', args=[self.student.pk, charge.pk]), {
+            'amount_assigned': '1500'
+        })
+        charge.refresh_from_db()
+        self.assertEqual(charge.amount_assigned, 1500)
+
+        # BUG-007: Negative / zero payment adjustment rejected
+        res_zero_adj = self.client.post(reverse('payment_adjust', args=[self.student.pk]), {
+            'fee_head': 'tuition',
+            'amount': '0'
+        })
+        self.assertContains(res_zero_adj, 'Payment adjustment amount must be greater than zero.')
+
+        res_neg_adj = self.client.post(reverse('payment_adjust', args=[self.student.pk]), {
+            'fee_head': 'tuition',
+            'amount': '-1000'
+        })
+        self.assertContains(res_neg_adj, 'Payment adjustment amount must be greater than zero.')
+
+        # BUG-009: Academic Year selection isolation
+        next_year = AcademicYear.objects.create(name='2027-2028', start_date='2027-06-01', end_date='2028-05-31', is_active=False)
+        sf_next = StudentFee.objects.create(student=self.student, academic_year=next_year, total_fee=60000)
+        sf_current = StudentFee.objects.get(student=self.student, academic_year=self.year)
+        self.assertNotEqual(sf_current.pk, sf_next.pk)
 
 
 

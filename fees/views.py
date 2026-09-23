@@ -12,6 +12,7 @@ from students.models import Student
 from accounts.models import AcademicYear
 from accounts.decorators import admin_accounts_required, all_roles_required
 from accounts.utils import _get_faculty_sections
+from django.views.decorators.http import require_POST
 from whatsapp.services import send_whatsapp_media
 
 @admin_accounts_required
@@ -119,6 +120,10 @@ def fee_type_assign(request, pk):
         except (InvalidOperation, TypeError, ValueError):
             amount = Decimal('0')
 
+        if amount < 0:
+            messages.error(request, 'Fee amount cannot be negative.')
+            return redirect('fee_type_assign', pk=pk)
+
         if not section_ids:
             messages.error(request, 'Please select at least one section.')
             return redirect('fee_type_assign', pk=pk)
@@ -144,6 +149,7 @@ def fee_type_assign(request, pk):
     })
 
 
+@require_POST
 @admin_accounts_required
 def fee_type_unassign_section(request, pk, section_id):
     fee_type = get_object_or_404(FeeType, pk=pk)
@@ -196,12 +202,13 @@ def fee_type_assign_individual(request, pk):
             if raw_amt != '':
                 try:
                     amount = Decimal(raw_amt)
-                    charge, _ = StudentFeeCharge.objects.get_or_create(
-                        student=student, fee_type=fee_type, defaults={'amount_assigned': amount}
-                    )
-                    charge.amount_assigned = amount
-                    charge.save()
-                    updated += 1
+                    if amount >= 0:
+                        charge, _ = StudentFeeCharge.objects.get_or_create(
+                            student=student, fee_type=fee_type, defaults={'amount_assigned': amount}
+                        )
+                        charge.amount_assigned = amount
+                        charge.save()
+                        updated += 1
                 except (InvalidOperation, TypeError, ValueError):
                     pass
 
@@ -313,7 +320,8 @@ def fee_list(request):
     section_filter = request.GET.get('section', '').strip()
     active_year = AcademicYear.objects.filter(is_active=True).first()
 
-    students = Student.objects.filter(is_active=True).select_related('section__group')
+    allowed_sections = _get_faculty_sections(request.user)
+    students = Student.objects.filter(is_active=True, section__in=allowed_sections).select_related('section__group')
     if section_filter:
         students = students.filter(section_id=section_filter)
     if q:
@@ -447,7 +455,7 @@ def fee_list(request):
 def fee_set(request, pk):
     student = get_object_or_404(Student, pk=pk)
     active_year = student.academic_year or AcademicYear.objects.filter(is_active=True).first()
-    student_fee = StudentFee.objects.filter(student=student).first()
+    student_fee = StudentFee.objects.filter(student=student, academic_year=active_year).first()
     if not student_fee:
         student_fee, _ = StudentFee.objects.get_or_create(
             student=student, academic_year=active_year, defaults={'total_fee': 0}
@@ -505,7 +513,7 @@ def fee_set_bulk(request):
         updated_count = 0
         for student in students:
             student_ay = student.academic_year or active_year
-            student_fee = StudentFee.objects.filter(student=student).first()
+            student_fee = StudentFee.objects.filter(student=student, academic_year=student_ay).first()
             if not student_fee:
                 student_fee, _ = StudentFee.objects.get_or_create(
                     student=student, 
@@ -531,7 +539,7 @@ def fee_set_bulk(request):
 def fee_detail(request, pk):
     student = get_object_or_404(Student, pk=pk)
     active_year = student.academic_year or AcademicYear.objects.filter(is_active=True).first()
-    student_fee = StudentFee.objects.filter(student=student).first()
+    student_fee = StudentFee.objects.filter(student=student, academic_year=active_year).first()
     if not student_fee:
         student_fee, _ = StudentFee.objects.get_or_create(
             student=student, academic_year=active_year, defaults={'total_fee': 0}
@@ -557,7 +565,7 @@ def fee_detail(request, pk):
 def fee_collect(request, pk):
     student = get_object_or_404(Student, pk=pk)
     active_year = student.academic_year or AcademicYear.objects.filter(is_active=True).first()
-    student_fee = StudentFee.objects.filter(student=student).first()
+    student_fee = StudentFee.objects.filter(student=student, academic_year=active_year).first()
     if not student_fee:
         student_fee, _ = StudentFee.objects.get_or_create(
             student=student, academic_year=active_year, defaults={'total_fee': 0}
@@ -782,9 +790,18 @@ def fee_charge_set(request, pk, charge_id):
     if request.method == 'POST':
         raw_amount = request.POST.get('amount_assigned', '0').strip()
         try:
-            charge.amount_assigned = Decimal(raw_amount) if raw_amount else Decimal('0')
+            val = Decimal(raw_amount)
+            if val < Decimal('0'):
+                messages.error(request, "Fee amount cannot be negative.")
+                return render(request, 'fees/set_charge.html', {
+                    'student': student, 'charge': charge,
+                })
+            charge.amount_assigned = val
         except (InvalidOperation, TypeError, ValueError):
-            charge.amount_assigned = Decimal('0')
+            messages.error(request, "Invalid fee amount format.")
+            return render(request, 'fees/set_charge.html', {
+                'student': student, 'charge': charge,
+            })
         charge.save()
         messages.success(request, f"Assigned fee for {charge.fee_type.name} set to ₹{charge.amount_assigned} for {student.name}.")
         return redirect('fee_detail', pk=pk)
@@ -799,7 +816,7 @@ def fee_charge_set(request, pk, charge_id):
 def payment_adjust(request, pk):
     student = get_object_or_404(Student, pk=pk)
     active_year = student.academic_year or AcademicYear.objects.filter(is_active=True).first()
-    student_fee = StudentFee.objects.filter(student=student).first()
+    student_fee = StudentFee.objects.filter(student=student, academic_year=active_year).first()
     if not student_fee:
         student_fee, _ = StudentFee.objects.get_or_create(
             student=student, academic_year=active_year, defaults={'total_fee': 0}
@@ -810,9 +827,19 @@ def payment_adjust(request, pk):
         fee_head_id = request.POST.get('fee_head', 'tuition')
         raw_amount = request.POST.get('amount', '0').strip()
         try:
-            amount = Decimal(raw_amount) if raw_amount else Decimal('0')
+            amount = Decimal(raw_amount)
+            if amount <= Decimal('0'):
+                messages.error(request, "Payment adjustment amount must be greater than zero.")
+                return render(request, 'fees/payment_adjust.html', {
+                    'student': student, 'student_fee': student_fee, 'other_charges': other_charges,
+                    'active_year': active_year, 'today': timezone.localdate(),
+                })
         except (InvalidOperation, TypeError, ValueError):
-            amount = Decimal('0')
+            messages.error(request, "Invalid payment adjustment amount.")
+            return render(request, 'fees/payment_adjust.html', {
+                'student': student, 'student_fee': student_fee, 'other_charges': other_charges,
+                'active_year': active_year, 'today': timezone.localdate(),
+            })
 
         remarks = request.POST.get('remarks', 'Manual correction by admin').strip()
         if not remarks:
@@ -859,7 +886,8 @@ def payment_adjust(request, pk):
 @all_roles_required
 def receipt_download(request, pk, payment_id):
     """Generate and download/view the fee receipt PDF for a payment."""
-    student = get_object_or_404(Student, pk=pk)
+    allowed_sections = _get_faculty_sections(request.user)
+    student = get_object_or_404(Student.objects.filter(section__in=allowed_sections), pk=pk)
     payment = get_object_or_404(FeePayment, pk=payment_id)
     if not (payment.student_fee and payment.student_fee.student == student) and not (payment.fee_charge and payment.fee_charge.student == student):
         return HttpResponse("Unauthorized", status=401)
@@ -872,6 +900,7 @@ def receipt_download(request, pk, payment_id):
     return response
 
 
+@require_POST
 @admin_accounts_required
 def receipt_send_whatsapp(request, pk, payment_id):
     """Generate the fee receipt PDF, upload it, and send it to the student's
@@ -891,7 +920,10 @@ def receipt_send_whatsapp(request, pk, payment_id):
         messages.error(request, f'Could not generate/save receipt: {e}')
         return redirect('fee_detail', pk=pk)
 
-    media_url = f"{settings.SITE_BASE_URL.rstrip('/')}{settings.MEDIA_URL}{relative_path}"
+    from django.core.files.storage import default_storage
+    media_url = default_storage.url(relative_path)
+    if not media_url.startswith(('http://', 'https://')):
+        media_url = f"{settings.SITE_BASE_URL.rstrip('/')}{media_url}"
 
     caption = (
         f"Hi {student.father_name}, this is the fee receipt for {student.name} "
@@ -924,7 +956,8 @@ def fee_export(request):
     fmt = request.GET.get('fmt', 'excel')
     active_year = AcademicYear.objects.filter(is_active=True).first()
 
-    students = Student.objects.filter(is_active=True).select_related('section__group')
+    allowed_sections = _get_faculty_sections(request.user)
+    students = Student.objects.filter(is_active=True, section__in=allowed_sections).select_related('section__group')
     if section_id:
         students = students.filter(section_id=section_id)
     if year_filter:

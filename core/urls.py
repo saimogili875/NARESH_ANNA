@@ -3,9 +3,10 @@ from django.urls import path, include, re_path
 from django.conf import settings
 from django.conf.urls.static import static
 from django.views.static import serve
-from core.views import privacy_policy
+from core.views import privacy_policy, protected_media
 
 urlpatterns = [
+    path('media/<path:path>', protected_media, name='protected_media'),
     path('privacy/', privacy_policy, name='privacy-policy'),
     path('admin/', admin.site.urls),
     path('', include('accounts.urls')),

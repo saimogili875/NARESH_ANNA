@@ -14,17 +14,20 @@ META_API_URL = "https://graph.facebook.com/v21.0"
 # Intentionally throttles requests to max 1 message every 6 seconds to:
 # (a) Stay safely under Meta Cloud API rate limits.
 # (b) Smooth out traffic bursts when multiple faculty members save attendance near peak cutoff hours.
+WHATSAPP_MIN_INTERVAL_SECONDS = 6.0
+
 _rate_limit_lock = threading.Lock()
 _last_sent_at = 0.0
 
 
 def _apply_rate_limit():
     global _last_sent_at
+    min_interval = getattr(settings, 'WHATSAPP_MIN_INTERVAL_SECONDS', 6.0)
     with _rate_limit_lock:
         now = time.monotonic()
         elapsed = now - _last_sent_at
-        if elapsed < 2.0:
-            time.sleep(2.0 - elapsed)
+        if elapsed < min_interval:
+            time.sleep(min_interval - elapsed)
         _last_sent_at = time.monotonic()
 
 
@@ -76,6 +79,33 @@ def build_template_components(params: list) -> list:
     ]
 
 
+import random
+
+def _post_with_retry(url, json_payload=None, headers=None, timeout=30, max_retries=3):
+    """
+    POST request wrapper with exponential backoff and jitter for transient errors.
+    Does NOT retry permanent client errors (400, 401, 403, 404).
+    """
+    for attempt in range(max_retries + 1):
+        try:
+            resp = requests.post(url, json=json_payload, headers=headers, timeout=timeout)
+            if resp.status_code in (200, 201):
+                return resp
+            if resp.status_code in (429, 500, 502, 503, 504) and attempt < max_retries:
+                backoff = (2 ** attempt) + random.uniform(0.1, 0.5)
+                logger.warning(f"Transient HTTP {resp.status_code} for {url}. Retrying in {backoff:.2f}s (attempt {attempt+1}/{max_retries})...")
+                time.sleep(backoff)
+                continue
+            return resp
+        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as exc:
+            if attempt < max_retries:
+                backoff = (2 ** attempt) + random.uniform(0.1, 0.5)
+                logger.warning(f"Request exception {exc} for {url}. Retrying in {backoff:.2f}s (attempt {attempt+1}/{max_retries})...")
+                time.sleep(backoff)
+                continue
+            raise exc
+
+
 def send_whatsapp_template(to_number: str, template_name: str, language: str = "en", components: list = None) -> dict:
     phone = _normalize_phone(to_number)
     phone_id = getattr(settings, 'META_WHATSAPP_PHONE_ID', '').strip()
@@ -84,11 +114,9 @@ def send_whatsapp_template(to_number: str, template_name: str, language: str = "
     if not phone_id or not token:
         error_msg = "META_WHATSAPP_PHONE_ID or META_WHATSAPP_TOKEN is missing in environment variables."
         logger.error(f"Template '{template_name}' send failed to {phone}: {error_msg}")
-        return {"success": False, "error": error_msg}
+        return {"success": False, "error": error_msg, "status_code": 401}
 
     url = f"{META_API_URL}/{phone_id}/messages"
-
-    # Meta API expects standard language code (e.g. 'en') when sending trilingual parameters
     meta_lang_code = "en" if (language or "").lower() in ('all', 'trilingual', 'multi') else (language or "en")
 
     payload = {
@@ -111,19 +139,19 @@ def send_whatsapp_template(to_number: str, template_name: str, language: str = "
 
     _apply_rate_limit()
     try:
-        resp = requests.post(url, json=payload, headers=_get_headers(), timeout=30)
+        resp = _post_with_retry(url, json_payload=payload, headers=_get_headers(), timeout=30)
         data = resp.json()
         if resp.status_code in (200, 201):
             msg_id = data.get("messages", [{}])[0].get("id", "")
             logger.info(f"Template '{template_name}' ({meta_lang_code}) sent to {phone}: {msg_id}")
-            return {"success": True, "message_id": msg_id, "wamid": msg_id, "to": phone}
+            return {"success": True, "message_id": msg_id, "wamid": msg_id, "to": phone, "status_code": 200}
         else:
             error = data.get("error", {}).get("message", resp.text)
             logger.error(f"Template '{template_name}' send failed to {phone}: {error}")
-            return {"success": False, "error": error}
+            return {"success": False, "error": error, "status_code": resp.status_code}
     except Exception as e:
         logger.error(f"Template send exception to {phone}: {e}")
-        return {"success": False, "error": str(e)}
+        return {"success": False, "error": str(e), "status_code": 504 if "timeout" in str(e).lower() else 500}
 
 
 def send_whatsapp_text(to_number: str, message: str) -> dict:
@@ -134,7 +162,7 @@ def send_whatsapp_text(to_number: str, message: str) -> dict:
     if not phone_id or not token:
         error_msg = "META_WHATSAPP_PHONE_ID or META_WHATSAPP_TOKEN is missing in environment variables."
         logger.error(f"Text send failed to {phone}: {error_msg}")
-        return {"success": False, "error": error_msg}
+        return {"success": False, "error": error_msg, "status_code": 401}
 
     url = f"{META_API_URL}/{phone_id}/messages"
 
@@ -147,19 +175,19 @@ def send_whatsapp_text(to_number: str, message: str) -> dict:
 
     _apply_rate_limit()
     try:
-        resp = requests.post(url, json=payload, headers=_get_headers(), timeout=30)
+        resp = _post_with_retry(url, json_payload=payload, headers=_get_headers(), timeout=30)
         data = resp.json()
         if resp.status_code in (200, 201):
             msg_id = data.get("messages", [{}])[0].get("id", "")
             logger.info(f"Text sent to {phone}: {msg_id}")
-            return {"success": True, "message_id": msg_id, "wamid": msg_id, "to": phone}
+            return {"success": True, "message_id": msg_id, "wamid": msg_id, "to": phone, "status_code": 200}
         else:
             error = data.get("error", {}).get("message", resp.text)
             logger.error(f"Text send failed to {phone}: {error}")
-            return {"success": False, "error": error}
+            return {"success": False, "error": error, "status_code": resp.status_code}
     except Exception as e:
         logger.error(f"Text send exception to {phone}: {e}")
-        return {"success": False, "error": str(e)}
+        return {"success": False, "error": str(e), "status_code": 504 if "timeout" in str(e).lower() else 500}
 
 
 def send_absence_alert(student_name: str, parent_phone: str, date_str: str, section: str, reason: str = "", language: str = "en") -> dict:
@@ -237,16 +265,30 @@ def dispatch_pending_messages(batch_size: int = 50) -> dict:
     """
     Dispatches pending messages in DB via Meta Cloud API templates/text.
     """
-    from django.db import close_old_connections
-    close_old_connections()
     from whatsapp.models import PendingMessage
-
+    from django.db import transaction
+    from django.utils import timezone
+    from datetime import timedelta
     try:
-        pending = list(
-            PendingMessage.objects.filter(
-                status=PendingMessage.STATUS_PENDING
-            ).order_by('created_at')[:batch_size]
-        )
+        # Reclaim stale processing messages older than 10 minutes (e.g. from crashed workers)
+        stale_threshold = timezone.now() - timedelta(minutes=10)
+        PendingMessage.objects.filter(
+            status=PendingMessage.STATUS_PROCESSING,
+            updated_at__lt=stale_threshold
+        ).update(status=PendingMessage.STATUS_PENDING)
+
+        with transaction.atomic():
+            pending_ids = list(
+                PendingMessage.objects.select_for_update(skip_locked=True)
+                .filter(status=PendingMessage.STATUS_PENDING)
+                .order_by('created_at')
+                .values_list('id', flat=True)[:batch_size]
+            )
+            if not pending_ids:
+                return {"sent": 0, "failed": 0}
+            PendingMessage.objects.filter(id__in=pending_ids).update(status=PendingMessage.STATUS_PROCESSING)
+
+        pending = list(PendingMessage.objects.filter(id__in=pending_ids).order_by('created_at'))
     except Exception as err:
         logger.error(f"Error querying pending messages: {err}")
         return {"sent": 0, "failed": 0}

@@ -22,15 +22,20 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(f"  Batch size: {batch_size}"))
         self.stdout.write(self.style.SUCCESS("=" * 60))
 
-        pending = list(
-            PendingMessage.objects.filter(
-                status=PendingMessage.STATUS_PENDING
-            ).order_by('created_at')[:batch_size]
-        )
+        from django.db import transaction
+        with transaction.atomic():
+            pending_ids = list(
+                PendingMessage.objects.select_for_update(skip_locked=True)
+                .filter(status=PendingMessage.STATUS_PENDING)
+                .order_by('created_at')
+                .values_list('id', flat=True)[:batch_size]
+            )
+            if not pending_ids:
+                self.stdout.write("No pending messages. Exiting.")
+                return
+            PendingMessage.objects.filter(id__in=pending_ids).update(status=PendingMessage.STATUS_PROCESSING)
 
-        if not pending:
-            self.stdout.write("No pending messages. Exiting.")
-            return
+        pending = list(PendingMessage.objects.filter(id__in=pending_ids).order_by('created_at'))
 
         self.stdout.write(f"\nProcessing {len(pending)} message(s)...")
 

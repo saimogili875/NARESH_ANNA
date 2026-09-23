@@ -370,6 +370,22 @@ class SubjectAllotmentTestCase(TestCase):
         res_report = self.client.get(report_url, follow=True)
         self.assertContains(res_report, 'Access denied')
 
+    def test_conc_202_marks_entry_atomic_locking(self):
+        from accounts.models import Section
+        from students.models import Student
+        sec = Section.objects.create(group=self.group, year="1", name="C1", academic_year=self.year)
+        stu = Student.objects.create(admission_number="CONC001", name="Conc Student", section=sec, academic_year=self.year, is_active=True)
+
+        entry_url = reverse('marks_entry', args=[self.exam.id])
+        post_data = {
+            'section_id': sec.id,
+            f'mark_{stu.pk}_{self.subject1.name}': '85.0',
+        }
+        res = self.client.post(entry_url, post_data)
+        self.assertEqual(res.status_code, 302)
+        mark = Mark.objects.get(student=stu, exam=self.exam, subject=self.subject1)
+        self.assertEqual(float(mark.marks_obtained), 85.0)
+
 
 
 

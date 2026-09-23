@@ -58,8 +58,9 @@ class Student(models.Model):
                         if img.height > 400 or img.width > 400:
                             img.thumbnail((400, 400))
                             img.save(img_path, quality=80, optimize=True)
-            except Exception:
-                pass
+            except Exception as e:
+                import logging
+                logging.getLogger('django').error(f"Image processing failed for student {self.pk}: {e}", exc_info=True)
 
     @property
     def year(self):

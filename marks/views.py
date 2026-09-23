@@ -334,57 +334,57 @@ def marks_entry(request, exam_id):
             messages.error(request, 'Access denied: You are not assigned to this section.')
             return redirect(f'/marks/exam/{exam_id}/entry/')
 
-        # Server-side lock check
-        locks = MarksEntryLock.objects.filter(exam=exam, section=sec, subject__in=subjects)
-        locked_subject_ids = set(locks.filter(is_locked=True).values_list('subject_id', flat=True))
-        is_faculty = (getattr(request.user, 'role', None) == 'faculty' and not request.user.is_superuser)
-        saved_subjects_set = set()
-
-        existing_marks = {
-            (m.student_id, m.subject_id): m
-            for m in Mark.objects.filter(exam=exam, student__section=sec)
-        }
-
-        to_create = []
-        to_update = []
-
-        for student in Student.objects.filter(section=sec, is_active=True):
-            for subject in subjects:
-                if is_faculty and subject.id in locked_subject_ids:
-                    continue
-
-                val = request.POST.get(f'mark_{student.pk}_{subject.name}', '').strip()
-                if val:
-                    try:
-                        num_val = float(val)
-                        is_absent_val = (num_val == 0)
-                    except (ValueError, TypeError):
-                        is_absent_val = False
-
-                    existing_mark = existing_marks.get((student.pk, subject.id))
-                    if existing_mark:
-                        existing_mark.marks_obtained = val
-                        existing_mark.is_absent = is_absent_val
-                        to_update.append(existing_mark)
-                    else:
-                        to_create.append(Mark(
-                            student=student, exam=exam, subject=subject,
-                            marks_obtained=val, is_absent=is_absent_val
-                        ))
-                    saved_subjects_set.add(subject)
-
         with transaction.atomic():
+            # Server-side lock check
+            locks = MarksEntryLock.objects.select_for_update().filter(exam=exam, section=sec, subject__in=subjects)
+            locked_subject_ids = set(locks.filter(is_locked=True).values_list('subject_id', flat=True))
+            is_faculty = (getattr(request.user, 'role', None) == 'faculty' and not request.user.is_superuser)
+            saved_subjects_set = set()
+
+            existing_marks = {
+                (m.student_id, m.subject_id): m
+                for m in Mark.objects.select_for_update().filter(exam=exam, student__section=sec)
+            }
+
+            to_create = []
+            to_update = []
+
+            for student in Student.objects.filter(section=sec, is_active=True):
+                for subject in subjects:
+                    if is_faculty and subject.id in locked_subject_ids:
+                        continue
+
+                    val = request.POST.get(f'mark_{student.pk}_{subject.name}', '').strip()
+                    if val:
+                        try:
+                            num_val = float(val)
+                            is_absent_val = (num_val == 0)
+                        except (ValueError, TypeError):
+                            is_absent_val = False
+
+                        existing_mark = existing_marks.get((student.pk, subject.id))
+                        if existing_mark:
+                            existing_mark.marks_obtained = val
+                            existing_mark.is_absent = is_absent_val
+                            to_update.append(existing_mark)
+                        else:
+                            to_create.append(Mark(
+                                student=student, exam=exam, subject=subject,
+                                marks_obtained=val, is_absent=is_absent_val
+                            ))
+                        saved_subjects_set.add(subject)
+
             if to_create:
                 Mark.objects.bulk_create(to_create, batch_size=200)
             if to_update:
                 Mark.objects.bulk_update(to_update, ['marks_obtained', 'is_absent'], batch_size=200)
 
-        # Lock saved subjects for both Admin and Faculty
-        for subject in saved_subjects_set:
-            MarksEntryLock.objects.update_or_create(
-                exam=exam, section=sec, subject=subject,
-                defaults={'is_locked': True, 'locked_by': request.user}
-            )
+            # Lock saved subjects for both Admin and Faculty
+            for subject in saved_subjects_set:
+                MarksEntryLock.objects.update_or_create(
+                    exam=exam, section=sec, subject=subject,
+                    defaults={'is_locked': True, 'locked_by': request.user}
+                )
 
         messages.success(request, 'Marks saved successfully.')
         return redirect(f'/marks/exam/{exam_id}/entry/?section={sid}')
@@ -881,7 +881,8 @@ def student_marks_export_pdf(request, student_id):
         models.Q(student_fee__student=student) | models.Q(fee_charge__student=student)
     ).select_related('fee_charge__fee_type').order_by('payment_date')
 
-    student_fee = StudentFee.objects.filter(student=student).first()
+    active_year = student.academic_year or AcademicYear.objects.filter(is_active=True).first()
+    student_fee = StudentFee.objects.filter(student=student, academic_year=active_year).first()
     tot_assigned = float(student_fee.total_fee) if student_fee else 0.0
     tot_paid = float(student_fee.total_paid) if student_fee else 0.0
     tot_pending = float(student_fee.total_pending) if student_fee else 0.0

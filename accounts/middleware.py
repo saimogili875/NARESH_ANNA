@@ -68,6 +68,8 @@ FACULTY_ALLOWED_PATHS = [
     '/attendance/',
     '/marks/',
     '/lab/',
+    '/fees/',
+    '/students/',
     '/logout/',
     '/static/',
 ]
@@ -177,7 +179,9 @@ class ActivityLogMiddleware:
                 path=request.path,
                 method=request.method,
             )
-        except Exception:
+        except Exception as e:
+            import logging
+            logging.getLogger('django').error(f"ActivityLog creation failed for user {request.user} on path {request.path}: {e}", exc_info=True)
             pass  # Never break the request over logging failures
 
         return response

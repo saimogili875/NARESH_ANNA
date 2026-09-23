@@ -252,24 +252,18 @@ def generate_receipt_pdf(payment):
 
 
 import uuid
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
 
 
 def save_receipt_pdf(payment):
     """
-    Generate the receipt PDF and save it under MEDIA_ROOT/receipts/ using a random unguessable token.
+    Generate the receipt PDF and save it via Django default_storage abstraction.
     Returns (relative_media_path, pdf_bytes), e.g. ('receipts/receipt_a1b2c3d4.pdf', b'...').
     """
     pdf_bytes = generate_receipt_pdf(payment)
-
-    receipts_dir = os.path.join(settings.MEDIA_ROOT, 'receipts')
-    os.makedirs(receipts_dir, exist_ok=True)
-
     filename = f"receipt_{uuid.uuid4().hex}.pdf"
-    file_path = os.path.join(receipts_dir, filename)
-
-    with open(file_path, 'wb') as f:
-        f.write(pdf_bytes)
-
     relative_path = f"receipts/{filename}"
+    default_storage.save(relative_path, ContentFile(pdf_bytes))
     return relative_path, pdf_bytes
 

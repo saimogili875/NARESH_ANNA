@@ -17,7 +17,8 @@ from django.core.paginator import Paginator
 
 @all_roles_required
 def student_list(request):
-    students = Student.objects.filter(is_active=True).select_related('section__group')
+    allowed_sections = _get_faculty_sections(request.user)
+    students = Student.objects.filter(is_active=True, section__in=allowed_sections).select_related('section__group')
     group = request.GET.get('group')
     year = request.GET.get('year')
     section = request.GET.get('section')
@@ -202,7 +203,9 @@ def student_inline_update(request, pk):
     try:
         student.save(update_fields=[field])
     except Exception as e:
-        return JsonResponse({'ok': False, 'error': str(e)}, status=400)
+        import logging
+        logging.getLogger('django').error(f"Error updating student {pk} field {field}: {e}", exc_info=True)
+        return JsonResponse({'ok': False, 'error': 'Unable to update student.'}, status=400)
     return JsonResponse({'ok': True, 'value': value})
 
 
@@ -415,116 +418,140 @@ def student_export_excel(request):
 @admin_required
 def student_import_excel(request):
     if request.method == 'POST' and request.FILES.get('file'):
+        uploaded_file = request.FILES['file']
+        if uploaded_file.size > 5 * 1024 * 1024:
+            messages.error(request, 'File size exceeds limit of 5 MB.')
+            return redirect('student_list')
+
         from accounts.models import Group
         active_year = AcademicYear.objects.filter(is_active=True).first()
-        wb = openpyxl.load_workbook(request.FILES['file'])
-        ws = wb.active
 
-        rows = list(ws.iter_rows(values_only=True))
-        if not rows:
-            messages.error(request, 'The uploaded file is empty.')
-            return redirect('student_list')
+        wb = None
+        try:
+            wb = openpyxl.load_workbook(uploaded_file, read_only=True, data_only=True)
+            if len(wb.sheetnames) > 10:
+                messages.error(request, 'Workbook contains too many worksheets (maximum allowed is 10).')
+                return redirect('student_list')
 
-        # FIX: read columns BY HEADER NAME, not by position. The old code
-        # unpacked row[:11] assuming exactly one Mobile column, so any extra
-        # mobile column (Mobile 1..4) shifted Group/Year/Section into the
-        # wrong cells and section came out NULL.
-        header = [str(h).strip().lower() if h is not None else '' for h in rows[0]]
+            ws = wb.active
+            row_iter = ws.iter_rows(values_only=True)
+            header_row = next(row_iter, None)
+            if not header_row:
+                messages.error(request, 'The uploaded file is empty.')
+                return redirect('student_list')
 
-        def col(*names):
-            for n in names:
-                if n in header:
-                    return header.index(n)
-            return None
+            if len(header_row) > 100:
+                messages.error(request, f'Workbook exceeds maximum allowed columns limit of 100 (found {len(header_row)}).')
+                return redirect('student_list')
 
-        C = {
-            'adm':     col('admission no', 'admission number', 'admission_no'),
-            'hall':    col('hall ticket', 'hall ticket number', 'hall_ticket'),
-            'name':    col('name', 'student name'),
-            'father':  col('father name', 'father'),
-            'mother':  col('mother name', 'mother'),
-            'mobile':  col('mobile 1', 'mobile', 'mobile1'),
-            'mobile2': col('mobile 2', 'mobile2'),
-            'mobile3': col('mobile 3', 'mobile3'),
-            'mobile4': col('mobile 4', 'mobile4'),
-            'aadhaar': col('aadhaar', 'aadhar'),
-            'group':   col('group'),
-            'year':    col('year'),
-            'section': col('section'),
-            'address': col('address'),
-        }
+            header = [str(h).strip().lower() if h is not None else '' for h in header_row]
 
-        if C['adm'] is None or C['name'] is None:
-            messages.error(request, 'File must have "Admission No" and "Name" column headers.')
-            return redirect('student_list')
-
-        def cell(row, key):
-            i = C[key]
-            if i is None or i >= len(row):
+            def col(*names):
+                for n in names:
+                    if n in header:
+                        return header.index(n)
                 return None
-            return row[i]
 
-        def norm_year(v):
-            s = str(v or '').strip().lower()
-            if '2' in s:           # "2nd year", "year 2", "2"
-                return '2'
-            if '1' in s:           # "1st year", "year 1", "1"
-                return '1'
-            return ''
+            C = {
+                'adm':     col('admission no', 'admission number', 'admission_no'),
+                'hall':    col('hall ticket', 'hall ticket number', 'hall_ticket'),
+                'name':    col('name', 'student name'),
+                'father':  col('father name', 'father'),
+                'mother':  col('mother name', 'mother'),
+                'mobile':  col('mobile 1', 'mobile', 'mobile1'),
+                'mobile2': col('mobile 2', 'mobile2'),
+                'mobile3': col('mobile 3', 'mobile3'),
+                'mobile4': col('mobile 4', 'mobile4'),
+                'aadhaar': col('aadhaar', 'aadhar'),
+                'group':   col('group'),
+                'year':    col('year'),
+                'section': col('section'),
+                'address': col('address'),
+            }
 
-        created = 0
-        errors = []
-        for row in rows[1:]:
-            try:
-                adm_no = cell(row, 'adm')
-                name = cell(row, 'name')
-                if not adm_no or not name:
-                    continue
+            if C['adm'] is None or C['name'] is None:
+                messages.error(request, 'File must have "Admission No" and "Name" column headers.')
+                return redirect('student_list')
 
-                group_code = str(cell(row, 'group') or '').strip()
-                year_val = norm_year(cell(row, 'year'))
-                sec_name = str(cell(row, 'section') or '').strip()
+            def cell(row, key):
+                i = C[key]
+                if i is None or i >= len(row):
+                    return None
+                return row[i]
 
-                # Resolve (and create if missing) the section so year/section
-                # data is always attached.
-                section = None
-                if group_code and year_val and sec_name:
-                    group = (Group.objects.filter(code__iexact=group_code).first()
-                             or Group.objects.filter(name__iexact=group_code).first())
-                    if not group:
-                        group = Group.objects.create(
-                            name=group_code, code=group_code, academic_year=active_year)
-                    section, _ = Section.objects.get_or_create(
-                        group=group, year=year_val, name=sec_name,
-                        academic_year=active_year,
+            def norm_year(v):
+                s = str(v or '').strip().lower()
+                if '2' in s:
+                    return '2'
+                if '1' in s:
+                    return '1'
+                return ''
+
+            created = 0
+            row_count = 0
+            errors = []
+            for row in row_iter:
+                row_count += 1
+                if row_count > 5000:
+                    messages.error(request, 'Workbook exceeds maximum allowed rows limit of 5000.')
+                    return redirect('student_list')
+                try:
+                    adm_no = cell(row, 'adm')
+                    name = cell(row, 'name')
+                    if not adm_no or not name:
+                        continue
+
+                    group_code = str(cell(row, 'group') or '').strip()
+                    year_val = norm_year(cell(row, 'year'))
+                    sec_name = str(cell(row, 'section') or '').strip()
+
+                    section = None
+                    if group_code and year_val and sec_name:
+                        group = (Group.objects.filter(code__iexact=group_code).first()
+                                 or Group.objects.filter(name__iexact=group_code).first())
+                        if not group:
+                            group = Group.objects.create(
+                                name=group_code, code=group_code, academic_year=active_year)
+                        section, _ = Section.objects.get_or_create(
+                            group=group, year=year_val, name=sec_name,
+                            academic_year=active_year,
+                        )
+
+                    Student.objects.update_or_create(
+                        admission_number=str(adm_no),
+                        defaults=dict(
+                            hall_ticket_number=str(cell(row, 'hall') or ''),
+                            name=str(name),
+                            father_name=str(cell(row, 'father') or ''),
+                            mother_name=str(cell(row, 'mother') or ''),
+                            mobile=str(cell(row, 'mobile') or ''),
+                            second_mobile=str(cell(row, 'mobile2') or ''),
+                            third_mobile=str(cell(row, 'mobile3') or ''),
+                            fourth_mobile=str(cell(row, 'mobile4') or ''),
+                            aadhaar=str(cell(row, 'aadhaar') or ''),
+                            address=str(cell(row, 'address') or ''),
+                            section=section,
+                            academic_year=active_year,
+                            is_active=True,
+                        )
                     )
+                    created += 1
+                except Exception as e:
+                    errors.append(str(e))
 
-                Student.objects.update_or_create(
-                    admission_number=str(adm_no),
-                    defaults=dict(
-                        hall_ticket_number=str(cell(row, 'hall') or ''),
-                        name=str(name),
-                        father_name=str(cell(row, 'father') or ''),
-                        mother_name=str(cell(row, 'mother') or ''),
-                        mobile=str(cell(row, 'mobile') or ''),
-                        second_mobile=str(cell(row, 'mobile2') or ''),
-                        third_mobile=str(cell(row, 'mobile3') or ''),
-                        fourth_mobile=str(cell(row, 'mobile4') or ''),
-                        aadhaar=str(cell(row, 'aadhaar') or ''),
-                        address=str(cell(row, 'address') or ''),
-                        section=section,
-                        academic_year=active_year,
-                        is_active=True,
-                    )
-                )
-                created += 1
-            except Exception as e:
-                errors.append(str(e))
-
-        messages.success(request, f'{created} students imported.')
-        if errors:
-            messages.warning(request, f'{len(errors)} rows had errors.')
-        return redirect('student_list')
+            messages.success(request, f'{created} students imported.')
+            if errors:
+                messages.warning(request, f'{len(errors)} rows had errors.')
+            return redirect('student_list')
+        except Exception:
+            messages.error(request, 'Could not parse Excel workbook.')
+            return redirect('student_list')
+        finally:
+            if wb:
+                try:
+                    wb.close()
+                except Exception:
+                    pass
     return render(request, 'students/import.html')
 
 

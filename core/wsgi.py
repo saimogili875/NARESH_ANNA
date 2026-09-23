@@ -7,6 +7,6 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 
 application = get_wsgi_application()
 
-if hasattr(settings, 'MEDIA_ROOT') and os.path.exists(settings.MEDIA_ROOT):
-    application = WhiteNoise(application, root=settings.MEDIA_ROOT, prefix=settings.MEDIA_URL)
+# WhiteNoise is restricted to static files (STATIC_ROOT) only.
+# Private media files are served via authorized Django endpoints.
 

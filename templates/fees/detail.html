@@ -157,9 +157,12 @@
             <a href="{% url 'receipt_download' student.pk p.pk %}" target="_blank" class="btn btn-outline-secondary btn-sm" title="View/Download PDF">
               <i class="bi bi-file-earmark-pdf"></i>
             </a>
-            <a href="{% url 'receipt_send_whatsapp' student.pk p.pk %}" class="btn btn-outline-success btn-sm" title="Send via WhatsApp" onclick="return confirm('Send this receipt to {{ student.name }} ({{ student.mobile }}) via WhatsApp?');">
-              <i class="bi bi-whatsapp"></i>
-            </a>
+            <form method="post" action="{% url 'receipt_send_whatsapp' student.pk p.pk %}" class="d-inline">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-outline-success btn-sm" title="Send via WhatsApp" onclick="if(confirm('Send this receipt to {{ student.name }} ({{ student.mobile }}) via WhatsApp?')) { this.disabled=true; this.form.submit(); } else { return false; }">
+                <i class="bi bi-whatsapp"></i>
+              </button>
+            </form>
             {% if user.role == 'admin' or user.role == 'accounts' %}
             <a href="{% url 'payment_edit' student.pk p.pk %}" class="btn btn-outline-primary btn-sm" title="Edit Payment Record">
               <i class="bi bi-pencil"></i>

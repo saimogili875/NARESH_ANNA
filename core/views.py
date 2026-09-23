@@ -25,3 +25,50 @@ def privacy_policy(request):
 <p><em>Last updated: August 2026</em></p>
 </body></html>"""
     return HttpResponse(html)
+
+
+import os
+import mimetypes
+from django.conf import settings
+from django.http import HttpResponse, FileResponse, Http404
+from accounts.utils import _get_faculty_sections
+
+def protected_media(request, path):
+    """
+    Authorized file server for MEDIA_ROOT files.
+    Enforces role and section-level access control on student/faculty photos and private media.
+    """
+    if not request.user.is_authenticated:
+        return HttpResponse("Unauthorized", status=401)
+
+    safe_path = os.path.normpath(path).lstrip('/')
+    if safe_path.startswith('..'):
+        return HttpResponse("Forbidden", status=403)
+
+    full_path = os.path.join(settings.MEDIA_ROOT, safe_path)
+    if not os.path.exists(full_path) or os.path.isdir(full_path):
+        raise Http404("Media file not found")
+
+    # Access control checks
+    role = getattr(request.user, 'role', '')
+    is_admin_or_accounts = getattr(request.user, 'is_superuser', False) or role in ['admin', 'accounts']
+
+    if safe_path.startswith('students/photos/'):
+        if not is_admin_or_accounts:
+            filename = os.path.basename(safe_path)
+            from students.models import Student
+            student = Student.objects.filter(photo__icontains=filename).first()
+            if student:
+                allowed_sections = _get_faculty_sections(request.user)
+                if student.section not in allowed_sections:
+                    return HttpResponse("Access Denied", status=403)
+            else:
+                return HttpResponse("Access Denied", status=403)
+
+    elif safe_path.startswith('faculty/photos/'):
+        if not is_admin_or_accounts and role != 'faculty':
+            return HttpResponse("Access Denied", status=403)
+
+    content_type, _ = mimetypes.guess_type(full_path)
+    content_type = content_type or 'application/octet-stream'
+    return FileResponse(open(full_path, 'rb'), content_type=content_type)

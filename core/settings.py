@@ -259,6 +259,16 @@ GEMINI_API_KEY = config('GEMINI_API_KEY', default='')
 
 SITE_BASE_URL = config('SITE_BASE_URL', default='http://127.0.0.1:8000')
 
+# Production Configuration Validation (PROD-202 & PROD-203)
+from django.core.exceptions import ImproperlyConfigured
+IS_PRODUCTION_ENV = os.environ.get('ENVIRONMENT', '').lower() in ('production', 'prod') or config('IS_PRODUCTION', default=False, cast=bool)
+
+if IS_PRODUCTION_ENV and not DEBUG:
+    if not (AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY and AWS_STORAGE_BUCKET_NAME):
+        raise ImproperlyConfigured("Production environment requires AWS S3 cloud storage variables (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_STORAGE_BUCKET_NAME).")
+    if '127.0.0.1' in SITE_BASE_URL or 'localhost' in SITE_BASE_URL:
+        raise ImproperlyConfigured("SITE_BASE_URL must be configured with a valid production domain in production environment.")
+
 # --- IP Whitelisting ---
 _raw_ips = os.environ.get('ALLOWED_CLIENT_IPS', '')
 ALLOWED_CLIENT_IPS = [ip.strip() for ip in _raw_ips.split(',') if ip.strip()]

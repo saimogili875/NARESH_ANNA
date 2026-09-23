@@ -181,7 +181,7 @@ def attendance_mark(request):
             # One query to find which rows already exist for this section+date
             existing = {
                 a.student_id: a
-                for a in Attendance.objects.filter(section=section, date=selected_date)
+                for a in Attendance.objects.select_for_update().filter(section=section, date=selected_date)
             }
 
             # Track which students were ALREADY marked absent before this save
@@ -230,6 +230,7 @@ def attendance_mark(request):
                     template_name=getattr(conf, 'META_TEMPLATE_ABSENCE', 'absence_alert'),
                     template_params=[student.name, selected_date.strftime('%d-%m-%Y'), remarks or "Absent"],
                     language='en',
+                    attendance_date=selected_date,
                     status=PendingMessage.STATUS_PENDING,
                 )
                 queued_count += 1
@@ -341,6 +342,10 @@ def attendance_save_reasons(request):
     if request.POST.get('save_only') == '1':
         return JsonResponse({'success': True, 'message': 'Reasons saved.'})
 
+    from django.conf import settings as conf
+    from whatsapp.services import dispatch_pending_messages_async
+
+    queued_count = 0
     results = []
     for record in absent_records:
         student = record.student
@@ -349,20 +354,23 @@ def attendance_save_reasons(request):
             results.append({'name': student.name, 'status': 'no_phone'})
             continue
 
-        result = send_absence_alert(
-            student_name=student.name,
-            parent_phone=parent_phone,
-            date_str=att_date.strftime('%d-%m-%Y'),
-            section=str(section),
-            reason=record.remarks or '',
+        PendingMessage.objects.create(
+            student=student,
+            phone=parent_phone,
+            message_type=PendingMessage.TYPE_TEMPLATE,
+            template_name=getattr(conf, 'META_TEMPLATE_ABSENCE', 'absence_alert'),
+            template_params=[student.name, att_date.strftime('%d-%m-%Y'), record.remarks or "Absent"],
+            language='en',
+            attendance_date=att_date,
+            status=PendingMessage.STATUS_PENDING,
         )
+        queued_count += 1
+        results.append({'name': student.name, 'phone': parent_phone, 'status': 'queued'})
 
-        if result['success']:
-            results.append({'name': student.name, 'phone': parent_phone, 'status': 'sent'})
-        else:
-            results.append({'name': student.name, 'phone': parent_phone, 'status': 'failed', 'error': result.get('error', '')})
+    if queued_count > 0:
+        dispatch_pending_messages_async()
 
-    return JsonResponse({'success': True, 'results': results})
+    return JsonResponse({'success': True, 'queued_count': queued_count, 'results': results, 'message': f'{queued_count} WhatsApp alert(s) queued for sending.'})
 
 
 @all_roles_required
@@ -906,7 +914,22 @@ def tap_mark_api(request):
             return JsonResponse({'success': False, 'error': 'Student does not belong to the specified section'}, status=403)
 
         today = timezone.localdate()
-        selected_date = parse_date_input(date_str, default=today)
+        if date_str is None or str(date_str).strip() == '':
+            return JsonResponse({'success': False, 'error': 'Attendance date is required'}, status=400)
+
+        selected_date = parse_date_input(date_str)
+        if not selected_date:
+            return JsonResponse({'success': False, 'error': 'Invalid attendance date format'}, status=400)
+
+        if selected_date > today:
+            return JsonResponse({'success': False, 'error': 'Attendance date cannot be in the future'}, status=400)
+
+        if selected_date != today:
+            return JsonResponse({'success': False, 'error': 'Tap marking is restricted to today'}, status=400)
+
+        valid_statuses = [choice[0] for choice in Attendance.STATUS_CHOICES]
+        if not status or status not in valid_statuses:
+            return JsonResponse({'success': False, 'error': 'Invalid attendance status'}, status=400)
 
         # Time/Lock enforcement: Faculty cannot overwrite submitted attendance for a student
         if request.user.role == 'faculty' and Attendance.objects.filter(section=section, date=selected_date, student=student).exists():
@@ -934,7 +957,9 @@ def tap_mark_api(request):
 
 
     except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+        import logging
+        logging.getLogger('django').error(f"Error in tap_mark_api: {e}", exc_info=True)
+        return JsonResponse({'success': False, 'error': 'An internal server error occurred while processing attendance.'}, status=500)
 
 
 @all_roles_required

@@ -6,14 +6,22 @@ from django.shortcuts import render
 from django.http import JsonResponse, HttpResponse
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
 from django.utils.decorators import method_decorator
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
-from accounts.decorators import admin_required
+from accounts.decorators import admin_required, admin_accounts_required
 
 from .services import send_whatsapp_text, send_whatsapp_template
 
 logger = logging.getLogger('whatsapp_sender')
+
+
+def _redact_phone(phone):
+    if not phone or len(str(phone)) < 6:
+        return "*****"
+    s = str(phone).strip()
+    return f"{s[:3]}******{s[-4:]}"
 
 
 @csrf_exempt
@@ -56,13 +64,14 @@ def meta_webhook(request):
                         status_val = status.get('status')
                         wamid_id = status.get('id')
                         error_detail = ""
+                        recipient = _redact_phone(status.get('recipient_id'))
                         if status_val == 'failed':
                             errors = status.get('errors', [])
                             error_detail = "; ".join(
-                                f"code={e.get('code')} title={e.get('title')} detail={e.get('error_data', {}).get('details', e.get('message', ''))}"
+                                f"code={e.get('code')} title={e.get('title')}"
                                 for e in errors
                             )
-                            logger.error(f"Message {wamid_id} FAILED: {error_detail} | recipient={status.get('recipient_id')}")
+                            logger.error(f"Message {wamid_id} FAILED: {error_detail} | recipient={recipient}")
                         else:
                             logger.info(f"Message {wamid_id} status: {status_val}")
 
@@ -84,13 +93,11 @@ def meta_webhook(request):
 
                     incoming = value.get("messages", [])
                     for msg in incoming:
-                        from_number = msg.get("from")
-                        msg_type = msg.get("type")
-                        if msg_type == "text":
-                            text = msg.get("text", {}).get("body", "")
-                            logger.info(f"Incoming from {from_number}: {text}")
+                        from_number = _redact_phone(msg.get("from"))
+                        logger.info(f"Incoming message event from {from_number}")
         except Exception as e:
-            logger.error(f"Webhook processing error: {e}")
+            logger.exception(f"Webhook processing error: {e}")
+            return HttpResponse("Internal Server Error", status=500)
 
         return HttpResponse("OK", status=200)
 
@@ -110,7 +117,7 @@ class SendMessageView(View):
                 return JsonResponse({"error": "'to' and 'message' are required"}, status=400)
 
             result = send_whatsapp_text(to_number=to, message=message)
-            status_code = 200 if result["success"] else 500
+            status_code = 200 if result["success"] else result.get("status_code", 502)
             return JsonResponse(result, status=status_code)
 
         except json.JSONDecodeError:
@@ -135,13 +142,14 @@ class SendTemplateView(View):
                 template_name=template_name,
                 components=components,
             )
-            status_code = 200 if result["success"] else 500
+            status_code = 200 if result["success"] else result.get("status_code", 502)
             return JsonResponse(result, status=status_code)
 
         except json.JSONDecodeError:
             return JsonResponse({"error": "Invalid JSON body"}, status=400)
 
 
+@require_POST
 @login_required
 @admin_required
 def trigger_batch_webhook(request):
@@ -204,6 +212,7 @@ def trigger_batch_webhook(request):
     })
 
 
+@require_POST
 @login_required
 @admin_required
 def retry_failed_messages(request):
@@ -231,8 +240,8 @@ def retry_failed_messages(request):
     })
 
 
-
 @login_required
+@admin_required
 def message_status_list(request):
     from .models import PendingMessage
     from django.db.models import Q
