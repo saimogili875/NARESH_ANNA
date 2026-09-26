@@ -17,6 +17,16 @@ from django.core.paginator import Paginator
 
 @all_roles_required
 def student_list(request):
+    is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
+    from accounts.models import Group
+
+    if not is_ajax:
+        return render(request, 'students/list.html', {
+            'groups': Group.objects.all(),
+            'sections': Section.objects.all(),
+            'total': 0,
+        })
+
     allowed_sections = _get_faculty_sections(request.user)
     students = Student.objects.filter(is_active=True, section__in=allowed_sections).select_related('section__group')
     group = request.GET.get('group')
@@ -41,18 +51,14 @@ def student_list(request):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
-    from accounts.models import Group
     context = {
         'students': page_obj,
         'page_obj': page_obj,
         'groups': Group.objects.all(),
         'sections': Section.objects.all(),
-        'total': students.count(),
+        'total': paginator.count,
     }
-    is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
-    if is_ajax:
-        return render(request, 'students/_list_table.html', context)
-    return render(request, 'students/list.html', context)
+    return render(request, 'students/_list_table.html', context)
 
 
 

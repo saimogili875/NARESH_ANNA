@@ -11,5 +11,8 @@ python manage.py collectstatic --no-input
 # 3. Run migrations to create database tables
 python manage.py migrate
 
+python manage.py showmigrations --list | grep -q '\[ \]' && \
+  (echo "ERROR: unapplied migrations remain after migrate step" && exit 1) || true
+
 # 4. Bootstrap admin accounts if environment variables are set
 python manage.py bootstrap_admins

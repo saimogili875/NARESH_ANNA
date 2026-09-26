@@ -1,0 +1,18 @@
+<table class="table table-hover align-middle mb-0">
+  <thead>
+    <tr><th>Adm. No</th><th>Name</th><th>Group</th><th>Section</th><th></th></tr>
+  </thead>
+  <tbody>
+    {% for s in recent_students %}
+    <tr>
+      <td class="small text-muted font-monospace">{{ s.admission_number }}</td>
+      <td class="fw-medium">{{ s.name }}</td>
+      <td><span class="badge bg-secondary-subtle text-body border fw-normal">{{ s.section.group.name|default:'-' }}</span></td>
+      <td>{{ s.section|default:'-' }}</td>
+      <td class="text-end"><a href="{% url 'student_profile' s.pk %}" class="btn btn-sm btn-outline-secondary rounded-circle px-2 py-1"><i class="bi bi-chevron-right"></i></a></td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="5" class="text-center text-muted py-4">No recent admissions found</td></tr>
+    {% endfor %}
+  </tbody>
+</table>

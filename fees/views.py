@@ -312,6 +312,10 @@ def fee_type_delete(request, pk):
     return render(request, 'fees/delete_type_confirm.html', {'fee_type': fee_type})
 
 
+# NOTE FOR FUTURE: The real long-term fix is to store a denormalized `status` field
+# and cached `total_paid`/`total_pending` on StudentFee (updated via a post_save signal
+# on FeePayment), so status filtering can happen as a DB .filter(status=...) with real
+# pagination instead of a full Python classification loop over every matching student on every request.
 @all_roles_required
 def fee_list(request):
     q = request.GET.get('q', '')
@@ -332,11 +336,41 @@ def fee_list(request):
     student_ids = [s.pk for s in student_list]
 
     fee_types = list(FeeType.objects.all().order_by('created_at'))
-    fee_data = []
 
-    total_collected_tuition = 0
-    total_pending_tuition = 0
-    total_fees_tuition = 0
+    # 1. Compute summary totals via direct DB aggregates BEFORE per-student loop
+    summary = StudentFee.objects.filter(student_id__in=student_ids).aggregate(
+        total_fee_sum=Sum('total_fee'),
+    )
+    paid_summary = FeePayment.objects.filter(
+        Q(student_fee__student_id__in=student_ids) | Q(fee_charge__student_id__in=student_ids)
+    ).aggregate(total_paid_sum=Sum('amount'))
+    charge_summary = StudentFeeCharge.objects.filter(student_id__in=student_ids).aggregate(
+        total_assigned_sum=Sum('amount_assigned'),
+    )
+
+    total_fees = (summary['total_fee_sum'] or 0) + (charge_summary['total_assigned_sum'] or 0)
+    total_collected = paid_summary['total_paid_sum'] or 0
+    total_pending = total_fees - total_collected
+
+    from accounts.models import Section
+    sections = Section.objects.select_related('group').all().order_by('group__name', 'year', 'name')
+
+    is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
+    if not is_ajax:
+        return render(request, 'fees/list.html', {
+            'fee_data': [],
+            'fee_types': fee_types,
+            'sections': sections,
+            'q': q,
+            'status_filter': status_filter,
+            'fee_type_filter': fee_type_filter,
+            'section_filter': section_filter,
+            'total_fees': total_fees,
+            'total_collected': total_collected,
+            'total_pending': total_pending,
+        })
+
+    fee_data = []
 
     def classify_status(total_fee_or_assigned, total_paid, total_pending):
         if total_fee_or_assigned <= 0:
@@ -415,28 +449,7 @@ def fee_list(request):
                 'overall_status': row_status,
             })
 
-            total_collected_tuition += sf.total_paid
-            total_pending_tuition += sf.total_pending
-            total_fees_tuition += sf.total_fee
-
-    total_charges_fees = sum(
-        c.amount_assigned for row in fee_data for c in row['charges'] if c
-    )
-    total_charges_paid = sum(
-        c.total_paid for row in fee_data for c in row['charges'] if c
-    )
-    total_charges_pending = sum(
-        c.total_pending for row in fee_data for c in row['charges'] if c
-    )
-
-    total_fees = total_fees_tuition + total_charges_fees
-    total_collected = total_collected_tuition + total_charges_paid
-    total_pending = total_pending_tuition + total_charges_pending
-
-    from accounts.models import Section
-    sections = Section.objects.select_related('group').all().order_by('group__name', 'year', 'name')
-
-    return render(request, 'fees/list.html', {
+    return render(request, 'fees/_list_table.html', {
         'fee_data': fee_data,
         'fee_types': fee_types,
         'sections': sections,

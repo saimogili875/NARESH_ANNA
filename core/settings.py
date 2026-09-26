@@ -12,6 +12,17 @@ SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', default=False, cast=bool)
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='srinri.in,www.srinri.in,localhost,127.0.0.1').split(',') + ['.onrender.com', 'localhost', '127.0.0.1']
 
+# To profile production traffic for a short debugging session:
+#   1. Set ENABLE_PROFILING=True as an env var on Render, redeploy.
+#   2. Run `python manage.py migrate silk` once via Render's shell.
+#   3. Visit /silk/ while logged in as a superuser — shows every request's 
+#      timing, SQL query count, and slowest queries, ranked.
+#   4. Once you've found the slow spots, set ENABLE_PROFILING=False again and 
+#      redeploy — this removes the middleware and its overhead entirely.
+# Never leave this on permanently in production — it adds per-request overhead 
+# and stores request/response bodies.
+ENABLE_PROFILING = config('ENABLE_PROFILING', default=False, cast=bool)
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -35,6 +46,9 @@ INSTALLED_APPS = [
     'captcha',
 ]
 
+if ENABLE_PROFILING:
+    INSTALLED_APPS.append('silk')
+
 MIDDLEWARE = [
     'core.middleware.IPWhitelistMiddleware',
     'django.middleware.security.SecurityMiddleware',
@@ -50,6 +64,9 @@ MIDDLEWARE = [
     'accounts.middleware.FacultyAccessMiddleware',
     'accounts.middleware.ActivityLogMiddleware',
 ]
+
+if ENABLE_PROFILING:
+    MIDDLEWARE.insert(1, 'silk.middleware.SilkyMiddleware')
 
 ROOT_URLCONF = 'core.urls'
 
@@ -329,5 +346,13 @@ SESSION_EXPIRY_OTHER_MINUTES = 120     # Admin / accounts / superuser (2 hours)
 SESSION_COOKIE_AGE = 7200              # 2 hours (7200 seconds)
 
 # --- WhatsApp Batch Sender ---
+
+# --- Profiling Configuration (django-silk) ---
+if ENABLE_PROFILING:
+    SILKY_PYTHON_PROFILER = True
+    SILKY_AUTHENTICATION = True   # require login
+    SILKY_AUTHORISATION = True    # require permission check below
+    SILKY_PERMISSIONS = lambda user: user.is_superuser
+    SILKY_MAX_RECORDED_REQUESTS = 200  # cap storage, avoid unbounded growth
 
 

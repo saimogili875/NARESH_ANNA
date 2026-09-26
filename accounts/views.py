@@ -6,6 +6,7 @@ from django.views.decorators.http import require_POST
 from accounts.decorators import admin_required, all_roles_required, superuser_required
 from django.utils import timezone
 from django.db.models import Sum, Count, Q
+from django.core.cache import cache
 from .models import User, Group, Section, AcademicYear, LoginSession, LoginLog, parse_user_agent, get_client_ip
 from .forms import LoginForm, UserForm, GroupForm, SectionForm, AcademicYearForm
 from students.models import Student
@@ -249,7 +250,11 @@ def logout_view(request):
 @login_required
 def dashboard(request):
     today = timezone.localdate()
-    active_year = AcademicYear.objects.filter(is_active=True).first()
+
+    active_year = cache.get('dashboard_active_year')
+    if active_year is None:
+        active_year = AcademicYear.objects.filter(is_active=True).first()
+        cache.set('dashboard_active_year', active_year, 300)
 
     # Date filter for transactions
     date_str = request.GET.get('txn_date', str(today))
@@ -258,30 +263,52 @@ def dashboard(request):
     except Exception:
         selected_txn_date = today
 
+    # Combined Count & Q aggregation for student stats
     students_qs = Student.objects.filter(is_active=True)
-    total_students = students_qs.count()
-    year1_students = students_qs.filter(section__year='1').count()
-    year2_students = students_qs.filter(section__year='2').count()
+    student_stats = students_qs.aggregate(
+        total=Count('id'),
+        year1=Count('id', filter=Q(section__year='1')),
+        year2=Count('id', filter=Q(section__year='2'))
+    )
+    total_students = student_stats['total'] or 0
+    year1_students = student_stats['year1'] or 0
+    year2_students = student_stats['year2'] or 0
 
+    # Combined Count & Q aggregation for today's attendance stats
     today_att = Attendance.objects.filter(date=today)
-    today_present = today_att.filter(status='P').count()
-    today_absent = today_att.filter(status='A').count()
+    att_stats = today_att.aggregate(
+        present=Count('id', filter=Q(status='P')),
+        absent=Count('id', filter=Q(status='A'))
+    )
+    today_present = att_stats['present'] or 0
+    today_absent = att_stats['absent'] or 0
 
-    # FIX: payment_date is a DateField — use direct equality, not __date lookup
     today_payments = FeePayment.objects.filter(payment_date=today)
     today_fee_collection = today_payments.aggregate(total=Sum('amount'))['total'] or 0
 
-    # Transactions for selected date — FIX: same here
+    # Transactions for selected date
     selected_day_payments = FeePayment.objects.filter(
         payment_date=selected_txn_date
     ).select_related('student_fee__student').order_by('-created_at')
     selected_day_total = selected_day_payments.aggregate(total=Sum('amount'))['total'] or 0
 
-    total_fees = StudentFee.objects.aggregate(t=Sum('total_fee'))['t'] or 0
-    total_paid = FeePayment.objects.aggregate(t=Sum('amount'))['t'] or 0
-    pending_fees = total_fees - total_paid
+    # Cache fee totals
+    fee_totals = cache.get('dashboard_fee_totals')
+    if fee_totals is None:
+        t_fees = StudentFee.objects.aggregate(t=Sum('total_fee'))['t'] or 0
+        t_paid = FeePayment.objects.aggregate(t=Sum('amount'))['t'] or 0
+        fee_totals = {
+            'total_fees': t_fees,
+            'total_paid': t_paid,
+            'pending_fees': t_fees - t_paid,
+        }
+        cache.set('dashboard_fee_totals', fee_totals, 300)
 
-    recent_students = Student.objects.order_by('-date_of_admission')[:10]
+    total_paid = fee_totals['total_paid']
+    pending_fees = fee_totals['pending_fees']
+
+    # Optimised recent_students query with select_related('section__group')
+    recent_students = Student.objects.select_related('section__group').order_by('-date_of_admission')[:10]
 
     return render(request, 'accounts/dashboard.html', {
         'total_students': total_students,
@@ -297,6 +324,34 @@ def dashboard(request):
         'selected_txn_date': selected_txn_date,
         'recent_students': recent_students,
         'active_year': active_year,
+        'today': today,
+    })
+
+
+@login_required
+def dashboard_recent_admissions(request):
+    recent_students = Student.objects.select_related('section__group').order_by('-date_of_admission')[:10]
+    return render(request, 'accounts/_recent_admissions.html', {'recent_students': recent_students})
+
+
+@login_required
+def dashboard_transactions(request):
+    today = timezone.localdate()
+    date_str = request.GET.get('txn_date', str(today))
+    try:
+        selected_txn_date = Date.fromisoformat(date_str)
+    except Exception:
+        selected_txn_date = today
+
+    selected_day_payments = FeePayment.objects.filter(
+        payment_date=selected_txn_date
+    ).select_related('student_fee__student').order_by('-created_at')
+    selected_day_total = selected_day_payments.aggregate(total=Sum('amount'))['total'] or 0
+
+    return render(request, 'accounts/_transactions.html', {
+        'selected_day_payments': selected_day_payments,
+        'selected_day_total': selected_day_total,
+        'selected_txn_date': selected_txn_date,
         'today': today,
     })
 

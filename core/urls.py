@@ -22,4 +22,7 @@ urlpatterns = [
     path('captcha/', include('captcha.urls')),
 ]
 
+if settings.ENABLE_PROFILING:
+    urlpatterns += [path('silk/', include('silk.urls', namespace='silk'))]
+
 

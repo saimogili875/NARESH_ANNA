@@ -116,25 +116,8 @@
         <span class="fw-bold">Recent Admissions</span>
         <a href="{% url 'student_list' %}" class="btn btn-sm btn-outline-primary rounded-pill px-3">View All</a>
       </div>
-      <div class="card-body p-0">
-        <table class="table table-hover align-middle mb-0">
-          <thead>
-            <tr><th>Adm. No</th><th>Name</th><th>Group</th><th>Section</th><th></th></tr>
-          </thead>
-          <tbody>
-            {% for s in recent_students %}
-            <tr>
-              <td class="small text-muted font-monospace">{{ s.admission_number }}</td>
-              <td class="fw-medium">{{ s.name }}</td>
-              <td><span class="badge bg-secondary-subtle text-body border fw-normal">{{ s.section.group.name|default:'-' }}</span></td>
-              <td>{{ s.section|default:'-' }}</td>
-              <td class="text-end"><a href="{% url 'student_profile' s.pk %}" class="btn btn-sm btn-outline-secondary rounded-circle px-2 py-1"><i class="bi bi-chevron-right"></i></a></td>
-            </tr>
-            {% empty %}
-            <tr><td colspan="5" class="text-center text-muted py-4">No recent admissions found</td></tr>
-            {% endfor %}
-          </tbody>
-        </table>
+      <div class="card-body p-0" id="recent-admissions-container">
+        {% include 'accounts/_recent_admissions.html' %}
       </div>
     </div>
   </div>
@@ -155,24 +138,8 @@
           {% endif %}
         </form>
       </div>
-      <div class="card-body p-0" style="max-height:380px;overflow-y:auto">
-        <table class="table table-hover align-middle mb-0">
-          <thead>
-            <tr><th>Receipt</th><th>Student</th><th>Amount</th><th>Mode</th></tr>
-          </thead>
-          <tbody>
-            {% for p in selected_day_payments %}
-            <tr>
-              <td class="small text-muted font-monospace">#{{ p.receipt_number }}</td>
-              <td class="small fw-medium">{{ p.student_fee.student.name }}</td>
-              <td class="fw-semibold text-success">₹{{ p.amount|floatformat:0 }}</td>
-              <td><span class="badge bg-secondary-subtle text-body border fw-normal">{{ p.get_payment_mode_display }}</span></td>
-            </tr>
-            {% empty %}
-            <tr><td colspan="4" class="text-center text-muted py-4">No transactions on {{ selected_txn_date|date:"d M Y" }}</td></tr>
-            {% endfor %}
-          </tbody>
-        </table>
+      <div class="card-body p-0" id="transactions-container" style="max-height:380px;overflow-y:auto">
+        {% include 'accounts/_transactions.html' %}
       </div>
     </div>
   </div>

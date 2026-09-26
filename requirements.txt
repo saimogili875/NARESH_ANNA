@@ -14,3 +14,4 @@ django-axes>=6.0
 django-storages>=1.14
 boto3>=1.28
 cryptography>=42.0.0
+django-silk>=5.1

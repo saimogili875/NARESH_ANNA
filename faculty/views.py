@@ -10,8 +10,12 @@ from accounts.decorators import admin_required, all_roles_required
 
 @all_roles_required
 def faculty_list(request):
+    is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
+    if not is_ajax:
+        return render(request, 'faculty/list.html', {'faculty': []})
+
     faculty = Faculty.objects.select_related('user').prefetch_related('assigned_sections__group', 'assigned_subjects').filter(is_active=True)
-    return render(request, 'faculty/list.html', {'faculty': faculty})
+    return render(request, 'faculty/_list_table.html', {'faculty': faculty})
 
 
 @admin_required

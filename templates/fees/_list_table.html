@@ -1,0 +1,66 @@
+<table class="table table-hover mb-0">
+  <thead class="bg-light">
+    <tr>
+      <th>Student</th>
+      <th>Section</th>
+      <th>Tuition Assigned</th>
+      <th>Tuition Paid</th>
+      <th>Tuition Pending</th>
+      {% for ft in fee_types %}
+      <th>{{ ft.name }} <div class="text-muted fw-normal" style="font-size:0.7rem">(Paid / Pending)</div></th>
+      {% endfor %}
+      <th>Overall Status</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for item in fee_data %}
+    {% with sf=item.student_fee charges=item.charges %}
+    <tr>
+      <td>
+        <div class="fw-500">{{ sf.student.name }}</div>
+        <div class="small text-muted">{{ sf.student.admission_number }}</div>
+      </td>
+      <td class="small">{{ sf.student.section|default:"—" }}</td>
+      <td class="fw-500">₹{{ sf.total_fee|floatformat:0 }}</td>
+      <td class="text-success fw-500">₹{{ sf.total_paid|floatformat:0 }}</td>
+      <td class="text-danger">₹{{ sf.total_pending|floatformat:0 }}</td>
+      
+      {% for charge in charges %}
+        {% if charge %}
+        <td class="small">
+          <span class="text-success fw-bold">₹{{ charge.total_paid|floatformat:0 }}</span> / 
+          <span class="{% if charge.total_pending > 0 %}text-danger fw-bold{% else %}text-muted{% endif %}">₹{{ charge.total_pending|floatformat:0 }}</span>
+        </td>
+        {% else %}
+        <td class="small text-muted">—</td>
+        {% endif %}
+      {% endfor %}
+
+      <td>
+        {% if item.overall_status == 'paid' or item.overall_status == 'Paid' %}
+          <span class="badge" style="background:#dcfce7;color:#166534">Paid</span>
+        {% elif item.overall_status == 'partial' or item.overall_status == 'Partial' %}
+          <span class="badge" style="background:#fef9c3;color:#854d0e">Partial</span>
+        {% elif item.overall_status == 'not_started' %}
+          <span class="badge bg-secondary-subtle text-secondary border">Not Started</span>
+        {% else %}
+          <span class="badge" style="background:#fee2e2;color:#991b1b">Pending</span>
+        {% endif %}
+      </td>
+      <td>
+        <a href="{% url 'fee_detail' sf.student.pk %}" class="btn btn-sm btn-light" title="View"><i class="bi bi-eye"></i></a>
+        <a href="{% url 'fee_set' sf.student.pk %}" class="btn btn-sm btn-outline-secondary" title="Set Fee"><i class="bi bi-pencil"></i></a>
+        <a href="{% url 'fee_collect' sf.student.pk %}" class="btn btn-sm btn-primary" title="Collect">Collect</a>
+      </td>
+    </tr>
+    {% endwith %}
+    {% empty %}
+    <tr>
+      <td colspan="{{ fee_types|length|add:'7' }}" class="text-center text-muted py-4">
+        No students found. <a href="{% url 'student_list' %}">Go to Students</a>.
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>

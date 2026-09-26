@@ -351,10 +351,31 @@
         alert('Network error — no changes were saved. Please try again.');
       });
   });
-  // ---- Live search debounced AJAX ----
-  const searchInput = document.querySelector('input[name="q"]');
-  const searchForm = searchInput ? searchInput.closest('form') : null;
+  // ---- Progressive table loading ----
   const tableContainer = document.querySelector('#results-table-container');
+  const searchInput = document.querySelector('input[name="q"]');
+  const searchForm = searchInput ? searchInput.closest('form') : document.querySelector('form');
+
+  function loadStudentTable(url) {
+    if (!tableContainer) return;
+    const fetchUrl = url || (window.location.pathname + window.location.search);
+    fetch(fetchUrl, {
+      headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+      .then(res => res.text())
+      .then(html => {
+        tableContainer.innerHTML = html;
+        document.querySelectorAll('#results-table-container .editable-cell').forEach(function (cell) {
+          cell.dataset.savedValue = cell.textContent.trim();
+        });
+      })
+      .catch(() => {});
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    loadStudentTable();
+  });
+
   if (searchInput && searchForm && tableContainer) {
     let debounceTimer;
     searchInput.addEventListener('input', function() {
@@ -362,18 +383,7 @@
       debounceTimer = setTimeout(function() {
         const params = new URLSearchParams(new FormData(searchForm));
         const actionUrl = searchForm.getAttribute('action') || window.location.pathname;
-        fetch(actionUrl + '?' + params.toString(), {
-          headers: { 'X-Requested-With': 'XMLHttpRequest' }
-        })
-          .then(res => res.text())
-          .then(html => {
-            tableContainer.innerHTML = html;
-            // Re-bind inline edit handlers for newly loaded table cells
-            document.querySelectorAll('#results-table-container .editable-cell').forEach(function (cell) {
-              cell.dataset.savedValue = cell.textContent.trim();
-            });
-          })
-          .catch(() => {});
+        loadStudentTable(actionUrl + '?' + params.toString());
       }, 600);
     });
   }
