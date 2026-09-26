@@ -277,6 +277,51 @@ def student_profile(request, pk):
     marks = student.marks.select_related('exam').order_by('-exam__date')
     fees = student.fees.prefetch_related('payments').first()
 
+    # Monthly Attendance Breakdown
+    monthly_attendance = {}
+    total_work = attendance.count()
+    total_pres = 0
+    total_abs = 0
+
+    for att in attendance:
+        m_key = att.date.strftime('%Y_%m')
+        m_label = att.date.strftime('%B %Y')
+        if m_key not in monthly_attendance:
+            monthly_attendance[m_key] = {
+                'key': m_key,
+                'label': m_label,
+                'total': 0,
+                'present': 0,
+                'absent': 0,
+                'late': 0,
+                'pct': 0.0,
+                'records': [],
+            }
+        item = monthly_attendance[m_key]
+        item['total'] += 1
+        item['records'].append(att)
+        if att.status == 'P':
+            item['present'] += 1
+            total_pres += 1
+        elif att.status == 'A':
+            item['absent'] += 1
+            total_abs += 1
+        else:
+            item['late'] += 1
+
+    for m in monthly_attendance.values():
+        m['pct'] = round((m['present'] / m['total'] * 100), 1) if m['total'] > 0 else 0.0
+
+    attd_pct = round((total_pres / total_work * 100), 1) if total_work > 0 else 0.0
+
+    attendance_summary = {
+        'total_work': total_work,
+        'total_pres': total_pres,
+        'total_abs': total_abs,
+        'attd_pct': attd_pct,
+    }
+    monthly_att_list = list(monthly_attendance.values())
+
     # Pivot marks into one row per exam, subjects as left-to-right columns,
     # so the marks tab reads naturally for IPE / MPIC / BPIC / MEC / CEC.
     exams_map = {}
@@ -310,6 +355,8 @@ def student_profile(request, pk):
     return render(request, 'students/profile.html', {
         'student': student,
         'attendance': attendance,
+        'attendance_summary': attendance_summary,
+        'monthly_att_list': monthly_att_list,
         'marks': marks,
         'exam_rows': exam_rows,
         'fees': fees,

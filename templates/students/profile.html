@@ -53,28 +53,96 @@
     <div class="tab-content">
       <!-- Attendance -->
       <div class="tab-pane active" id="attendance">
-        <div class="card border-0 shadow-sm">
-          <div class="card-body p-0">
-            <table class="table table-sm mb-0">
-              <thead class="bg-light"><tr><th>Date</th><th>Status</th><th>Remarks</th></tr></thead>
-              <tbody>
-                {% for a in attendance %}
-                <tr>
-                  <td>{{ a.date }}</td>
-                  <td>
-                    {% if a.status == 'P' %}<span class="badge bg-success">Present</span>
-                    {% elif a.status == 'A' %}<span class="badge bg-danger">Absent</span>
-                    {% else %}<span class="badge bg-warning text-dark">Late</span>{% endif %}
-                  </td>
-                  <td class="text-muted small">{{ a.remarks|default:'-' }}</td>
-                </tr>
-                {% empty %}
-                <tr><td colspan="3" class="text-center text-muted py-3">No attendance records</td></tr>
-                {% endfor %}
-              </tbody>
-            </table>
+        {% if monthly_att_list %}
+        <!-- Overall Attendance Summary Cards -->
+        <div class="row g-2 mb-3">
+          <div class="col-6 col-sm-3">
+            <div class="p-2.5 rounded text-center bg-body-tertiary border">
+              <div class="fs-5 fw-bold text-primary">{{ attendance_summary.total_work }}</div>
+              <div class="small text-muted" style="font-size:0.75rem">Total Days</div>
+            </div>
+          </div>
+          <div class="col-6 col-sm-3">
+            <div class="p-2.5 rounded text-center bg-body-tertiary border">
+              <div class="fs-5 fw-bold text-success">{{ attendance_summary.total_pres }}</div>
+              <div class="small text-muted" style="font-size:0.75rem">Present Days</div>
+            </div>
+          </div>
+          <div class="col-6 col-sm-3">
+            <div class="p-2.5 rounded text-center bg-body-tertiary border">
+              <div class="fs-5 fw-bold text-danger">{{ attendance_summary.total_abs }}</div>
+              <div class="small text-muted" style="font-size:0.75rem">Absent Days</div>
+            </div>
+          </div>
+          <div class="col-6 col-sm-3">
+            <div class="p-2.5 rounded text-center bg-body-tertiary border">
+              <div class="fs-5 fw-bold text-warning-emphasis">{{ attendance_summary.attd_pct }}%</div>
+              <div class="small text-muted" style="font-size:0.75rem">Attendance %</div>
+            </div>
           </div>
         </div>
+
+        <!-- Monthly Tap Buttons / Accordion -->
+        <div class="accordion" id="monthlyAttendanceAccordion">
+          {% for m in monthly_att_list %}
+          <div class="accordion-item border shadow-sm mb-2 rounded overflow-hidden">
+            <h2 class="accordion-header" id="heading_{{ m.key }}">
+              <button class="accordion-button {% if not forloop.first %}collapsed{% endif %} py-2.5 px-3 bg-light" 
+                      type="button" data-bs-toggle="collapse" 
+                      data-bs-target="#collapse_{{ m.key }}" 
+                      aria-expanded="{% if forloop.first %}true{% else %}false{% endif %}" 
+                      aria-controls="collapse_{{ m.key }}">
+                <div class="d-flex justify-content-between align-items-center w-100 me-2 flex-wrap gap-2">
+                  <div>
+                    <span class="fw-bold me-2">{{ m.label }}</span>
+                    <span class="badge bg-secondary-subtle text-body border fw-normal">{{ m.total }} Days</span>
+                  </div>
+                  <div class="d-flex gap-2 align-items-center">
+                    <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1"><i class="bi bi-check-circle me-1"></i>{{ m.present }} Pres</span>
+                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1"><i class="bi bi-x-circle me-1"></i>{{ m.absent }} Abs</span>
+                    {% if m.late %}<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-1">{{ m.late }} Late</span>{% endif %}
+                    <span class="badge bg-primary px-2.5 py-1">{{ m.pct }}%</span>
+                  </div>
+                </div>
+              </button>
+            </h2>
+            <div id="collapse_{{ m.key }}" class="accordion-collapse collapse {% if forloop.first %}show{% endif %}" 
+                 aria-labelledby="heading_{{ m.key }}" data-bs-parent="#monthlyAttendanceAccordion">
+              <div class="accordion-body p-0">
+                <table class="table table-sm table-hover mb-0 align-middle">
+                  <thead class="bg-light">
+                    <tr>
+                      <th class="ps-3">Date</th>
+                      <th>Day</th>
+                      <th>Status</th>
+                      <th>Remarks</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for a in m.records %}
+                    <tr>
+                      <td class="ps-3 font-monospace small">{{ a.date|date:"d M Y" }}</td>
+                      <td class="small text-muted">{{ a.date|date:"D" }}</td>
+                      <td>
+                        {% if a.status == 'P' %}<span class="badge bg-success"><i class="bi bi-check-lg me-1"></i>Present</span>
+                        {% elif a.status == 'A' %}<span class="badge bg-danger"><i class="bi bi-x-lg me-1"></i>Absent</span>
+                        {% else %}<span class="badge bg-warning text-dark"><i class="bi bi-clock me-1"></i>Late</span>{% endif %}
+                      </td>
+                      <td class="text-muted small">{{ a.remarks|default:'-' }}</td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="card border-0 shadow-sm">
+          <div class="card-body text-center text-muted py-4">No attendance records found for this student.</div>
+        </div>
+        {% endif %}
       </div>
 
       <!-- Marks -->
