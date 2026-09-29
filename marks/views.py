@@ -35,11 +35,16 @@ def get_subject_max_marks(exam, subjects):
     saved = {m.subject: m.max_marks for m in exam.subject_max_marks.select_related('subject')}
     return {sub: saved.get(sub, exam.max_marks) for sub in subjects}
 
-def get_section_completion_status(exam):
-    """Return section completion status list for every Section under exam.group."""
+def get_section_completion_status(exam, user=None):
+    """Return section completion status list for every Section allowed for user under exam.group."""
     subjects = get_subjects_for_exam(exam)
     total_subjects_count = len(subjects)
-    if exam.group_id:
+    if user:
+        sections_qs = _get_faculty_sections(user)
+        if exam.group_id:
+            sections_qs = sections_qs.filter(group=exam.group)
+        sections = list(sections_qs.select_related('group'))
+    elif exam.group_id:
         sections = list(Section.objects.filter(group=exam.group).select_related('group'))
     else:
         sections = list(Section.objects.all().select_related('group'))
@@ -69,13 +74,39 @@ def get_section_completion_status(exam):
         })
     return result
 
+
 @all_roles_required
 def exam_list(request):
+    section_id = request.GET.get('section', '')
+    group_id = request.GET.get('group', '')
+    year_val = request.GET.get('year', '')
+
+    all_allowed_sections = _get_faculty_sections(request.user)
+    sections = all_allowed_sections
+    groups = Group.objects.all().order_by('name')
+
+    selected_section = None
+    if section_id and str(section_id).isdigit():
+        if not _section_allowed(request.user, section_id):
+            messages.error(request, 'You do not have access to that section.')
+            return redirect('exam_list')
+        selected_section = get_object_or_404(Section, pk=section_id)
+        if not group_id and selected_section.group_id:
+            group_id = str(selected_section.group_id)
+        if not year_val and selected_section.year:
+            year_val = str(selected_section.year)
+
     active_year = AcademicYear.objects.filter(is_active=True).first()
     all_exams = (
         Exam.objects.filter(academic_year=active_year).select_related('group', 'category', 'exam_type').order_by('-date')
         if active_year else []
     )
+
+    if selected_section:
+        all_exams = [e for e in all_exams if not e.group_id or e.group_id == selected_section.group_id]
+    elif group_id and group_id != 'all':
+        all_exams = [e for e in all_exams if not e.group_id or str(e.group_id) == str(group_id)]
+
     categories_qs = ExamCategory.objects.all()
     exam_boxes = []
     for cat in categories_qs:
@@ -89,6 +120,12 @@ def exam_list(request):
         'exams': all_exams,
         'exam_boxes': exam_boxes,
         'active_year': active_year,
+        'groups': groups,
+        'sections': sections,
+        'selected_section': selected_section,
+        'section_id': str(section_id),
+        'selected_group_id': str(group_id),
+        'selected_year': str(year_val),
     })
 
 @all_roles_required
@@ -296,12 +333,16 @@ def marks_entry_unlock(request, exam_id, section_id, subject_id):
 def marks_entry(request, exam_id):
     exam = get_object_or_404(Exam, pk=exam_id)
     section_id = request.GET.get('section', '')
-    if getattr(request.user, 'role', None) == 'faculty' and not request.user.is_superuser:
-        sections = _get_faculty_sections(request.user)
-    elif exam.group_id:
-        sections = Section.objects.select_related('group').filter(group=exam.group)
+    group_id = request.GET.get('group', '')
+    year_val = request.GET.get('year', '')
+
+    all_allowed_sections = _get_faculty_sections(request.user)
+    if exam.group_id:
+        sections = all_allowed_sections.filter(group=exam.group)
     else:
-        sections = Section.objects.select_related('group').all()
+        sections = all_allowed_sections
+
+    groups = Group.objects.all().order_by('name')
 
     subjects = get_subjects_for_exam(exam)
     subjects = filter_subjects_for_user(request, subjects)
@@ -323,6 +364,11 @@ def marks_entry(request, exam_id):
             if not _section_allowed(request.user, selected_section.pk):
                 messages.error(request, 'Access denied: You are not assigned to this section.')
                 return redirect('exam_list')
+        if not group_id and selected_section.group_id:
+            group_id = str(selected_section.group_id)
+        if not year_val and selected_section.year:
+            year_val = str(selected_section.year)
+
         locks = MarksEntryLock.objects.filter(exam=exam, section=selected_section, subject__in=subjects)
         locked_subject_ids = set(locks.filter(is_locked=True).values_list('subject_id', flat=True))
         locked_map = {sub.id: (sub.id in locked_subject_ids) for sub in subjects}
@@ -387,7 +433,7 @@ def marks_entry(request, exam_id):
                 )
 
         messages.success(request, 'Marks saved successfully.')
-        return redirect(f'/marks/exam/{exam_id}/entry/?section={sid}')
+        return redirect(f'/marks/exam/{exam_id}/entry/?section={sid}&group={group_id}&year={year_val}')
 
     if selected_section:
         students = list(Student.objects.filter(section=selected_section, is_active=True))
@@ -405,9 +451,16 @@ def marks_entry(request, exam_id):
     ]
 
     return render(request, 'marks/entry.html', {
-        'exam': exam, 'sections': sections, 'rows': rows,
-        'selected_section': selected_section, 'section_id': str(section_id),
-        'subjects': subjects, 'subject_max_marks': subject_max_marks,
+        'exam': exam,
+        'sections': sections,
+        'groups': groups,
+        'selected_group_id': str(group_id),
+        'selected_year': str(year_val),
+        'rows': rows,
+        'selected_section': selected_section,
+        'section_id': str(section_id),
+        'subjects': subjects,
+        'subject_max_marks': subject_max_marks,
         'subjects_with_info': subjects_with_info,
         'locked_map': locked_map,
     })
@@ -416,12 +469,32 @@ def marks_entry(request, exam_id):
 def marks_whatsapp_send(request, exam_id):
     from whatsapp.models import PendingMessage
     exam = get_object_or_404(Exam, pk=exam_id)
-    statuses = get_section_completion_status(exam)
+    statuses = get_section_completion_status(exam, user=request.user)
 
-    total_sections = len(statuses)
-    sent_sections_count = sum(1 for s in statuses if s['is_sent'])
-    ready_sections_count = sum(1 for s in statuses if s['is_complete'])
-    pending_marks_count = sum(1 for s in statuses if not s['is_complete'])
+    section_id = request.GET.get('section', '')
+    group_id = request.GET.get('group', '')
+    year_val = request.GET.get('year', '')
+
+    all_allowed_sections = _get_faculty_sections(request.user)
+    if exam.group_id:
+        sections = all_allowed_sections.filter(group=exam.group)
+    else:
+        sections = all_allowed_sections
+    groups = Group.objects.all().order_by('name')
+
+    filtered_statuses = statuses
+    if section_id and str(section_id).isdigit():
+        filtered_statuses = [s for s in statuses if str(s['section'].id) == str(section_id)]
+    elif group_id and str(group_id).isdigit():
+        filtered_statuses = [s for s in statuses if str(s['section'].group_id) == str(group_id)]
+
+    if year_val:
+        filtered_statuses = [s for s in filtered_statuses if str(s['section'].year) == str(year_val)]
+
+    total_sections = len(filtered_statuses)
+    sent_sections_count = sum(1 for s in filtered_statuses if s['is_sent'])
+    ready_sections_count = sum(1 for s in filtered_statuses if s['is_complete'])
+    pending_marks_count = sum(1 for s in filtered_statuses if not s['is_complete'])
 
     if request.method == 'POST':
         selected_section_ids = request.POST.getlist('selected_sections')
@@ -587,6 +660,7 @@ def marks_report(request):
     import json
     group_id   = request.GET.get('group', '')
     category   = request.GET.get('category', '')
+    year_val   = request.GET.get('year', '')
     section_id = request.GET.get('section', '')
     exam_id    = request.GET.get('exam', '')
     sort_order = request.GET.get('sort', 'asc')
@@ -632,6 +706,8 @@ def marks_report(request):
         qs = Student.objects.select_related('section').filter(is_active=True)
         if eff_group:
             qs = qs.filter(section__group_id=eff_group)
+        if year_val:
+            qs = qs.filter(section__year=year_val)
         section_label = 'All Sections'
         return qs
 
@@ -699,6 +775,7 @@ def marks_report(request):
         'section_label': section_label,
         'is_all_exams': is_all_exams, 'all_exams_list': all_exams_list,
         'group_id': str(group_id), 'category': category,
+        'selected_group_id': str(group_id), 'selected_year': str(year_val), 'year_val': str(year_val),
         'section_id': str(section_id), 'exam_id': str(exam_id), 'subjects': subjects,
         'subject_max_marks': subject_max_marks, 'total_max': total_max,
         'sort_order': sort_order, 'subjects_with_max': subjects_with_max,

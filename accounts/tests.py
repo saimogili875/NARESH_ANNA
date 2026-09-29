@@ -134,18 +134,18 @@ class GroupSectionSearchAndDeleteTestCase(TestCase):
         self.assertEqual(res_weak.status_code, 200)
         self.assertTrue(target_user.check_password('OldPass123!'))
 
-    def test_autofill_rejection_no_failed_log_or_axes_lockout(self):
+    def test_missing_credentials_rejection_no_failed_log_or_axes_lockout(self):
         anon_client = Client()
         initial_log_count = LoginLog.objects.filter(username='admin_autofill', status='FAILED').count()
         res = anon_client.post(reverse('login'), {
-            'username': 'admin_autofill',
-            'password': 'Pass123!_wrong',
-            'human_typed': 'false',
+            'username': '',
+            'password': '',
         })
         self.assertEqual(res.status_code, 200)
-        self.assertContains(res, 'Please type your credentials manually')
+        self.assertContains(res, 'Please enter both username and password')
         new_log_count = LoginLog.objects.filter(username='admin_autofill', status='FAILED').count()
         self.assertEqual(new_log_count, initial_log_count)
+
 
 
     def test_section_delete_get_request_rejected(self):
@@ -213,5 +213,153 @@ class SecuritySettingsTestCase(TestCase):
         self.assertEqual(res.status_code, 200)
         self.assertIn('csrftoken', res.cookies)
         self.assertTrue(res.cookies['csrftoken']['secure'])
+
+
+from unittest.mock import patch
+from django.contrib.messages.storage.fallback import FallbackStorage
+from accounts.admin import GroupAdmin, SectionAdmin
+from django.contrib.admin.sites import AdminSite
+
+
+class GroupDeletionRulesTestCase(TestCase):
+    def setUp(self):
+        self.admin = User.objects.create_user(
+            username='admin_del_test', password='Password123!', role='admin', is_staff=True, is_superuser=True
+        )
+        self.staff = User.objects.create_user(
+            username='staff_del_test', password='Password123!', role='faculty', is_staff=False, is_superuser=False
+        )
+        self.client = Client()
+        self.client.force_login(self.admin)
+        self.ay = AcademicYear.objects.create(
+            name='2024-2025', is_active=True, start_date='2024-06-01', end_date='2025-05-31'
+        )
+
+    def test_group_with_0_sections_and_0_students_deletes(self):
+        grp = Group.objects.create(name='EmptyGroup', code='EMPTY1', academic_year=self.ay)
+        res = self.client.post(reverse('group_delete', args=[grp.pk]), follow=True)
+        self.assertEqual(res.status_code, 200)
+        self.assertFalse(Group.objects.filter(pk=grp.pk).exists())
+
+    def test_group_with_sections_and_0_students_needs_confirm(self):
+        grp = Group.objects.create(name='GroupWithSec', code='GWSEC1', academic_year=self.ay)
+        sec = Section.objects.create(group=grp, year='1', name='A', academic_year=self.ay)
+        
+        # Unconfirmed delete should fail and keep group + section
+        res_unconfirmed = self.client.post(reverse('group_delete', args=[grp.pk]), follow=True)
+        self.assertEqual(res_unconfirmed.status_code, 200)
+        self.assertContains(res_unconfirmed, 'requires confirmation')
+        self.assertTrue(Group.objects.filter(pk=grp.pk).exists())
+        self.assertTrue(Section.objects.filter(pk=sec.pk).exists())
+
+        # Confirmed delete (confirm=1) should delete section and group
+        res_confirmed = self.client.post(reverse('group_delete', args=[grp.pk]), {'confirm': '1'}, follow=True)
+        self.assertEqual(res_confirmed.status_code, 200)
+        self.assertContains(res_confirmed, 'deleted successfully')
+        self.assertFalse(Group.objects.filter(pk=grp.pk).exists())
+        self.assertFalse(Section.objects.filter(pk=sec.pk).exists())
+
+    def test_group_with_only_inactive_students_is_blocked(self):
+        grp = Group.objects.create(name='InactiveGroup', code='INACT1', academic_year=self.ay)
+        sec = Section.objects.create(group=grp, year='1', name='A', academic_year=self.ay)
+        Student.objects.create(
+            admission_number='INACT_01', name='Inactive Sam', section=sec, academic_year=self.ay, is_active=False
+        )
+
+        res = self.client.post(reverse('group_delete', args=[grp.pk]), {'confirm': '1'}, follow=True)
+        self.assertEqual(res.status_code, 200)
+        self.assertContains(res, 'Cannot delete group')
+        self.assertContains(res, '0 active, 1 inactive')
+        self.assertTrue(Group.objects.filter(pk=grp.pk).exists())
+        self.assertTrue(Section.objects.filter(pk=sec.pk).exists())
+
+    def test_group_with_active_students_is_blocked(self):
+        grp = Group.objects.create(name='ActiveGroup', code='ACT1', academic_year=self.ay)
+        sec = Section.objects.create(group=grp, year='1', name='A', academic_year=self.ay)
+        Student.objects.create(
+            admission_number='ACT_01', name='Active Alice', section=sec, academic_year=self.ay, is_active=True
+        )
+
+        res = self.client.post(reverse('group_delete', args=[grp.pk]), {'confirm': '1'}, follow=True)
+        self.assertEqual(res.status_code, 200)
+        self.assertContains(res, 'Cannot delete group')
+        self.assertTrue(Group.objects.filter(pk=grp.pk).exists())
+        self.assertTrue(Section.objects.filter(pk=sec.pk).exists())
+
+    def test_section_with_students_is_blocked(self):
+        grp = Group.objects.create(name='SecGroup', code='SECGRP', academic_year=self.ay)
+        sec = Section.objects.create(group=grp, year='1', name='A', academic_year=self.ay)
+        Student.objects.create(
+            admission_number='SEC_01', name='Section Student', section=sec, academic_year=self.ay, is_active=True
+        )
+
+        res = self.client.post(reverse('section_delete', args=[sec.pk]), follow=True)
+        self.assertEqual(res.status_code, 200)
+        self.assertContains(res, 'Cannot delete section')
+        self.assertTrue(Section.objects.filter(pk=sec.pk).exists())
+
+    def test_non_admin_user_gets_denied(self):
+        self.client.force_login(self.staff)
+        grp = Group.objects.create(name='NonAdminGroup', code='NADMIN', academic_year=self.ay)
+        res = self.client.post(reverse('group_delete', args=[grp.pk]), {'confirm': '1'})
+        self.assertNotEqual(res.status_code, 200)
+        self.assertTrue(Group.objects.filter(pk=grp.pk).exists())
+
+    def test_get_request_to_delete_url_rejected(self):
+        grp = Group.objects.create(name='GetGroup', code='GETGRP', academic_year=self.ay)
+        res = self.client.get(reverse('group_delete', args=[grp.pk]))
+        self.assertEqual(res.status_code, 405)
+        self.assertTrue(Group.objects.filter(pk=grp.pk).exists())
+
+    def test_no_raw_protected_error_text_in_messages(self):
+        grp = Group.objects.create(name='RawErrGroup', code='RAWERR', academic_year=self.ay)
+        sec = Section.objects.create(group=grp, year='1', name='A', academic_year=self.ay)
+        Student.objects.create(
+            admission_number='RAW_01', name='Raw Student', section=sec, academic_year=self.ay, is_active=True
+        )
+        res = self.client.post(reverse('group_delete', args=[grp.pk]), {'confirm': '1'}, follow=True)
+        self.assertEqual(res.status_code, 200)
+        self.assertNotContains(res, 'ProtectedError')
+        self.assertNotContains(res, 'Cannot delete group. Deleting the selected group would require')
+
+    def test_admin_bulk_delete_respects_rules(self):
+        site = AdminSite()
+        admin_obj = GroupAdmin(Group, site)
+        
+        # 1. Group with students -> blocked
+        grp_students = Group.objects.create(name='AdminGrp1', code='AGRP1', academic_year=self.ay)
+        sec1 = Section.objects.create(group=grp_students, year='1', name='A', academic_year=self.ay)
+        Student.objects.create(admission_number='AG1', name='Ag Student', section=sec1, academic_year=self.ay)
+
+        # 2. Group with sections (0 students) -> blocked with clear warning message
+        grp_sections = Group.objects.create(name='AdminGrp2', code='AGRP2', academic_year=self.ay)
+        Section.objects.create(group=grp_sections, year='1', name='A', academic_year=self.ay)
+
+        # 3. Group with 0 sections & 0 students -> deletes
+        grp_empty = Group.objects.create(name='AdminGrp3', code='AGRP3', academic_year=self.ay)
+
+        req = self.client.get('/').wsgi_request
+        req.user = self.admin
+        setattr(req, '_messages', FallbackStorage(req))
+
+        admin_obj.delete_queryset(req, Group.objects.filter(pk__in=[grp_students.pk, grp_sections.pk, grp_empty.pk]))
+
+        self.assertTrue(Group.objects.filter(pk=grp_students.pk).exists())
+        self.assertTrue(Group.objects.filter(pk=grp_sections.pk).exists())
+        self.assertFalse(Group.objects.filter(pk=grp_empty.pk).exists())
+
+    def test_transaction_rollback_on_failure(self):
+        grp = Group.objects.create(name='RollbackGroup', code='RBACK', academic_year=self.ay)
+        sec = Section.objects.create(group=grp, year='1', name='A', academic_year=self.ay)
+
+        with patch.object(Group, 'delete', side_effect=Exception("Database failure during group delete")):
+            res = self.client.post(reverse('group_delete', args=[grp.pk]), {'confirm': '1'}, follow=True)
+            self.assertEqual(res.status_code, 200)
+            self.assertContains(res, 'An unexpected error occurred')
+
+        # Because transaction.atomic() rolled back, section MUST still exist!
+        self.assertTrue(Group.objects.filter(pk=grp.pk).exists())
+        self.assertTrue(Section.objects.filter(pk=sec.pk).exists())
+
 
 

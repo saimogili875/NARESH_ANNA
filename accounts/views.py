@@ -109,42 +109,43 @@ def login_view(request):
         ua_raw = request.META.get('HTTP_USER_AGENT', '')
         device_str = parse_user_agent(ua_raw)
 
-        # Reject autofilled submissions (JS sets human_typed=true on real keystrokes)
-        if request.POST.get('human_typed') != 'true':
-            messages.warning(request, 'Please type your credentials manually. Autofill is not allowed.')
+        # Validate username & password presence
+        if not username or not request.POST.get('password'):
+            messages.warning(request, 'Please enter both username and password.')
             return render(request, 'accounts/login.html', {'form': LoginForm()})
 
+
+        # Resolve exact case-insensitive username if present
+        db_user = User.objects.filter(username__iexact=username).first()
+        auth_username = db_user.username if db_user else username
+
         # --- Admin manual block check (independent of axes) ---
-        try:
-            target_user = User.objects.get(username=username)
-            if target_user.is_blocked_by_admin:
-                msg = 'Your account has been blocked by admin. Contact admin for more details.'
-                if target_user.blocked_reason:
-                    msg += f' Reason: {target_user.blocked_reason}'
-                LoginLog.objects.create(
-                    username=username, user=target_user, status='BLOCKED',
-                    failure_reason=f'Account blocked by admin ({target_user.blocked_reason or "No reason specified"})',
-                    ip_address=ip_addr, device_info=device_str, user_agent_raw=ua_raw
-                )
-                messages.error(request, msg)
-                return render(request, 'accounts/login.html', {'form': LoginForm()})
-        except User.DoesNotExist:
-            pass  # Let axes/authenticate handle unknown usernames
+        if db_user and db_user.is_blocked_by_admin:
+            msg = 'Your account has been blocked by admin. Contact admin for more details.'
+            if db_user.blocked_reason:
+                msg += f' Reason: {db_user.blocked_reason}'
+            LoginLog.objects.create(
+                username=auth_username, user=db_user, status='BLOCKED',
+                failure_reason=f'Account blocked by admin ({db_user.blocked_reason or "No reason specified"})',
+                ip_address=ip_addr, device_info=device_str, user_agent_raw=ua_raw
+            )
+            messages.error(request, msg)
+            return render(request, 'accounts/login.html', {'form': LoginForm()})
 
         # Check if already locked out by axes
         from axes.helpers import get_client_ip_address
         from axes.handlers.proxy import AxesProxyHandler
-        if AxesProxyHandler.is_locked(request, credentials={'username': username}):
+        if AxesProxyHandler.is_locked(request, credentials={'username': auth_username}):
             LoginLog.objects.create(
-                username=username, status='FAILED', failure_reason='Locked out due to repeated failed attempts',
+                username=auth_username, status='FAILED', failure_reason='Locked out due to repeated failed attempts',
                 ip_address=ip_addr, device_info=device_str, user_agent_raw=ua_raw
             )
-            messages.error(request, get_cooloff_message(request, username))
+            messages.error(request, get_cooloff_message(request, auth_username))
             return render(request, 'accounts/login.html', {'form': LoginForm()})
 
         if not form.is_valid():
             if 'captcha' in form.errors:
-                logger.error(f"reCAPTCHA validation failed for username '{username}'")
+                logger.error(f"reCAPTCHA validation failed for username '{auth_username}'")
                 for error in form.errors.as_data().get('captcha', []):
                     logger.error(f"reCAPTCHA Error - Code: {error.code}, Message: {error.message}, Params: {error.params}")
 
@@ -152,21 +153,20 @@ def login_view(request):
             from django.contrib.auth.signals import user_login_failed
             user_login_failed.send(
                 sender=__name__,
-                credentials={'username': username},
+                credentials={'username': auth_username},
                 request=request,
             )
             LoginLog.objects.create(
-                username=username, status='FAILED', failure_reason='reCAPTCHA or form validation failed',
-
+                username=auth_username, status='FAILED', failure_reason='reCAPTCHA or form validation failed',
                 ip_address=ip_addr, device_info=device_str, user_agent_raw=ua_raw
             )
             # Re-check lockout after this failure
-            if AxesProxyHandler.is_locked(request, credentials={'username': username}):
-                messages.error(request, get_cooloff_message(request, username))
+            if AxesProxyHandler.is_locked(request, credentials={'username': auth_username}):
+                messages.error(request, get_cooloff_message(request, auth_username))
                 return render(request, 'accounts/login.html', {'form': LoginForm()})
         else:
             user = authenticate(request,
-                                username=form.cleaned_data['username'],
+                                username=auth_username,
                                 password=form.cleaned_data['password'])
             if user:
                 login(request, user)
@@ -187,7 +187,7 @@ def login_view(request):
                     return redirect('/attendance/')
                 return redirect('dashboard')
             else:
-                target_user = User.objects.filter(username=form.cleaned_data['username']).first()
+                target_user = db_user or User.objects.filter(username=form.cleaned_data['username']).first()
                 reason = 'Invalid password' if target_user else 'Username does not exist'
                 LoginLog.objects.create(
                     username=form.cleaned_data['username'], user=target_user, status='FAILED', failure_reason=reason,
@@ -451,6 +451,7 @@ def group_list(request):
             sample_photos_by_section[sec_id].append(st)
 
     group_data = []
+    from .utils import get_group_delete_impact
     for group in groups:
         code_upper = (group.code or '').upper().strip()
         theme = STREAM_THEMES.get(code_upper, {
@@ -472,6 +473,7 @@ def group_list(request):
         }
         sections = list(group.sections.all())
         section_count = len(sections)
+        impact = get_group_delete_impact(group)
 
         # In-memory aggregation per group
         student_count = sum(student_counts_by_section.get(sec.pk, 0) for sec in sections)
@@ -495,6 +497,7 @@ def group_list(request):
             'sections': sections,
             'section_count': section_count,
             'student_count': student_count,
+            'impact': impact,
             'att_pct': att_pct,
             'present_att': present_att,
             'absent_att': absent_att,
@@ -536,25 +539,61 @@ def group_edit(request, pk):
 @admin_required
 @require_POST
 def group_delete(request, pk):
-    group = get_object_or_404(Group, pk=pk)
-    sections = group.sections.all()
-    section_count = sections.count()
-    student_count = Student.objects.filter(section__group=group).count()
+    from django.db import transaction, IntegrityError
+    from django.db.models import ProtectedError
+    from accounts.utils import get_group_delete_impact
+    from accounts.models import ActivityLog, LoginSession
 
-    if student_count > 0:
-        messages.error(
+    group = get_object_or_404(Group, pk=pk)
+    impact = get_group_delete_impact(group)
+
+    if not impact['can_delete']:
+        sec_info = ", ".join(impact['sections_with_students']) if impact['sections_with_students'] else ""
+        msg = (
+            f'Cannot delete group "{group.name}": {impact["total_students"]} student(s) '
+            f'({impact["active_students"]} active, {impact["inactive_students"]} inactive) '
+            f'are assigned across sections: {sec_info}. Please reassign or remove all students first.'
+        )
+        messages.error(request, msg)
+        return redirect('group_list')
+
+    if impact['section_count'] > 0 and request.POST.get('confirm') != '1':
+        messages.warning(
             request,
-            f'Cannot delete group "{group.name}": {student_count} student(s) across {section_count} section(s) '
-            f'are assigned to this group. Please reassign or remove the students first.'
+            f'Deleting group "{group.name}" requires confirmation because it has {impact["section_count"]} empty section(s).'
         )
         return redirect('group_list')
 
     group_name = group.name
+    section_count = impact['section_count']
     try:
-        group.delete()
-        messages.success(request, f'Group "{group_name}" deleted successfully.')
-    except Exception as e:
-        messages.error(request, f'Could not delete group "{group_name}": {e}')
+        with transaction.atomic():
+            if section_count > 0:
+                group.sections.all().delete()
+            group.delete()
+
+        try:
+            session_id = request.session.get('login_session_id')
+            login_session = LoginSession.objects.filter(pk=session_id).first() if session_id else None
+            ActivityLog.objects.create(
+                session=login_session,
+                user=request.user,
+                action=f'Deleted group: {group_name}' + (f' (and {section_count} section(s))' if section_count > 0 else ''),
+                path=request.path,
+                method=request.method,
+            )
+        except Exception:
+            pass
+
+        if section_count > 0:
+            messages.success(request, f'Group "{group_name}" and its {section_count} empty section(s) deleted successfully.')
+        else:
+            messages.success(request, f'Group "{group_name}" deleted successfully.')
+    except (ProtectedError, IntegrityError):
+        messages.error(request, f'Could not delete group "{group_name}": Protected related objects exist.')
+    except Exception:
+        messages.error(request, f'Could not delete group "{group_name}": An unexpected error occurred.')
+
     return redirect('group_list')
 
 @admin_required
@@ -579,23 +618,49 @@ def section_edit(request, pk):
 @admin_required
 @require_POST
 def section_delete(request, pk):
+    from django.db import transaction, IntegrityError
+    from django.db.models import ProtectedError
+    from accounts.models import ActivityLog, LoginSession
+
     sec = get_object_or_404(Section, pk=pk)
     sec_name = str(sec)
-    student_count = Student.objects.filter(section=sec).count()
+    student_qs = Student.objects.filter(section=sec)
+    active_cnt = student_qs.filter(is_active=True).count()
+    inactive_cnt = student_qs.filter(is_active=False).count()
+    total_cnt = active_cnt + inactive_cnt
 
-    if student_count > 0:
+    if total_cnt > 0:
         messages.error(
             request,
-            f'Cannot delete section "{sec_name}": {student_count} student(s) '
+            f'Cannot delete section "{sec_name}": {total_cnt} student(s) '
+            f'({active_cnt} active, {inactive_cnt} inactive) '
             f'are assigned to this section. Please reassign or remove the students first.'
         )
         return redirect('group_list')
 
     try:
-        sec.delete()
+        with transaction.atomic():
+            sec.delete()
+
+        try:
+            session_id = request.session.get('login_session_id')
+            login_session = LoginSession.objects.filter(pk=session_id).first() if session_id else None
+            ActivityLog.objects.create(
+                session=login_session,
+                user=request.user,
+                action=f'Deleted section: {sec_name}',
+                path=request.path,
+                method=request.method,
+            )
+        except Exception:
+            pass
+
         messages.success(request, f'Section "{sec_name}" deleted successfully.')
-    except Exception as e:
-        messages.error(request, f'Could not delete section "{sec_name}": {e}')
+    except (ProtectedError, IntegrityError):
+        messages.error(request, f'Could not delete section "{sec_name}": Protected related objects exist.')
+    except Exception:
+        messages.error(request, f'Could not delete section "{sec_name}": An unexpected error occurred.')
+
     return redirect('group_list')
 
 @superuser_required

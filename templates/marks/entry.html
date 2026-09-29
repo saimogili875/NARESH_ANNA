@@ -10,27 +10,11 @@
       {% if exam.group %}
       <span class="badge bg-light text-dark border">{{ exam.group.code }}</span>
       {% endif %}
-      <span class="badge bg-info-subtle text-info-emphasis border">{{ exam.get_category_display }}</span>
+      <span class="badge bg-info-subtle text-info-emphasis border">{{ exam.category.name }}</span>
       <span class="text-muted small">Subjects: {{ subjects|join:", " }}</span>
     </div>
-    <form method="get" class="row g-2 align-items-center">
-      <div class="col-md-4">
-        <select name="section" class="form-select form-select-sm" onchange="this.form.submit()">
-          <option value="">-- Select Section --</option>
-          {% for s in sections %}
-          <option value="{{ s.pk }}" {% if s.pk|stringformat:"s" == section_id %}selected{% endif %}>
-            {{ s.group.name }} - Year {{ s.year }} - {{ s.name }}
-          </option>
-          {% endfor %}
-        </select>
-        {% if not sections %}
-        <div class="form-text text-warning">No sections found for this exam's group ({{ exam.group.code|default:"—" }}).</div>
-        {% endif %}
-      </div>
-      <div class="col-auto">
-        <a href="{% url 'exam_list' %}" class="btn btn-outline-secondary btn-sm">Back to Exams</a>
-      </div>
-    </form>
+    {% include 'marks/_section_filter.html' with back_url='/marks/' back_label='Back to Exams' %}
+  </div>
 </div>
 
 {% if not subjects %}
@@ -124,9 +108,12 @@
 {% elif selected_section %}
 <div class="alert alert-info">No active students in this section.</div>
 {% else %}
-<div class="text-center py-5 text-muted">
-  <i class="bi bi-journal-text fs-1 d-block mb-2"></i>
-  Select a section to enter marks.
+<div class="card border-0 shadow-sm text-center py-5">
+  <div class="card-body py-4">
+    <i class="bi bi-journal-check fs-1 text-muted d-block mb-2"></i>
+    <h5 class="fw-bold text-dark">Select a section to enter marks</h5>
+    <p class="text-muted small mb-0">Choose Group, Year, and Section above to view student marks table.</p>
+  </div>
 </div>
 {% endif %}
 {% endblock %}

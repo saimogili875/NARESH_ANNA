@@ -2,6 +2,9 @@ import json
 import logging
 import hmac
 import hashlib
+from datetime import timedelta
+from django.utils import timezone
+from django.core.cache import cache
 from django.shortcuts import render
 from django.http import JsonResponse, HttpResponse
 from django.views import View
@@ -149,67 +152,92 @@ class SendTemplateView(View):
             return JsonResponse({"error": "Invalid JSON body"}, status=400)
 
 
-@require_POST
-@login_required
-@admin_required
+@csrf_exempt
 def trigger_batch_webhook(request):
-    from whatsapp.models import PendingMessage
-    from .services import send_whatsapp_text, send_whatsapp_template, build_template_components
+    token = request.GET.get('token', '')
+    expected_token = getattr(settings, 'WHATSAPP_TRIGGER_TOKEN', '')
 
-    pending = list(
-        PendingMessage.objects.filter(
-            status=PendingMessage.STATUS_PENDING
-        ).order_by('created_at')[:50]
-    )
+    if not expected_token or not token or not hmac.compare_digest(token, expected_token):
+        return HttpResponse(status=403)
 
-    if not pending:
-        return JsonResponse({"success": True, "message": "No pending messages.", "sent": 0, "failed": 0})
+    lock_acquired = cache.add("whatsapp_trigger_batch_lock", "locked", timeout=300)
+    if not lock_acquired:
+        logger.info("WhatsApp batch trigger skipped: another run is currently in progress.")
+        return JsonResponse({"success": True, "message": "Batch processing already in progress.", "sent": 0, "failed": 0})
 
-    sent = 0
-    failed = 0
-    for msg in pending:
-        phone = (msg.phone or "").strip()
-        if not phone:
-            msg.status = PendingMessage.STATUS_FAILED
-            msg.error_message = "No phone number"
-            msg.save()
-            failed += 1
-            continue
+    try:
+        from whatsapp.models import PendingMessage
+        from .services import send_whatsapp_text, send_whatsapp_template, build_template_components
 
-        if getattr(msg, 'message_type', 'template') == PendingMessage.TYPE_TEMPLATE:
-            template_name = msg.template_name or getattr(settings, 'META_TEMPLATE_GENERAL', 'general_notification')
-            params = msg.template_params or [msg.message]
-            components = build_template_components(params)
-            language = msg.language or getattr(settings, 'WHATSAPP_DEFAULT_LANGUAGE', 'en')
-            result = send_whatsapp_template(
-                to_number=phone,
-                template_name=template_name,
-                language=language,
-                components=components
-            )
-            if not result["success"]:
-                logger.error(f"PendingMessage {msg.pk} template '{template_name}' failed: {result.get('error')}")
-        else:
-            result = send_whatsapp_text(to_number=phone, message=msg.message)
+        cutoff = timezone.now() - timedelta(minutes=10)
+        stuck_count = PendingMessage.objects.filter(
+            status=PendingMessage.STATUS_PROCESSING,
+            updated_at__lt=cutoff
+        ).update(status=PendingMessage.STATUS_PENDING)
+        if stuck_count > 0:
+            logger.info(f"Reset {stuck_count} stuck processing WhatsApp messages back to pending.")
 
-        if result["success"]:
-            msg.status = PendingMessage.STATUS_SENT
-            msg.wamid = result.get('wamid') or result.get('message_id') or ''
-            msg.error_message = ""
-            msg.save()
-            sent += 1
-        else:
-            msg.status = PendingMessage.STATUS_FAILED
-            msg.error_message = result.get("error", "Unknown error")
-            msg.save()
-            failed += 1
+        pending = list(
+            PendingMessage.objects.filter(
+                status=PendingMessage.STATUS_PENDING
+            ).order_by('created_at')[:45]
+        )
 
-    return JsonResponse({
-        "success": True,
-        "message": f"Dispatched: {sent} sent, {failed} failed out of {len(pending)}.",
-        "sent": sent,
-        "failed": failed,
-    })
+        if not pending:
+            logger.info("WhatsApp batch trigger executed: 0 pending messages.")
+            return JsonResponse({"success": True, "message": "No pending messages.", "sent": 0, "failed": 0})
+
+        pks = [m.pk for m in pending]
+        PendingMessage.objects.filter(pk__in=pks).update(status=PendingMessage.STATUS_PROCESSING)
+
+        sent = 0
+        failed = 0
+        for msg in pending:
+            phone = (msg.phone or "").strip()
+            if not phone:
+                msg.status = PendingMessage.STATUS_FAILED
+                msg.error_message = "No phone number"
+                msg.save()
+                failed += 1
+                continue
+
+            if getattr(msg, 'message_type', 'template') == PendingMessage.TYPE_TEMPLATE:
+                template_name = msg.template_name or getattr(settings, 'META_TEMPLATE_GENERAL', 'general_notification')
+                params = msg.template_params or [msg.message]
+                components = build_template_components(params)
+                language = msg.language or getattr(settings, 'WHATSAPP_DEFAULT_LANGUAGE', 'en')
+                result = send_whatsapp_template(
+                    to_number=phone,
+                    template_name=template_name,
+                    language=language,
+                    components=components
+                )
+                if not result["success"]:
+                    logger.error(f"PendingMessage {msg.pk} template '{template_name}' failed: {result.get('error')}")
+            else:
+                result = send_whatsapp_text(to_number=phone, message=msg.message)
+
+            if result["success"]:
+                msg.status = PendingMessage.STATUS_SENT
+                msg.wamid = result.get('wamid') or result.get('message_id') or ''
+                msg.error_message = ""
+                msg.save()
+                sent += 1
+            else:
+                msg.status = PendingMessage.STATUS_FAILED
+                msg.error_message = result.get("error", "Unknown error")
+                msg.save()
+                failed += 1
+
+        logger.info(f"WhatsApp batch trigger completed: processed={len(pending)}, sent={sent}, failed={failed}.")
+        return JsonResponse({
+            "success": True,
+            "message": f"Dispatched: {sent} sent, {failed} failed out of {len(pending)}.",
+            "sent": sent,
+            "failed": failed,
+        })
+    finally:
+        cache.delete("whatsapp_trigger_batch_lock")
 
 
 @require_POST

@@ -37,12 +37,22 @@
             </div>
 
             <div>
+              <label class="form-label form-label-sm fw-semibold mb-1">Year</label>
+              <select name="year" id="yearSel" class="form-select form-select-sm">
+                <option value="">-- All Years --</option>
+                <option value="1" {% if year_val == '1' %}selected{% endif %}>1st Year</option>
+                <option value="2" {% if year_val == '2' %}selected{% endif %}>2nd Year</option>
+              </select>
+            </div>
+
+            <div>
               <label class="form-label form-label-sm fw-semibold mb-1">Section</label>
               <select name="section" id="sectionSel" class="form-select form-select-sm">
-                <option value="">-- Select --</option>
+                <option value="">-- Select Section --</option>
                 {% for s in sections %}
                 <option value="{{ s.pk }}"
                         data-group="{{ s.group_id }}"
+                        data-year="{{ s.year }}"
                         {% if s.pk|stringformat:"s" == section_id %}selected{% endif %}>
                   {{ s.group.code }}-{{ s.year }}Y-{{ s.name }}
                 </option>
@@ -207,9 +217,12 @@
 {% elif section_id and exam_id %}
 <div class="alert alert-info">No marks entered yet for this combination.</div>
 {% else %}
-<div class="text-center py-5 text-muted">
-  <i class="bi bi-bar-chart fs-1 d-block mb-2"></i>
-  Select filters on the left and click <strong>View Report</strong>.
+<div class="card border-0 shadow-sm text-center py-5">
+  <div class="card-body py-4">
+    <i class="bi bi-bar-chart-line fs-1 text-muted d-block mb-2"></i>
+    <h5 class="fw-bold text-dark">Select a section and exam to view marks report</h5>
+    <p class="text-muted small mb-0">Choose Group, Year, Section, and Exam from the filter panel on the left to display student marks.</p>
+  </div>
 </div>
 {% endif %}
 
@@ -223,56 +236,67 @@
   const GROUP_CAT_MAP = JSON.parse(document.getElementById('group-category-map-data').textContent);
 
   const groupSel    = document.getElementById('groupSel');
+  const yearSel     = document.getElementById('yearSel');
   const categorySel = document.getElementById('categorySel');
   const sectionSel  = document.getElementById('sectionSel');
   const examSel     = document.getElementById('examSel');
 
   function applyFilters() {
-    const gId = groupSel.value;
-    const cat = categorySel.value;
+    const gId  = groupSel ? groupSel.value : '';
+    const yVal = yearSel ? yearSel.value : '';
+    const cat  = categorySel ? categorySel.value : '';
 
-    // 'all' or '' both mean "no filter on this dimension"
     const filterByGroup = gId && gId !== 'all';
+    const filterByYear  = yVal && yVal !== 'all';
     const filterByCat   = cat && cat !== 'all';
     const allowed = filterByGroup ? (GROUP_CAT_MAP[gId] || []) : null;
 
     // --- Category dropdown: filter by group ---
-    Array.from(categorySel.options).forEach(opt => {
-      if (!opt.value || opt.value === 'all') return;
-      const ok = !filterByGroup || allowed.includes(opt.value);
-      opt.hidden = !ok; opt.disabled = !ok;
-    });
-    if (categorySel.value && categorySel.value !== 'all' && categorySel.selectedOptions[0]?.hidden) {
-      categorySel.value = '';
+    if (categorySel) {
+      Array.from(categorySel.options).forEach(opt => {
+        if (!opt.value || opt.value === 'all') return;
+        const ok = !filterByGroup || allowed.includes(opt.value);
+        opt.hidden = !ok; opt.disabled = !ok;
+      });
+      if (categorySel.value && categorySel.value !== 'all' && categorySel.selectedOptions[0]?.hidden) {
+        categorySel.value = '';
+      }
     }
 
-    // --- Section dropdown: filter by group ---
-    Array.from(sectionSel.options).forEach(opt => {
-      if (!opt.value || opt.value === 'all') return;
-      const ok = !filterByGroup || opt.dataset.group === gId;
-      opt.hidden = !ok; opt.disabled = !ok;
-    });
-    if (sectionSel.value && sectionSel.value !== 'all' && sectionSel.selectedOptions[0]?.hidden) {
-      sectionSel.value = '';
+    // --- Section dropdown: filter by group AND year ---
+    if (sectionSel) {
+      Array.from(sectionSel.options).forEach(opt => {
+        if (!opt.value || opt.value === 'all') return;
+        const groupOk = !filterByGroup || opt.dataset.group === gId;
+        const yearOk  = !filterByYear  || opt.dataset.year  === yVal;
+        const ok = groupOk && yearOk;
+        opt.hidden = !ok; opt.disabled = !ok;
+      });
+      if (sectionSel.value && sectionSel.value !== 'all' && sectionSel.selectedOptions[0]?.hidden) {
+        sectionSel.value = '';
+      }
     }
 
-    // --- Exam dropdown: filter by group AND category (keep "All Exams" always visible) ---
-    const activeCat = categorySel.value;
-    const filterExamByCat = activeCat && activeCat !== 'all';
-    Array.from(examSel.options).forEach(opt => {
-      if (!opt.value || opt.value === 'all') return;   // keep "All Exams" always visible
-      const groupOk = !filterByGroup    || opt.dataset.group    === gId;
-      const catOk   = !filterExamByCat  || opt.dataset.category === activeCat;
-      const ok = groupOk && catOk;
-      opt.hidden = !ok; opt.disabled = !ok;
-    });
-    if (examSel.value && examSel.value !== 'all' && examSel.selectedOptions[0]?.hidden) {
-      examSel.value = '';
+    // --- Exam dropdown: filter by group AND category ---
+    if (examSel) {
+      const activeCat = categorySel ? categorySel.value : '';
+      const filterExamByCat = activeCat && activeCat !== 'all';
+      Array.from(examSel.options).forEach(opt => {
+        if (!opt.value || opt.value === 'all') return;
+        const groupOk = !filterByGroup   || opt.dataset.group    === gId;
+        const catOk   = !filterExamByCat || opt.dataset.category === activeCat;
+        const ok = groupOk && catOk;
+        opt.hidden = !ok; opt.disabled = !ok;
+      });
+      if (examSel.value && examSel.value !== 'all' && examSel.selectedOptions[0]?.hidden) {
+        examSel.value = '';
+      }
     }
   }
 
-  groupSel.addEventListener('change', applyFilters);
-  categorySel.addEventListener('change', applyFilters);
+  if (groupSel) groupSel.addEventListener('change', applyFilters);
+  if (yearSel) yearSel.addEventListener('change', applyFilters);
+  if (categorySel) categorySel.addEventListener('change', applyFilters);
   applyFilters();
 })();
 </script>

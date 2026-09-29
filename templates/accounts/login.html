@@ -553,33 +553,29 @@
   const form = document.getElementById('loginForm');
 
   function markTyped(e) {
-    if (['Tab','Shift','Control','Alt','Meta','CapsLock'].includes(e.key)) return;
-    e.target.dataset.typed = 'true';
+    if (uField && uField.value.trim() !== '') uField.dataset.typed = 'true';
+    if (pField && pField.value !== '') pField.dataset.typed = 'true';
     updateHidden();
   }
-  if (uField) uField.addEventListener('keydown', markTyped);
-  if (pField) pField.addEventListener('keydown', markTyped);
+  if (uField) {
+    ['keydown', 'input', 'change', 'paste', 'blur'].forEach(evt => uField.addEventListener(evt, markTyped));
+  }
+  if (pField) {
+    ['keydown', 'input', 'change', 'paste', 'blur'].forEach(evt => pField.addEventListener(evt, markTyped));
+  }
 
   function updateHidden() {
-    if (uField && pField && uField.dataset.typed === 'true' && pField.dataset.typed === 'true') {
+    if (uField && pField && uField.value.trim() !== '' && pField.value !== '') {
       hidden.value = 'true';
     }
   }
 
-  function isAutofilled(el) {
-    try { return el.matches(':-webkit-autofill'); } catch(e) { return false; }
-  }
-
   if (form) {
     form.addEventListener('submit', function(e) {
-      const uTyped = uField ? uField.dataset.typed === 'true' : true;
-      const pTyped = pField ? pField.dataset.typed === 'true' : true;
-      const autofilled = (uField && isAutofilled(uField)) || (pField && isAutofilled(pField));
-      if (!uTyped || !pTyped || autofilled) {
+      updateHidden();
+      if (!uField.value.trim() || !pField.value) {
         e.preventDefault();
         if (warning) warning.style.display = 'block';
-        if (uField && !uTyped) { uField.value = ''; uField.focus(); }
-        else if (pField && !pTyped) { pField.value = ''; pField.focus(); }
         return false;
       }
     });

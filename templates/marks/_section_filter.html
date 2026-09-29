@@ -1,0 +1,76 @@
+{% comment %}
+Shared Section Selection Filter Partial (Group -> Year -> Section)
+{% endcomment %}
+<form method="get" class="row g-2 align-items-center mb-0">
+  <div class="col-md-3">
+    <select name="group" id="filter_group" class="form-select form-select-sm" onchange="updateSectionFilter()">
+      <option value="">-- All Groups --</option>
+      {% for g in groups %}
+      <option value="{{ g.pk }}" {% if g.pk|stringformat:"s" == selected_group_id %}selected{% endif %}>
+        {{ g.name }} ({{ g.code }})
+      </option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div class="col-md-2">
+    <select name="year" id="filter_year" class="form-select form-select-sm" onchange="updateSectionFilter()">
+      <option value="">-- All Years --</option>
+      <option value="1" {% if selected_year == '1' %}selected{% endif %}>1st Year</option>
+      <option value="2" {% if selected_year == '2' %}selected{% endif %}>2nd Year</option>
+    </select>
+  </div>
+
+  <div class="col-md-4">
+    <select name="section" id="filter_section" class="form-select form-select-sm" onchange="this.form.submit()">
+      <option value="">-- Select Section --</option>
+      {% for s in sections %}
+      <option value="{{ s.pk }}"
+              data-group="{{ s.group_id }}"
+              data-year="{{ s.year }}"
+              {% if s.pk|stringformat:"s" == section_id %}selected{% endif %}>
+        {{ s.group.name }} - Year {{ s.year }} - Section {{ s.name }}
+      </option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div class="col-auto ms-auto d-flex gap-2">
+    {% if back_url %}
+    <a href="{{ back_url }}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left"></i> {{ back_label|default:"Back" }}
+    </a>
+    {% endif %}
+  </div>
+</form>
+
+<script>
+function updateSectionFilter() {
+  const groupEl = document.getElementById('filter_group');
+  const yearEl = document.getElementById('filter_year');
+  const secEl = document.getElementById('filter_section');
+  if (!secEl) return;
+
+  const groupVal = groupEl ? groupEl.value : '';
+  const yearVal = yearEl ? yearEl.value : '';
+
+  Array.from(secEl.options).forEach(opt => {
+    if (!opt.value) return;
+    const matchGroup = !groupVal || opt.getAttribute('data-group') === groupVal;
+    const matchYear = !yearVal || opt.getAttribute('data-year') === yearVal;
+    if (matchGroup && matchYear) {
+      opt.style.display = '';
+      opt.disabled = false;
+    } else {
+      opt.style.display = 'none';
+      opt.disabled = true;
+    }
+  });
+
+  const selectedOpt = secEl.options[secEl.selectedIndex];
+  if (selectedOpt && selectedOpt.disabled) {
+    secEl.value = '';
+  }
+}
+document.addEventListener('DOMContentLoaded', updateSectionFilter);
+</script>

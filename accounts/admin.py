@@ -25,9 +25,16 @@ class AcademicYearAdmin(admin.ModelAdmin):
         super().delete_model(request, obj)
 
 
+class SectionInline(admin.TabularInline):
+    model = Section
+    extra = 0
+    show_change_link = True
+
+
 @admin.register(Group)
 class GroupAdmin(admin.ModelAdmin):
     list_display = ('name', 'code', 'academic_year', 'color', 'icon')
+    inlines = [SectionInline]
     fieldsets = (
         (None, {
             'fields': ('name', 'code', 'academic_year')
@@ -36,6 +43,19 @@ class GroupAdmin(admin.ModelAdmin):
             'fields': ('color', 'bg_color', 'border_color', 'icon', 'subjects_text')
         }),
     )
+
+    def get_deleted_objects(self, objs, request):
+        deleted_objects, model_count, perms_needed, protected = super().get_deleted_objects(objs, request)
+        new_protected = []
+        for obj in objs:
+            student_count = Student.objects.filter(section__group=obj).count()
+            if student_count > 0:
+                new_protected.append(f'Group "{obj.name}" has {student_count} student(s) assigned. Reassign or remove students first.')
+            elif obj.sections.exists():
+                new_protected.append(f'Group "{obj.name}" has {obj.sections.count()} section(s). Delete this group\'s sections first, or use the Groups page in the app.')
+        if new_protected:
+            protected = new_protected
+        return deleted_objects, model_count, perms_needed, protected
 
     def delete_model(self, request, obj):
         student_count = Student.objects.filter(section__group=obj).count()
@@ -46,13 +66,62 @@ class GroupAdmin(admin.ModelAdmin):
                 level=messages.ERROR
             )
             return
+        if obj.sections.exists():
+            self.message_user(
+                request,
+                f'Cannot delete Group "{obj.name}": Delete this group\'s sections first, or use the Groups page in the app.',
+                level=messages.WARNING
+            )
+            return
         super().delete_model(request, obj)
+
+    def delete_queryset(self, request, queryset):
+        from django.db import IntegrityError
+        from django.db.models import ProtectedError
+        deleted_count = 0
+        for obj in list(queryset):
+            student_count = Student.objects.filter(section__group=obj).count()
+            if student_count > 0:
+                self.message_user(
+                    request,
+                    f'Cannot delete Group "{obj.name}": {student_count} student(s) are assigned to it.',
+                    level=messages.ERROR
+                )
+            elif obj.sections.exists():
+                self.message_user(
+                    request,
+                    f'Cannot delete Group "{obj.name}": Delete this group\'s sections first, or use the Groups page in the app.',
+                    level=messages.WARNING
+                )
+            else:
+                try:
+                    obj.delete()
+                    deleted_count += 1
+                except (ProtectedError, IntegrityError):
+                    self.message_user(
+                        request,
+                        f'Cannot delete Group "{obj.name}": Protected related objects exist.',
+                        level=messages.ERROR
+                    )
+        if deleted_count > 0:
+            self.message_user(request, f'Successfully deleted {deleted_count} group(s).', level=messages.SUCCESS)
 
 
 @admin.register(Section)
 class SectionAdmin(admin.ModelAdmin):
     list_display = ('__str__', 'group', 'year', 'name', 'academic_year')
     list_filter = ('year', 'group', 'academic_year')
+
+    def get_deleted_objects(self, objs, request):
+        deleted_objects, model_count, perms_needed, protected = super().get_deleted_objects(objs, request)
+        new_protected = []
+        for obj in objs:
+            student_count = Student.objects.filter(section=obj).count()
+            if student_count > 0:
+                new_protected.append(f'Section "{obj}" has {student_count} student(s) assigned. Reassign or remove students first.')
+        if new_protected:
+            protected = new_protected
+        return deleted_objects, model_count, perms_needed, protected
 
     def delete_model(self, request, obj):
         student_count = Student.objects.filter(section=obj).count()
@@ -64,6 +133,32 @@ class SectionAdmin(admin.ModelAdmin):
             )
             return
         super().delete_model(request, obj)
+
+    def delete_queryset(self, request, queryset):
+        from django.db import IntegrityError
+        from django.db.models import ProtectedError
+        deleted_count = 0
+        for obj in list(queryset):
+            student_count = Student.objects.filter(section=obj).count()
+            if student_count > 0:
+                self.message_user(
+                    request,
+                    f'Cannot delete Section "{obj}": {student_count} student(s) are assigned to it.',
+                    level=messages.ERROR
+                )
+            else:
+                try:
+                    obj.delete()
+                    deleted_count += 1
+                except (ProtectedError, IntegrityError):
+                    self.message_user(
+                        request,
+                        f'Cannot delete Section "{obj}": Protected related objects exist.',
+                        level=messages.ERROR
+                    )
+        if deleted_count > 0:
+            self.message_user(request, f'Successfully deleted {deleted_count} section(s).', level=messages.SUCCESS)
+
 
 
 

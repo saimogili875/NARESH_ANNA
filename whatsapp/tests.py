@@ -1,5 +1,8 @@
 from django.test import TestCase, Client
 from django.urls import reverse
+from django.utils import timezone
+from datetime import timedelta
+from django.core.cache import cache
 from whatsapp.models import PendingMessage
 from accounts.models import User
 from unittest.mock import patch, MagicMock
@@ -42,15 +45,9 @@ class WhatsAppPhase2Test(TestCase):
             self.assertEqual(resp.status_code, 200)
             self.assertEqual(mock_post.call_count, 2)
 
-    def test_bug_013_get_state_changing_endpoints_rejected(self):
-        res_trigger = self.client.get(reverse('whatsapp-trigger-batch'))
-        self.assertEqual(res_trigger.status_code, 405)
-
+    def test_get_state_changing_endpoints_rejected(self):
         res_retry = self.client.get(reverse('whatsapp-retry-failed'))
         self.assertEqual(res_retry.status_code, 405)
-
-        res_post_trigger = self.client.post(reverse('whatsapp-trigger-batch'))
-        self.assertEqual(res_post_trigger.status_code, 200)
 
     def test_bug_012_message_status_list_authorization(self):
         anon_client = Client()
@@ -59,3 +56,105 @@ class WhatsAppPhase2Test(TestCase):
 
         res_admin = self.client.get(reverse('whatsapp-status'))
         self.assertEqual(res_admin.status_code, 200)
+
+
+class WhatsAppTriggerBatchTest(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.valid_token = '9f3a7c1e2b8d4f6a0c5e9b2d7a1f4c8e6b3d0a9f2c7e5b1d8a4f0c3e9b6d2a7f'
+        cache.delete('whatsapp_trigger_batch_lock')
+
+    def tearDown(self):
+        cache.delete('whatsapp_trigger_batch_lock')
+
+    def test_no_token_returns_403(self):
+        with self.settings(WHATSAPP_TRIGGER_TOKEN=self.valid_token):
+            response = self.client.get(reverse('whatsapp-trigger-batch'))
+            self.assertEqual(response.status_code, 403)
+            self.assertEqual(response.content, b'')
+
+    def test_wrong_token_returns_403(self):
+        with self.settings(WHATSAPP_TRIGGER_TOKEN=self.valid_token):
+            url = f"{reverse('whatsapp-trigger-batch')}?token=invalid_token_xyz"
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, 403)
+            self.assertEqual(response.content, b'')
+
+    def test_correct_token_processes_pending_messages(self):
+        msg = PendingMessage.objects.create(
+            phone='9876543210',
+            message_type=PendingMessage.TYPE_TEMPLATE,
+            template_name='general_notification',
+            message='Test Batch Trigger',
+            status=PendingMessage.STATUS_PENDING,
+        )
+        with self.settings(WHATSAPP_TRIGGER_TOKEN=self.valid_token):
+            with patch('whatsapp.services.send_whatsapp_template', return_value={'success': True, 'wamid': 'wamid.test.123'}):
+                url = f"{reverse('whatsapp-trigger-batch')}?token={self.valid_token}"
+                response = self.client.get(url)
+                self.assertEqual(response.status_code, 200)
+                data = response.json()
+                self.assertTrue(data['success'])
+                self.assertEqual(data['sent'], 1)
+                self.assertEqual(data['failed'], 0)
+
+                msg.refresh_from_db()
+                self.assertEqual(msg.status, PendingMessage.STATUS_SENT)
+                self.assertEqual(msg.wamid, 'wamid.test.123')
+
+    def test_batch_limit_is_45(self):
+        for i in range(50):
+            PendingMessage.objects.create(
+                phone=f'98765432{i:02d}',
+                message_type=PendingMessage.TYPE_TEXT,
+                message=f'Batch message {i}',
+                status=PendingMessage.STATUS_PENDING,
+            )
+        with self.settings(WHATSAPP_TRIGGER_TOKEN=self.valid_token):
+            with patch('whatsapp.services.send_whatsapp_text', return_value={'success': True, 'wamid': 'wamid.45'}):
+                url = f"{reverse('whatsapp-trigger-batch')}?token={self.valid_token}"
+                response = self.client.get(url)
+                self.assertEqual(response.status_code, 200)
+                data = response.json()
+                self.assertEqual(data['sent'], 45)
+                self.assertEqual(PendingMessage.objects.filter(status=PendingMessage.STATUS_PENDING).count(), 5)
+
+    def test_overlapping_run_does_not_double_send(self):
+        PendingMessage.objects.create(
+            phone='9876543210',
+            message_type=PendingMessage.TYPE_TEXT,
+            message='Overlap test',
+            status=PendingMessage.STATUS_PENDING,
+        )
+        # Lock is active from another run
+        cache.set('whatsapp_trigger_batch_lock', 'locked', timeout=300)
+
+        with self.settings(WHATSAPP_TRIGGER_TOKEN=self.valid_token):
+            with patch('whatsapp.services.send_whatsapp_text') as mock_send:
+                url = f"{reverse('whatsapp-trigger-batch')}?token={self.valid_token}"
+                response = self.client.get(url)
+                self.assertEqual(response.status_code, 200)
+                data = response.json()
+                self.assertTrue(data['success'])
+                self.assertEqual(data['sent'], 0)
+                mock_send.assert_not_called()
+
+    def test_stuck_processing_message_reset(self):
+        stuck_msg = PendingMessage.objects.create(
+            phone='9876543210',
+            message_type=PendingMessage.TYPE_TEXT,
+            message='Stuck message',
+            status=PendingMessage.STATUS_PROCESSING,
+        )
+        # Set updated_at to 15 minutes in the past
+        PendingMessage.objects.filter(pk=stuck_msg.pk).update(
+            updated_at=timezone.now() - timedelta(minutes=15)
+        )
+
+        with self.settings(WHATSAPP_TRIGGER_TOKEN=self.valid_token):
+            with patch('whatsapp.services.send_whatsapp_text', return_value={'success': True, 'wamid': 'wamid.stuck.fixed'}):
+                url = f"{reverse('whatsapp-trigger-batch')}?token={self.valid_token}"
+                response = self.client.get(url)
+                self.assertEqual(response.status_code, 200)
+                stuck_msg.refresh_from_db()
+                self.assertEqual(stuck_msg.status, PendingMessage.STATUS_SENT)

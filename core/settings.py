@@ -122,6 +122,12 @@ else:
         }
     }
 
+if DATABASES['default'].get('ENGINE') == 'django.db.backends.postgresql':
+    DATABASES['default']['DISABLE_SERVER_SIDE_CURSORS'] = True
+
+
+
+
 
 AUTH_USER_MODEL = 'accounts.User'
 LOGIN_URL = '/login/'
@@ -262,6 +268,7 @@ META_WHATSAPP_PHONE_ID = config('META_WHATSAPP_PHONE_ID', default='')
 META_WEBHOOK_VERIFY_TOKEN = config('META_WEBHOOK_VERIFY_TOKEN', default='')
 META_APP_SECRET = config('META_APP_SECRET', default='')
 WHATSAPP_CRON_SECRET = config('WHATSAPP_CRON_SECRET', default='')
+WHATSAPP_TRIGGER_TOKEN = config('WHATSAPP_TRIGGER_TOKEN', default='')
 META_TEMPLATE_ABSENCE = config('META_TEMPLATE_ABSENCE', default='absence_alert')
 META_TEMPLATE_EXAM_MARKS = config('META_TEMPLATE_EXAM_MARKS', default='marks_template')
 MARKS_TEMPLATE_HAS_SUBJECTS = config('MARKS_TEMPLATE_HAS_SUBJECTS', default=False, cast=bool)
@@ -296,7 +303,7 @@ ALLOWED_CLIENT_IPS = [ip.strip() for ip in _raw_ips.split(',') if ip.strip()]
 _raw_trusted_proxies = config('TRUSTED_PROXY_IPS', default='')
 TRUSTED_PROXY_IPS = [ip.strip() for ip in _raw_trusted_proxies.split(',') if ip.strip()]
 
-IP_WHITELIST_EXEMPT_PATHS = ['/healthz', '/whatsapp/webhook/']
+IP_WHITELIST_EXEMPT_PATHS = ['/healthz', '/whatsapp/webhook/', '/whatsapp/trigger-batch/']
 
 # Render terminates TLS at its proxy
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
