@@ -102,7 +102,7 @@ class WhatsAppTriggerBatchTest(TestCase):
                 self.assertEqual(msg.status, PendingMessage.STATUS_SENT)
                 self.assertEqual(msg.wamid, 'wamid.test.123')
 
-    def test_batch_limit_is_45(self):
+    def test_batch_limit_is_25(self):
         for i in range(50):
             PendingMessage.objects.create(
                 phone=f'98765432{i:02d}',
@@ -111,13 +111,13 @@ class WhatsAppTriggerBatchTest(TestCase):
                 status=PendingMessage.STATUS_PENDING,
             )
         with self.settings(WHATSAPP_TRIGGER_TOKEN=self.valid_token):
-            with patch('whatsapp.services.send_whatsapp_text', return_value={'success': True, 'wamid': 'wamid.45'}):
+            with patch('whatsapp.services.send_whatsapp_text', return_value={'success': True, 'wamid': 'wamid.25'}):
                 url = f"{reverse('whatsapp-trigger-batch')}?token={self.valid_token}"
                 response = self.client.get(url)
                 self.assertEqual(response.status_code, 200)
                 data = response.json()
-                self.assertEqual(data['sent'], 45)
-                self.assertEqual(PendingMessage.objects.filter(status=PendingMessage.STATUS_PENDING).count(), 5)
+                self.assertEqual(data['sent'], 25)
+                self.assertEqual(PendingMessage.objects.filter(status=PendingMessage.STATUS_PENDING).count(), 25)
 
     def test_overlapping_run_does_not_double_send(self):
         PendingMessage.objects.create(

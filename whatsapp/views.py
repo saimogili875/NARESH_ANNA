@@ -180,7 +180,7 @@ def trigger_batch_webhook(request):
         pending = list(
             PendingMessage.objects.filter(
                 status=PendingMessage.STATUS_PENDING
-            ).order_by('created_at')[:45]
+            ).order_by('created_at')[:25]
         )
 
         if not pending:
