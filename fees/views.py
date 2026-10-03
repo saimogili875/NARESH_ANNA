@@ -13,7 +13,22 @@ from accounts.models import AcademicYear
 from accounts.decorators import admin_accounts_required, all_roles_required
 from accounts.utils import _get_faculty_sections
 from django.views.decorators.http import require_POST
-from whatsapp.services import send_whatsapp_media
+from datetime import datetime, date as Date
+
+def parse_flexible_date(date_str, fallback=None):
+    if not date_str:
+        return fallback or timezone.localdate()
+    date_str = str(date_str).strip()
+    formats = ['%Y-%m-%d', '%d/%m/%Y', '%d-%m-%Y', '%Y/%m/%d', '%d.%m.%Y']
+    for fmt in formats:
+        try:
+            return datetime.strptime(date_str, fmt).date()
+        except ValueError:
+            pass
+    try:
+        return Date.fromisoformat(date_str)
+    except ValueError:
+        return fallback or timezone.localdate()
 
 @admin_accounts_required
 def fee_type_manage(request):
@@ -606,11 +621,7 @@ def fee_collect(request, pk):
             messages.error(request, 'Amount must be greater than 0.')
             return redirect('fee_collect', pk=pk)
 
-        try:
-            from datetime import date as Date
-            payment_date = Date.fromisoformat(payment_date_str)
-        except Exception:
-            payment_date = today
+        payment_date = parse_flexible_date(payment_date_str, fallback=today)
 
         if custom_receipt:
             if FeePayment.objects.filter(receipt_number=custom_receipt).exists():
@@ -753,11 +764,7 @@ def payment_edit(request, pk, payment_id):
 
 
         if payment_date_str:
-            try:
-                from datetime import date as Date
-                payment.payment_date = Date.fromisoformat(payment_date_str)
-            except ValueError:
-                pass
+            payment.payment_date = parse_flexible_date(payment_date_str, fallback=payment.payment_date)
 
         payment.payment_mode = payment_mode
         payment.remarks = remarks
@@ -859,11 +866,7 @@ def payment_adjust(request, pk):
             remarks = 'Manual correction by admin'
 
         payment_date_str = request.POST.get('payment_date', str(timezone.localdate()))
-        try:
-            from datetime import date as Date
-            payment_date = Date.fromisoformat(payment_date_str)
-        except Exception:
-            payment_date = timezone.localdate()
+        payment_date = parse_flexible_date(payment_date_str, fallback=timezone.localdate())
 
         receipt_number = 'ADJ' + str(uuid.uuid4())[:8].upper()
 
