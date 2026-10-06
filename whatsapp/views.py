@@ -78,21 +78,20 @@ def meta_webhook(request):
                         else:
                             logger.info(f"Message {wamid_id} status: {status_val}")
 
+                        ts = status.get('timestamp')
+                        event_time = None
+                        if ts:
+                            try:
+                                from datetime import datetime, timezone as dt_timezone
+                                event_time = datetime.fromtimestamp(int(ts), tz=dt_timezone.utc)
+                            except Exception:
+                                event_time = None
+
                         if wamid_id:
                             from .models import PendingMessage
                             pending_msg = PendingMessage.objects.filter(wamid=wamid_id).first()
                             if pending_msg:
-                                if status_val == 'delivered':
-                                    pending_msg.status = PendingMessage.STATUS_DELIVERED
-                                    pending_msg.save()
-                                elif status_val == 'read':
-                                    pending_msg.status = PendingMessage.STATUS_READ
-                                    pending_msg.save()
-                                elif status_val == 'failed':
-                                    pending_msg.status = PendingMessage.STATUS_FAILED
-                                    if error_detail:
-                                        pending_msg.error_message = error_detail
-                                    pending_msg.save()
+                                pending_msg.apply_status_update(status_val, event_time=event_time, error_detail=error_detail)
 
                     incoming = value.get("messages", [])
                     for msg in incoming:

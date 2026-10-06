@@ -1,0 +1,827 @@
+{% extends 'base.html' %}
+{% load dict_filters %}
+
+{% block title %}WhatsApp Analytics — Sri NRI Junior College{% endblock %}
+
+{% block page_title %}WhatsApp Analytics{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+  <!-- Top Header & Period Selector -->
+  <div class="card mb-4 border-0 shadow-sm" style="background: var(--sf-card);">
+    <div class="card-body p-3 p-md-4">
+      <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+        <div>
+          <h4 class="fw-bold mb-1"><i class="bi bi-graph-up text-success me-2"></i>WhatsApp Analytics</h4>
+          <p class="text-muted small mb-0">Delivery metrics, status tracking, and student engagement analysis</p>
+        </div>
+
+        <!-- Period Presets -->
+        <div class="d-flex flex-wrap align-items-center gap-2">
+          <a href="?tab={{ active_tab }}&preset=all" class="btn btn-sm {% if preset == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %} rounded-pill">All Time</a>
+          <a href="?tab={{ active_tab }}&preset=today" class="btn btn-sm {% if preset == 'today' %}btn-primary{% else %}btn-outline-secondary{% endif %} rounded-pill">Today</a>
+          <a href="?tab={{ active_tab }}&preset=yesterday" class="btn btn-sm {% if preset == 'yesterday' %}btn-primary{% else %}btn-outline-secondary{% endif %} rounded-pill">Yesterday</a>
+          <a href="?tab={{ active_tab }}&preset=7d" class="btn btn-sm {% if preset == '7d' %}btn-primary{% else %}btn-outline-secondary{% endif %} rounded-pill">Last 7 Days</a>
+          <a href="?tab={{ active_tab }}&preset=30d" class="btn btn-sm {% if preset == '30d' %}btn-primary{% else %}btn-outline-secondary{% endif %} rounded-pill">Last 30 Days</a>
+        </div>
+      </div>
+
+      <!-- Custom Date Range Form -->
+      <form method="GET" class="row g-2 mt-2 align-items-center">
+        <input type="hidden" name="tab" value="{{ active_tab }}">
+        <input type="hidden" name="preset" value="custom">
+        <div class="col-auto">
+          <span class="small text-muted fw-semibold">Custom Date Range:</span>
+        </div>
+        <div class="col-auto">
+          <input type="date" name="from_date" value="{{ from_date }}" class="form-control form-control-sm" style="max-width: 140px;">
+        </div>
+        <div class="col-auto">
+          <span class="small text-muted">to</span>
+        </div>
+        <div class="col-auto">
+          <input type="date" name="to_date" value="{{ to_date }}" class="form-control form-control-sm" style="max-width: 140px;">
+        </div>
+        <div class="col-auto">
+          <button type="submit" class="btn btn-sm btn-outline-primary rounded-pill px-3">Apply</button>
+        </div>
+        {% if preset == 'custom' and from_date and to_date %}
+        <div class="col-auto">
+          <a href="?tab={{ active_tab }}&preset=all" class="btn btn-sm btn-link text-muted p-0 text-decoration-none small"><i class="bi bi-x-circle me-1"></i>Reset</a>
+        </div>
+        {% endif %}
+      </form>
+    </div>
+  </div>
+
+  <!-- Top Summary Cards Grid -->
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-3 col-xl">
+      <div class="stat-card">
+        <i class="bi bi-people"></i>
+        <div class="label">Total Students (Active)</div>
+        <div class="value num">{{ summary.total_active_students }}</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3 col-xl">
+      <div class="stat-card">
+        <i class="bi bi-send"></i>
+        <div class="label">Messages Sent</div>
+        <div class="value num text-primary">{{ summary.total_sent }}</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3 col-xl">
+      <div class="stat-card">
+        <i class="bi bi-check2-circle"></i>
+        <div class="label">Delivered</div>
+        <div class="value num text-info">{{ summary.total_delivered }}</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3 col-xl">
+      <div class="stat-card">
+        <i class="bi bi-check2-all"></i>
+        <div class="label">Read</div>
+        <div class="value num text-success">{{ summary.total_read }}</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3 col-xl">
+      <div class="stat-card">
+        <i class="bi bi-exclamation-triangle"></i>
+        <div class="label">Failed</div>
+        <div class="value num text-danger">{{ summary.total_failed }}</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3 col-xl">
+      <div class="stat-card">
+        <i class="bi bi-journal-check"></i>
+        <div class="label">Marks Messages</div>
+        <div class="value num">{{ summary.total_marks }}</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3 col-xl">
+      <div class="stat-card">
+        <i class="bi bi-calendar-event"></i>
+        <div class="label">Attendance Messages</div>
+        <div class="value num">{{ summary.total_attendance }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Unique Students vs Messages Card -->
+  <div class="card mb-4 border-0 shadow-sm" style="background: var(--sf-card);">
+    <div class="card-body p-3 p-md-4">
+      <div class="row align-items-center g-3">
+        <div class="col-md-6 col-lg-3">
+          <div class="d-flex align-items-center gap-3">
+            <div class="rounded-circle p-3 bg-primary bg-opacity-10 text-primary fs-3">
+              <i class="bi bi-person-check"></i>
+            </div>
+            <div>
+              <div class="text-muted small fw-semibold">Unique Students Contacted</div>
+              <div class="fs-3 fw-bold num text-primary">{{ summary.unique_students }}</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <div class="d-flex align-items-center gap-3">
+            <div class="rounded-circle p-3 bg-info bg-opacity-10 text-info fs-3">
+              <i class="bi bi-chat-left-text"></i>
+            </div>
+            <div>
+              <div class="text-muted small fw-semibold">Total Messages Sent</div>
+              <div class="fs-3 fw-bold num text-info">{{ summary.total_sent }}</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <div class="d-flex align-items-center gap-3">
+            <div class="rounded-circle p-3 bg-warning bg-opacity-10 text-warning fs-3">
+              <i class="bi bi-calculator"></i>
+            </div>
+            <div>
+              <div class="text-muted small fw-semibold">Messages per Student</div>
+              <div class="fs-3 fw-bold num text-warning">{{ summary.msgs_per_student }}</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <div class="d-flex align-items-center gap-3">
+            <div class="rounded-circle p-3 bg-secondary bg-opacity-10 text-secondary fs-3">
+              <i class="bi bi-hourglass-split"></i>
+            </div>
+            <div>
+              <div class="text-muted small fw-semibold">Queued (Pending/Processing)</div>
+              <div class="fs-3 fw-bold num text-secondary">{{ summary.total_queued }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Server-Side Navigation Tabs -->
+  <ul class="nav nav-tabs border-bottom mb-4" id="analyticsTabs">
+    <li class="nav-item">
+      <a class="nav-link fw-bold {% if active_tab == 'overview' %}active{% endif %}" href="?tab=overview&preset={{ preset }}&from_date={{ from_date }}&to_date={{ to_date }}">
+        <i class="bi bi-pie-chart me-1"></i>Overview
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link fw-bold {% if active_tab == 'marks' %}active{% endif %}" href="?tab=marks&preset={{ preset }}&from_date={{ from_date }}&to_date={{ to_date }}">
+        <i class="bi bi-journal-text me-1"></i>Marks Analytics
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link fw-bold {% if active_tab == 'attendance' %}active{% endif %}" href="?tab=attendance&preset={{ preset }}&from_date={{ from_date }}&to_date={{ to_date }}">
+        <i class="bi bi-calendar-check me-1"></i>Attendance Analytics
+      </a>
+    </li>
+  </ul>
+
+  <!-- TAB CONTENT AREA -->
+  {% if active_tab == 'overview' %}
+  <!-- Overview Tab Content -->
+  <div class="row g-4 mb-4">
+    <!-- Chart 1: Date Stacked Bar -->
+    <div class="col-lg-8">
+      <div class="card h-100 border-0 shadow-sm">
+        <div class="card-header border-0 d-flex justify-content-between align-items-center">
+          <h6 class="fw-bold mb-0"><i class="bi bi-bar-chart-line text-primary me-2"></i>Messages Sent by Date (Marks vs Attendance)</h6>
+        </div>
+        <div class="card-body p-3">
+          <div style="position: relative; height: 300px; width: 100%;">
+            <canvas id="dateChart"></canvas>
+            <div id="dateChartEmpty" class="d-none text-muted text-center py-5">
+              <i class="bi bi-bar-chart fs-1 opacity-25"></i>
+              <p class="small mt-2">No message data recorded for this period.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chart 3 & 4: Doughnut Charts -->
+    <div class="col-lg-4">
+      <div class="row g-4 h-100">
+        <div class="col-12">
+          <div class="card border-0 shadow-sm">
+            <div class="card-header border-0">
+              <h6 class="fw-bold mb-0"><i class="bi bi-pie-chart-fill text-info me-2"></i>Exclusive Status Buckets</h6>
+            </div>
+            <div class="card-body p-3">
+              <div style="position: relative; height: 180px; width: 100%;">
+                <canvas id="statusChart"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-12">
+          <div class="card border-0 shadow-sm">
+            <div class="card-header border-0">
+              <h6 class="fw-bold mb-0"><i class="bi bi-pie-chart text-success me-2"></i>Marks vs Attendance Split</h6>
+            </div>
+            <div class="card-body p-3">
+              <div style="position: relative; height: 180px; width: 100%;">
+                <canvas id="categoryChart"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chart 2: Section Stacked Bar -->
+    <div class="col-12">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header border-0">
+          <h6 class="fw-bold mb-0"><i class="bi bi-diagram-3 text-warning me-2"></i>Messages Sent by Section</h6>
+        </div>
+        <div class="card-body p-3">
+          <div id="sectionChartWrapper" style="position: relative; width: 100%; min-height: 250px;">
+            <canvas id="sectionChart"></canvas>
+            <div id="sectionChartEmpty" class="d-none text-muted text-center py-5">
+              <i class="bi bi-diagram-3 fs-1 opacity-25"></i>
+              <p class="small mt-2">No section message data found.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Overview Tables -->
+  <div class="row g-4 mb-4">
+    <!-- Date-wise Table -->
+    <div class="col-lg-6">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header border-0">
+          <h6 class="fw-bold mb-0"><i class="bi bi-calendar-range me-2 text-primary"></i>Date-wise Summary</h6>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 text-nowrap">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th class="text-center">Unique Students</th>
+                  <th class="text-center">Marks</th>
+                  <th class="text-center">Attendance</th>
+                  <th class="text-center">Total Sent</th>
+                  <th class="text-center">Delivered</th>
+                  <th class="text-center">Read</th>
+                  <th class="text-center">Failed</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for row in tab_data.date_table %}
+                <tr>
+                  <td class="fw-semibold num">{{ row.date }}</td>
+                  <td class="text-center num text-primary fw-bold">{{ row.unique_students }}</td>
+                  <td class="text-center num">{{ row.marks }}</td>
+                  <td class="text-center num">{{ row.attendance }}</td>
+                  <td class="text-center num fw-bold">{{ row.total_sent }}</td>
+                  <td class="text-center num text-info">{{ row.delivered }}</td>
+                  <td class="text-center num text-success">{{ row.read }}</td>
+                  <td class="text-center num text-danger">{{ row.failed }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="8" class="text-center text-muted py-4">No date records found.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section-wise Table -->
+    <div class="col-lg-6">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header border-0">
+          <h6 class="fw-bold mb-0"><i class="bi bi-building me-2 text-warning"></i>Section-wise Summary</h6>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 text-nowrap">
+              <thead>
+                <tr>
+                  <th>Group</th>
+                  <th>Section</th>
+                  <th class="text-center">Unique Students</th>
+                  <th class="text-center">Marks</th>
+                  <th class="text-center">Attendance</th>
+                  <th class="text-center">Total Sent</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for row in tab_data.section_table %}
+                <tr>
+                  <td><span class="badge bg-secondary">{{ row.group_code }}</span></td>
+                  <td class="fw-semibold">{{ row.section_name }}</td>
+                  <td class="text-center num text-primary fw-bold">{{ row.unique_students }}</td>
+                  <td class="text-center num">{{ row.marks }}</td>
+                  <td class="text-center num">{{ row.attendance }}</td>
+                  <td class="text-center num fw-bold">{{ row.total_sent }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6" class="text-center text-muted py-4">No section records found.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Students Receiving Multiple Messages Table -->
+    <div class="col-12">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header border-0 d-flex justify-content-between align-items-center">
+          <h6 class="fw-bold mb-0"><i class="bi bi-people-fill text-danger me-2"></i>Students Receiving Multiple Messages (>1 Sent Message)</h6>
+          <span class="badge bg-danger rounded-pill">{{ tab_data.total_multi_students }} Total Students</span>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 text-nowrap">
+              <thead>
+                <tr>
+                  <th>Student Name</th>
+                  <th>Admission No</th>
+                  <th class="text-center">Marks Sent</th>
+                  <th class="text-center">Attendance Sent</th>
+                  <th class="text-center">Total Sent Messages</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for st in tab_data.multi_students %}
+                <tr>
+                  <td class="fw-bold text-dark">{{ st.student__name }}</td>
+                  <td class="num text-muted">{{ st.student__admission_number }}</td>
+                  <td class="text-center num">{{ st.marks_count }}</td>
+                  <td class="text-center num">{{ st.att_count }}</td>
+                  <td class="text-center num fw-bold text-danger">{{ st.total_sent }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5" class="text-center text-muted py-4">No students have received multiple messages in this period.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% elif active_tab == 'marks' or active_tab == 'attendance' %}
+  <!-- Marks / Attendance Dedicated Tab Content -->
+  <div class="row g-3 mb-4">
+    <div class="col-md col-6">
+      <div class="stat-card">
+        <div class="label">Total Messages Sent</div>
+        <div class="value num text-primary">{{ tab_data.summary.total_sent }}</div>
+      </div>
+    </div>
+    <div class="col-md col-6">
+      <div class="stat-card">
+        <div class="label">Unique Students Contacted</div>
+        <div class="value num text-success">{{ tab_data.summary.unique_students }}</div>
+      </div>
+    </div>
+    <div class="col-md col-6">
+      <div class="stat-card">
+        <div class="label">Messages per Student</div>
+        <div class="value num text-warning">{{ tab_data.summary.msgs_per_student }}</div>
+      </div>
+    </div>
+    <div class="col-md col-6">
+      <div class="stat-card">
+        <div class="label">Delivered</div>
+        <div class="value num text-info">{{ tab_data.summary.delivered }}</div>
+      </div>
+    </div>
+    <div class="col-md col-6">
+      <div class="stat-card">
+        <div class="label">Read</div>
+        <div class="value num text-success">{{ tab_data.summary.read }}</div>
+      </div>
+    </div>
+    <div class="col-md col-6">
+      <div class="stat-card">
+        <div class="label">Failed</div>
+        <div class="value num text-danger">{{ tab_data.summary.failed }}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-header border-0">
+      <h6 class="fw-bold mb-0">
+        <i class="bi bi-table me-2"></i>{% if active_tab == 'marks' %}Marks{% else %}Attendance{% endif %} Message Breakdown by Date & Section
+      </h6>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 text-nowrap">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Group</th>
+              <th>Section</th>
+              <th class="text-center">Students Contacted</th>
+              <th class="text-center">Messages Sent</th>
+              <th class="text-center">Delivered</th>
+              <th class="text-center">Read</th>
+              <th class="text-center">Failed</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in tab_data.breakdown_table %}
+            <tr>
+              <td class="fw-semibold num">{{ row.date }}</td>
+              <td><span class="badge bg-secondary">{{ row.group_code }}</span></td>
+              <td class="fw-semibold">{{ row.section_name }}</td>
+              <td class="text-center num text-primary fw-bold">{{ row.students_contacted }}</td>
+              <td class="text-center num fw-bold">{{ row.messages_sent }}</td>
+              <td class="text-center num text-info">{{ row.delivered }}</td>
+              <td class="text-center num text-success">{{ row.read }}</td>
+              <td class="text-center num text-danger">{{ row.failed }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="8" class="text-center text-muted py-4">No records found for this period.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Meta Explainer Card -->
+  <div class="card border-0 shadow-sm mb-4" style="background: rgba(37, 99, 235, 0.05); border: 1px solid rgba(37, 99, 235, 0.2) !important;">
+    <div class="card-body p-3 p-md-4">
+      <div class="d-flex align-items-start gap-3">
+        <div class="text-primary fs-3">
+          <i class="bi bi-info-circle-fill"></i>
+        </div>
+        <div>
+          <h6 class="fw-bold text-primary mb-1">Why Meta messages may be higher than student count</h6>
+          <p class="small text-muted mb-2">
+            <strong>Messages Sent</strong> counts individual WhatsApp messages dispatched, not unique students. A student can receive multiple messages (e.g., separate alerts for multiple exams, re-sent absent notifications, or fee receipts).
+          </p>
+          <div class="d-flex flex-wrap align-items-center gap-3 small">
+            <span class="badge bg-primary px-2 py-1">Unique Students: <strong class="num">{{ summary.unique_students }}</strong></span>
+            <span class="badge bg-info px-2 py-1">Messages Sent: <strong class="num">{{ summary.total_sent }}</strong></span>
+            {% if summary.other_or_faculty_count %}
+            <span class="badge bg-secondary px-2 py-1">Faculty & Other Messages: <strong class="num">{{ summary.other_or_faculty_count }}</strong></span>
+            {% endif %}
+          </div>
+          <p class="small text-muted mt-2 mb-0" style="font-size: 0.8rem;">
+            * Figures in this dashboard come strictly from this system's local database records. Meta's WhatsApp Manager dashboard may reflect higher counts because Meta also logs faculty alerts, custom test notifications, and fee receipt sends that are not queued in student analytics.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Message Log Section -->
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-header border-0 bg-transparent py-3">
+      <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+        <h6 class="fw-bold mb-0"><i class="bi bi-list-ul text-primary me-2"></i>Detailed WhatsApp Message Log</h6>
+        <span class="badge bg-secondary">{{ log_page.paginator.count }} Total Messages</span>
+      </div>
+
+      <!-- Filters Bar -->
+      <form method="GET" class="row g-2 mt-2">
+        <input type="hidden" name="tab" value="{{ active_tab }}">
+        <input type="hidden" name="preset" value="{{ preset }}">
+        <input type="hidden" name="from_date" value="{{ from_date }}">
+        <input type="hidden" name="to_date" value="{{ to_date }}">
+
+        <div class="col-md-3 col-6">
+          <input type="text" name="q" value="{{ q_search }}" class="form-control form-control-sm" placeholder="Search name / phone / wamid...">
+        </div>
+        <div class="col-md-2 col-6">
+          <select name="group" class="form-select form-select-sm">
+            <option value="">All Groups</option>
+            {% for g in groups %}
+            <option value="{{ g.pk }}" {% if filter_group_id == g.pk|stringformat:"s" %}selected{% endif %}>{{ g.code }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-2 col-6">
+          <select name="section" class="form-select form-select-sm">
+            <option value="">All Sections</option>
+            {% for s in sections %}
+            <option value="{{ s.pk }}" {% if filter_section_id == s.pk|stringformat:"s" %}selected{% endif %}>{{ s }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-2 col-6">
+          <select name="type" class="form-select form-select-sm">
+            <option value="">All Types</option>
+            <option value="MARKS" {% if filter_type == 'MARKS' %}selected{% endif %}>Marks</option>
+            <option value="ATTENDANCE" {% if filter_type == 'ATTENDANCE' %}selected{% endif %}>Attendance</option>
+            <option value="OTHER" {% if filter_type == 'OTHER' %}selected{% endif %}>Other</option>
+          </select>
+        </div>
+        <div class="col-md-2 col-6">
+          <select name="status" class="form-select form-select-sm">
+            <option value="">All Statuses</option>
+            <option value="pending" {% if filter_status == 'pending' %}selected{% endif %}>Pending</option>
+            <option value="processing" {% if filter_status == 'processing' %}selected{% endif %}>Processing</option>
+            <option value="sent" {% if filter_status == 'sent' %}selected{% endif %}>Sent</option>
+            <option value="delivered" {% if filter_status == 'delivered' %}selected{% endif %}>Delivered</option>
+            <option value="read" {% if filter_status == 'read' %}selected{% endif %}>Read</option>
+            <option value="failed" {% if filter_status == 'failed' %}selected{% endif %}>Failed</option>
+          </select>
+        </div>
+        <div class="col-md-1 col-12 d-flex gap-1">
+          <button type="submit" class="btn btn-sm btn-primary w-100 rounded-pill"><i class="bi bi-funnel"></i></button>
+          <a href="?tab={{ active_tab }}&preset={{ preset }}" class="btn btn-sm btn-outline-secondary w-100 rounded-pill"><i class="bi bi-x-lg"></i></a>
+        </div>
+      </form>
+    </div>
+
+    <!-- Log Table -->
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 text-nowrap">
+          <thead>
+            <tr>
+              <th>Date & Time</th>
+              <th>Student</th>
+              <th>Admission No</th>
+              <th>Phone</th>
+              <th>Group / Section</th>
+              <th>Type</th>
+              <th>Template</th>
+              <th>WhatsApp WAMID</th>
+              <th>Status</th>
+              <th>Delivered At</th>
+              <th>Read At</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for msg in log_page %}
+            <tr>
+              <td class="small num text-muted">{{ msg.created_at|date:"Y-m-d H:i:s" }}</td>
+              <td class="fw-bold">
+                {% if msg.student %}
+                {{ msg.student.name }}
+                {% elif msg.faculty %}
+                {{ msg.faculty.name }} <span class="badge bg-secondary">Faculty</span>
+                {% else %}
+                <span class="text-muted">Unknown</span>
+                {% endif %}
+              </td>
+              <td class="num small text-muted">{{ msg.student.admission_number|default:"-" }}</td>
+              <td class="num small">
+                {% if user.is_superuser or user.role == 'admin' or user.role == 'accounts' %}
+                {{ msg.phone }}
+                {% else %}
+                *****
+                {% endif %}
+              </td>
+              <td class="small">
+                {% if msg.section %}
+                <span class="badge bg-outline-secondary border text-dark">{{ msg.section }}</span>
+                {% elif msg.group %}
+                <span class="badge bg-outline-secondary border text-dark">{{ msg.group.code }}</span>
+                {% else %}
+                <span class="text-muted">-</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if msg.category == 'MARKS' %}
+                <span class="badge bg-primary">MARKS</span>
+                {% elif msg.category == 'ATTENDANCE' %}
+                <span class="badge bg-info">ATTENDANCE</span>
+                {% else %}
+                <span class="badge bg-secondary">OTHER</span>
+                {% endif %}
+              </td>
+              <td class="small text-muted font-monospace">{{ msg.template_name|default:"-" }}</td>
+              <td class="small num font-monospace text-muted" title="{{ msg.wamid }}">{{ msg.wamid|truncatechars:18|default:"-" }}</td>
+              <td>
+                {% if msg.status == 'read' %}
+                <span class="badge bg-success"><i class="bi bi-check2-all me-1"></i>READ</span>
+                {% elif msg.status == 'delivered' %}
+                <span class="badge bg-info"><i class="bi bi-check2 me-1"></i>DELIVERED</span>
+                {% elif msg.status == 'sent' %}
+                <span class="badge bg-primary"><i class="bi bi-send me-1"></i>SENT</span>
+                {% elif msg.status == 'failed' %}
+                <span class="badge bg-danger" title="{{ msg.error_message }}"><i class="bi bi-x-circle me-1"></i>FAILED</span>
+                {% elif msg.status == 'processing' %}
+                <span class="badge bg-warning text-dark"><i class="bi bi-arrow-repeat me-1"></i>PROCESSING</span>
+                {% else %}
+                <span class="badge bg-secondary"><i class="bi bi-clock me-1"></i>PENDING</span>
+                {% endif %}
+              </td>
+              <td class="small num text-muted">{{ msg.delivered_at|date:"Y-m-d H:i:s"|default:"-" }}</td>
+              <td class="small num text-muted">{{ msg.read_at|date:"Y-m-d H:i:s"|default:"-" }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="11" class="text-center text-muted py-4">No log records match your filter criteria.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Pagination Footer -->
+    {% if log_page.has_other_pages %}
+    <div class="card-footer bg-transparent border-0 d-flex justify-content-between align-items-center py-3">
+      <span class="small text-muted">Showing page {{ log_page.number }} of {{ log_page.paginator.num_pages }}</span>
+      <ul class="pagination pagination-sm mb-0">
+        {% if log_page.has_previous %}
+        <li class="page-item">
+          <a class="page-link" href="?page={{ log_page.previous_page_number }}&tab={{ active_tab }}&preset={{ preset }}&from_date={{ from_date }}&to_date={{ to_date }}&q={{ q_search }}&group={{ filter_group_id }}&section={{ filter_section_id }}&type={{ filter_type }}&status={{ filter_status }}">Previous</a>
+        </li>
+        {% else %}
+        <li class="page-item disabled"><span class="page-link">Previous</span></li>
+        {% endif %}
+
+        <li class="page-item active"><span class="page-link">{{ log_page.number }}</span></li>
+
+        {% if log_page.has_next %}
+        <li class="page-item">
+          <a class="page-link" href="?page={{ log_page.next_page_number }}&tab={{ active_tab }}&preset={{ preset }}&from_date={{ from_date }}&to_date={{ to_date }}&q={{ q_search }}&group={{ filter_group_id }}&section={{ filter_section_id }}&type={{ filter_type }}&status={{ filter_status }}">Next</a>
+        </li>
+        {% else %}
+        <li class="page-item disabled"><span class="page-link">Next</span></li>
+        {% endif %}
+      </ul>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if active_tab == 'overview' %}
+<!-- Load Chart.js 4.x only on Overview Tab -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+{{ tab_data.charts|json_script:"charts-data" }}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const chartDataEl = document.getElementById('charts-data');
+  if (!chartDataEl) return;
+  const rawData = JSON.parse(chartDataEl.textContent);
+
+  let dateChart, statusChart, categoryChart, sectionChart;
+
+  function getThemeColors() {
+    const rootStyle = getComputedStyle(document.documentElement);
+    return {
+      text: rootStyle.getPropertyValue('--sf-text').trim() || '#0f172a',
+      muted: rootStyle.getPropertyValue('--sf-muted').trim() || '#64748b',
+      border: rootStyle.getPropertyValue('--sf-border').trim() || '#e2e8f0',
+      accent: rootStyle.getPropertyValue('--sf-accent').trim() || '#2563eb',
+      success: '#16a34a',
+      info: '#0284c7',
+      danger: '#dc2626',
+      warning: '#d97706',
+    };
+  }
+
+  function initCharts() {
+    const colors = getThemeColors();
+
+    // 1. Date Stacked Bar
+    const dateBarData = rawData.date_bar || { labels: [], marks: [], attendance: [] };
+    const dateCtx = document.getElementById('dateChart');
+    if (dateCtx) {
+      if (dateBarData.labels.length === 0) {
+        dateCtx.style.display = 'none';
+        document.getElementById('dateChartEmpty')?.classList.remove('d-none');
+      } else {
+        if (dateChart) dateChart.destroy();
+        dateChart = new Chart(dateCtx, {
+          type: 'bar',
+          data: {
+            labels: dateBarData.labels,
+            datasets: [
+              { label: 'Marks', data: dateBarData.marks, backgroundColor: colors.accent, borderRadius: 4 },
+              { label: 'Attendance', data: dateBarData.attendance, backgroundColor: colors.info, borderRadius: 4 },
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              x: { stacked: true, grid: { color: colors.border }, ticks: { color: colors.muted } },
+              y: { stacked: true, grid: { color: colors.border }, ticks: { color: colors.muted, precision: 0 } }
+            },
+            plugins: {
+              legend: { labels: { color: colors.text } }
+            }
+          }
+        });
+      }
+    }
+
+    // 2. Status Doughnut
+    const statusData = rawData.status_doughnut || { labels: [], data: [] };
+    const statusCtx = document.getElementById('statusChart');
+    if (statusCtx) {
+      if (statusChart) statusChart.destroy();
+      statusChart = new Chart(statusCtx, {
+        type: 'doughnut',
+        data: {
+          labels: statusData.labels,
+          datasets: [{
+            data: statusData.data,
+            backgroundColor: [colors.success, colors.info, colors.accent, colors.danger, colors.muted],
+            borderWidth: 2,
+            borderColor: colors.border
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'right', labels: { color: colors.text, boxWidth: 12, font: { size: 11 } } }
+          }
+        }
+      });
+    }
+
+    // 3. Category Doughnut
+    const catData = rawData.category_doughnut || { labels: [], data: [] };
+    const catCtx = document.getElementById('categoryChart');
+    if (catCtx) {
+      if (categoryChart) categoryChart.destroy();
+      categoryChart = new Chart(catCtx, {
+        type: 'doughnut',
+        data: {
+          labels: catData.labels,
+          datasets: [{
+            data: catData.data,
+            backgroundColor: [colors.accent, colors.info],
+            borderWidth: 2,
+            borderColor: colors.border
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'right', labels: { color: colors.text, boxWidth: 12, font: { size: 11 } } }
+          }
+        }
+      });
+    }
+
+    // 4. Section Horizontal Stacked Bar
+    const secBarData = rawData.section_bar || { labels: [], marks: [], attendance: [] };
+    const secCtx = document.getElementById('sectionChart');
+    const secWrapper = document.getElementById('sectionChartWrapper');
+    if (secCtx && secWrapper) {
+      if (secBarData.labels.length === 0) {
+        secCtx.style.display = 'none';
+        document.getElementById('sectionChartEmpty')?.classList.remove('d-none');
+      } else {
+        const dynamicHeight = Math.max(250, secBarData.labels.length * 35);
+        secWrapper.style.height = dynamicHeight + 'px';
+
+        if (sectionChart) sectionChart.destroy();
+        sectionChart = new Chart(secCtx, {
+          type: 'bar',
+          data: {
+            labels: secBarData.labels,
+            datasets: [
+              { label: 'Marks', data: secBarData.marks, backgroundColor: colors.accent, borderRadius: 4 },
+              { label: 'Attendance', data: secBarData.attendance, backgroundColor: colors.info, borderRadius: 4 },
+            ]
+          },
+          options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              x: { stacked: true, grid: { color: colors.border }, ticks: { color: colors.muted, precision: 0 } },
+              y: { stacked: true, grid: { color: colors.border }, ticks: { color: colors.muted } }
+            },
+            plugins: {
+              legend: { labels: { color: colors.text } }
+            }
+          }
+        });
+      }
+    }
+  }
+
+  initCharts();
+
+  // MutationObserver to recolor charts live on theme toggle
+  const observer = new MutationObserver(function() {
+    initCharts();
+  });
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'data-bs-theme'] });
+});
+</script>
+{% endif %}
+{% endblock %}

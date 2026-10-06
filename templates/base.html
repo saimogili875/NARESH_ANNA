@@ -391,6 +391,30 @@
     background-color: rgba(22, 22, 28, 0.75) !important;
   }
 
+  /* Mobile Sidebar & Responsive Layout */
+  @media (max-width: 768px) {
+    #sidebar {
+      transform: translateX(-100%);
+      transition: transform 0.25s ease-in-out;
+    }
+    #sidebar.show {
+      transform: translateX(0);
+    }
+    #main {
+      margin-left: 0 !important;
+    }
+    .sidebar-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 999;
+    }
+    .sidebar-overlay.show {
+      display: block;
+    }
+  }
+
   /* Reduced Motion Support */
   @media (prefers-reduced-motion: reduce) {
     *, ::before, ::after {
@@ -436,6 +460,11 @@
   <a href="{% url 'whatsapp-status' %}" class="nav-link {% if 'whatsapp' in request.resolver_match.url_name %}active{% endif %}">
     <i class="bi bi-whatsapp"></i> WhatsApp Status
   </a>
+  {% if not user.is_faculty %}
+  <a href="{% url 'wa_analytics' %}" class="nav-link {% if request.resolver_match.url_name == 'wa_analytics' %}active{% endif %}">
+    <i class="bi bi-graph-up text-success"></i> WhatsApp Analytics
+  </a>
+  {% endif %}
 
   {% if not user.is_faculty %}
   <div class="nav-label">Finance</div>
@@ -480,6 +509,9 @@
 <div id="main">
   <div class="topbar">
     <div class="d-flex align-items-center gap-2">
+      <button type="button" onclick="toggleSidebar()" class="btn btn-sm btn-outline-secondary d-md-none me-1" title="Toggle Navigation">
+        <i class="bi bi-list fs-5"></i>
+      </button>
       <button onclick="history.back()" class="btn btn-sm btn-outline-secondary" title="Go Back" id="backBtn">
         <i class="bi bi-arrow-left"></i>
       </button>
@@ -521,6 +553,19 @@
   var btn = document.getElementById('backBtn');
   if(btn && window.history.length <= 1) btn.style.display='none';
 })();
+
+function toggleSidebar() {
+  const sidebar = document.getElementById('sidebar');
+  let overlay = document.querySelector('.sidebar-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.className = 'sidebar-overlay';
+    overlay.onclick = toggleSidebar;
+    document.body.appendChild(overlay);
+  }
+  sidebar.classList.toggle('show');
+  overlay.classList.toggle('show');
+}
 
 function toggleDarkMode() {
   const isDark = document.documentElement.classList.toggle('dark-mode');

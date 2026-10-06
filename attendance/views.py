@@ -6,6 +6,7 @@ from datetime import date, datetime
 from django.db import transaction
 from django.db.models import Count, Q
 from django.urls import reverse
+from django.conf import settings
 from django.contrib.auth import authenticate, login
 from urllib.parse import urlencode
 import json
@@ -232,6 +233,9 @@ def attendance_mark(request):
                     language='en',
                     attendance_date=selected_date,
                     status=PendingMessage.STATUS_PENDING,
+                    category=PendingMessage.CATEGORY_ATTENDANCE,
+                    group=section.group,
+                    section=section,
                 )
                 queued_count += 1
 
@@ -293,6 +297,28 @@ def attendance_send_whatsapp(request):
             section=str(section),
             reason=getattr(record, 'reason', '') or "Absent",
             language=target_lang,
+        )
+
+        is_sent = result.get('success', False)
+        wamid = (result.get('wamid') or result.get('message_id') or '') if is_sent else ''
+        err_detail = '' if is_sent else (result.get('error') or '')
+        term_status = PendingMessage.STATUS_SENT if is_sent else PendingMessage.STATUS_FAILED
+
+        msg_obj = PendingMessage.objects.create(
+            student=student,
+            phone=parent_phone,
+            message_type=PendingMessage.TYPE_TEMPLATE,
+            template_name=getattr(settings, 'META_TEMPLATE_ABSENCE', 'absence_alert'),
+            template_params=[student.name, att_date.strftime('%d-%m-%Y'), getattr(record, 'reason', '') or "Absent"],
+            language=target_lang,
+            message=f"Absence alert for {student.name}",
+            attendance_date=att_date,
+            status=term_status,
+            wamid=wamid,
+            error_message=err_detail,
+            category=PendingMessage.CATEGORY_ATTENDANCE,
+            group=section.group,
+            section=section,
         )
 
         if result['success']:
@@ -363,6 +389,9 @@ def attendance_save_reasons(request):
             language='en',
             attendance_date=att_date,
             status=PendingMessage.STATUS_PENDING,
+            category=PendingMessage.CATEGORY_ATTENDANCE,
+            group=section.group,
+            section=section,
         )
         queued_count += 1
         results.append({'name': student.name, 'phone': parent_phone, 'status': 'queued'})
@@ -1162,7 +1191,10 @@ def enqueue_section_absent_whatsapp(request):
                 template_params=template_params,
                 language=target_lang,
                 message=msg_text,
-                status=PendingMessage.STATUS_PENDING
+                status=PendingMessage.STATUS_PENDING,
+                category=PendingMessage.CATEGORY_ATTENDANCE,
+                group=section.group,
+                section=section,
             )
             enqueued_count += 1
 

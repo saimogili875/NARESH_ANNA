@@ -10,7 +10,7 @@ load_dotenv(BASE_DIR / '.env')
 
 SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', default=False, cast=bool)
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='srinri.in,www.srinri.in,localhost,127.0.0.1').split(',') + ['.onrender.com', 'localhost', '127.0.0.1']
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='*').split(',') + ['.onrender.com', 'localhost', '127.0.0.1', '*']
 
 # To profile production traffic for a short debugging session:
 #   1. Set ENABLE_PROFILING=True as an env var on Render, redeploy.
@@ -122,8 +122,11 @@ else:
         }
     }
 
-if DATABASES['default'].get('ENGINE') == 'django.db.backends.postgresql':
+if 'postgresql' in DATABASES['default'].get('ENGINE', ''):
     DATABASES['default']['DISABLE_SERVER_SIDE_CURSORS'] = True
+    options = DATABASES['default'].setdefault('OPTIONS', {})
+    if isinstance(options, dict):
+        options['options'] = '-c default_transaction_read_only=off'
 
 
 

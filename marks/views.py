@@ -622,6 +622,9 @@ def marks_whatsapp_send(request, exam_id):
                     language=target_lang,
                     message=msg_text,
                     status=PendingMessage.STATUS_PENDING,
+                    category=PendingMessage.CATEGORY_MARKS,
+                    group_id=sec.group_id,
+                    section=sec,
                 )
                 sec_message_count += 1
                 total_queued_messages += 1
