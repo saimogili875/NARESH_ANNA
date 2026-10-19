@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ page_title }} | Groq Token Tracker{% endblock %}
+{% block page_title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="groq-monitor-container">
+  <!-- Top Navigation Tabs for Monitor -->
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4 p-3 bg-white border rounded-4 shadow-sm" style="border-color: var(--sf-border) !important;">
+    <div class="d-flex flex-wrap align-items-center gap-2">
+      <div class="bg-primary text-white rounded-3 p-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+        <i class="bi bi-speedometer2 fs-5"></i>
+      </div>
+      <div>
+        <h5 class="mb-0 fw-bold tracking-tight">GROQ USAGE MONITOR</h5>
+        <span class="text-muted small">Monitor AI inference, tokens, requests, and quota consumption.</span>
+      </div>
+    </div>
+
+    <!-- Sub-navigation links -->
+    <div class="d-flex flex-wrap align-items-center gap-1.5">
+      <a href="{% url 'monitor_dashboard' %}" class="btn btn-sm {% if active_tab == 'overview' %}btn-primary text-white shadow-sm{% else %}btn-light text-secondary{% endif %} rounded-pill px-3 py-1.5 fw-semibold">
+        <i class="bi bi-grid-1x2 me-1"></i> Overview
+      </a>
+      <a href="{% url 'monitor_analytics' %}" class="btn btn-sm {% if active_tab == 'analytics' %}btn-primary text-white shadow-sm{% else %}btn-light text-secondary{% endif %} rounded-pill px-3 py-1.5 fw-semibold">
+        <i class="bi bi-graph-up me-1"></i> Analytics
+      </a>
+      <a href="{% url 'monitor_requests' %}" class="btn btn-sm {% if active_tab == 'requests' %}btn-primary text-white shadow-sm{% else %}btn-light text-secondary{% endif %} rounded-pill px-3 py-1.5 fw-semibold">
+        <i class="bi bi-list-check me-1"></i> Requests Log
+      </a>
+      <a href="{% url 'monitor_models' %}" class="btn btn-sm {% if active_tab == 'models' %}btn-primary text-white shadow-sm{% else %}btn-light text-secondary{% endif %} rounded-pill px-3 py-1.5 fw-semibold">
+        <i class="bi bi-cpu me-1"></i> Models
+      </a>
+      <a href="{% url 'monitor_ratelimits' %}" class="btn btn-sm {% if active_tab == 'ratelimits' %}btn-primary text-white shadow-sm{% else %}btn-light text-secondary{% endif %} rounded-pill px-3 py-1.5 fw-semibold">
+        <i class="bi bi-shield-exclamation me-1"></i> Rate Limits
+      </a>
+      <a href="{% url 'monitor_speech_to_text' %}" class="btn btn-sm {% if active_tab == 'speech' %}btn-primary text-white shadow-sm{% else %}btn-light text-secondary{% endif %} rounded-pill px-3 py-1.5 fw-semibold">
+        <i class="bi bi-mic me-1"></i> Speech-to-Text
+      </a>
+      <a href="{% url 'monitor_quotas' %}" class="btn btn-sm {% if active_tab == 'quotas' %}btn-primary text-white shadow-sm{% else %}btn-light text-secondary{% endif %} rounded-pill px-3 py-1.5 fw-semibold">
+        <i class="bi bi-sliders me-1"></i> Quotas
+      </a>
+      <a href="{% url 'monitor_settings' %}" class="btn btn-sm {% if active_tab == 'settings' %}btn-primary text-white shadow-sm{% else %}btn-light text-secondary{% endif %} rounded-pill px-3 py-1.5 fw-semibold">
+        <i class="bi bi-gear me-1"></i> Settings
+      </a>
+    </div>
+  </div>
+
+  <!-- Content Block -->
+  {% block monitor_content %}{% endblock %}
+</div>
+
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+<style>
+.groq-monitor-container {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.monitor-card {
+  background: var(--sf-surface, #ffffff);
+  border: 1px solid var(--sf-border, #e2e8f0);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.monitor-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.stat-metric {
+  font-size: 1.85rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  font-family: SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+  line-height: 1.2;
+}
+
+.stat-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--sf-muted, #64748b);
+  margin-bottom: 6px;
+}
+
+.dark-mode .monitor-card {
+  background: #0f172a;
+  border-color: #1e293b;
+}
+
+.dark-mode .groq-monitor-container .bg-white {
+  background: #0f172a !important;
+  border-color: #1e293b !important;
+}
+
+.dark-mode .btn-light {
+  background: #1e293b;
+  border-color: #334155;
+  color: #cbd5e1 !important;
+}
+</style>
+{% endblock %}

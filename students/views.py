@@ -92,7 +92,13 @@ def student_delete(request, pk):
     obj = get_object_or_404(Student, pk=pk)
     obj.delete()
     messages.success(request, 'Student removed.')
-    return redirect('student_list')
+    
+    from django.urls import reverse
+    base_url = reverse('student_list')
+    query_string = request.GET.urlencode()
+    if query_string:
+        return redirect(f"{base_url}?{query_string}")
+    return redirect(base_url)
 
 
 @admin_required

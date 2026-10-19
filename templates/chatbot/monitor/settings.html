@@ -1,0 +1,72 @@
+{% extends 'chatbot/monitor/base_monitor.html' %}
+
+{% block monitor_content %}
+<div class="row g-4 mb-4">
+  <div class="col-12 col-md-6">
+    <div class="monitor-card h-100">
+      <h6 class="fw-bold mb-3">Groq API Connection Settings</h6>
+      
+      <div class="mb-3">
+        <label class="form-label text-muted small fw-bold">API Key Status</label>
+        <div class="d-flex align-items-center gap-2">
+          <input type="text" class="form-control font-monospace" value="{{ masked_api_key }}" readonly>
+          {% if is_key_configured %}
+            <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1.5"><i class="bi bi-check-circle-fill me-1"></i> Configured</span>
+          {% else %}
+            <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1.5"><i class="bi bi-x-circle-fill me-1"></i> Missing</span>
+          {% endif %}
+        </div>
+        <div class="form-text small text-muted">Stored securely in environment variables (never exposed in frontend code).</div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label text-muted small fw-bold">Active Primary Model</label>
+        <input type="text" class="form-control font-monospace" value="{{ configured_model }}" readonly>
+        <div class="form-text small text-muted">Configured via <code>GROQ_MODEL</code> in <code>.env</code>.</div>
+      </div>
+
+      <div>
+        <label class="form-label text-muted small fw-bold">SDK Version & Architecture</label>
+        <div class="p-2 bg-light rounded font-monospace small">
+          Official Groq Python SDK v1.7.0 • LPU High-Speed Inference Engine
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-md-6">
+    <div class="monitor-card h-100">
+      <h6 class="fw-bold mb-3">Sound & Notification Settings</h6>
+      <p class="text-muted small">
+        Audio feedback plays on user message send and agent response using <code>static/chatbot_sound.mp3</code>.
+      </p>
+
+      <div class="mb-3">
+        <label class="form-label text-muted small fw-bold">Sound File Location</label>
+        <input type="text" class="form-control font-monospace" value="{{ sound_url }}" readonly>
+      </div>
+
+      <div class="d-flex align-items-center gap-3 mt-4">
+        <button type="button" class="btn btn-outline-primary rounded-pill px-3 py-1.5" onclick="testChatSound()">
+          <i class="bi bi-play-circle-fill me-1"></i> Test Chatbot Sound
+        </button>
+        <span id="soundTestStatus" class="small text-muted"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function testChatSound() {
+  const audio = new Audio('{{ sound_url }}');
+  const statusEl = document.getElementById('soundTestStatus');
+  statusEl.textContent = 'Playing sound...';
+  audio.play().then(() => {
+    statusEl.textContent = 'Audio played successfully!';
+    setTimeout(() => { statusEl.textContent = ''; }, 3000);
+  }).catch(e => {
+    statusEl.textContent = 'Error: ' + e.message;
+  });
+}
+</script>
+{% endblock %}

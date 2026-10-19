@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'sai',
     'misc',
     'captcha',
+    'chatbot',
 ]
 
 if ENABLE_PROFILING:
@@ -364,5 +365,7 @@ if ENABLE_PROFILING:
     SILKY_AUTHORISATION = True    # require permission check below
     SILKY_PERMISSIONS = lambda user: user.is_superuser
     SILKY_MAX_RECORDED_REQUESTS = 200  # cap storage, avoid unbounded growth
-
-
+# --- Groq AI Chatbot (Swecha) ---
+GROQ_API_KEY = config('GROQ_API_KEY', default='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')
+GROQ_MODEL = config('GROQ_MODEL', default='qwen/qwen3.8-27b')
+CHATBOT_NAME = 'Swecha'

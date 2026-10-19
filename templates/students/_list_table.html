@@ -45,8 +45,10 @@
           <a href="{% url 'student_profile' s.pk %}" class="btn btn-xs btn-outline-primary rounded-circle px-2" title="View"><i class="bi bi-eye"></i></a>
           <a href="{% url 'student_edit' s.pk %}" class="btn btn-xs btn-outline-secondary rounded-circle px-2" title="Edit"><i class="bi bi-pencil"></i></a>
           <a href="{% url 'student_transfer' s.pk %}" class="btn btn-xs btn-outline-secondary rounded-circle px-2" title="Transfer"><i class="bi bi-arrow-left-right"></i></a>
-          <a href="{% url 'student_delete' s.pk %}" class="btn btn-xs btn-outline-danger rounded-circle px-2"
-             onclick="return confirm('Remove {{ s.name }}?')" title="Delete"><i class="bi bi-trash"></i></a>
+          <form method="post" action="{% url 'student_delete' s.pk %}?{{ request.GET.urlencode }}" class="d-inline m-0" onsubmit="return confirm('Remove {{ s.name|escapejs }}?')">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-xs btn-outline-danger rounded-circle px-2" title="Delete"><i class="bi bi-trash"></i></button>
+          </form>
         </div>
       </td>
     </tr>

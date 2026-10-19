@@ -106,7 +106,13 @@ def faculty_delete(request, pk):
     obj.is_active = False
     obj.save()
     messages.success(request, 'Faculty removed.')
-    return redirect('faculty_list')
+    
+    from django.urls import reverse
+    base_url = reverse('faculty_list')
+    query_string = request.GET.urlencode()
+    if query_string:
+        return redirect(f"{base_url}?{query_string}")
+    return redirect(base_url)
 
 
 from attendance.views import parse_date_input, trigger_whatsapp_sender_in_background

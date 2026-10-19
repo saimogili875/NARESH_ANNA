@@ -442,6 +442,16 @@
   </a>
   {% endif %}
 
+  <div class="nav-label">AI Assistant</div>
+  <a href="{% url 'chatbot_page' %}" class="nav-link {% if request.resolver_match.url_name == 'chatbot_page' %}active{% endif %}" style="background: rgba(37, 99, 235, 0.18); border-radius: 8px; margin-bottom: 4px;">
+    <i class="bi bi-robot text-warning"></i> Swecha AI
+    <span class="badge bg-warning text-dark ms-auto" style="font-size:0.65rem; font-weight:700;">AI</span>
+  </a>
+  <a href="{% url 'monitor_dashboard' %}" class="nav-link {% if 'monitor' in request.resolver_match.url_name %}active{% endif %}" style="margin-bottom: 6px;">
+    <i class="bi bi-speedometer2 text-info"></i> Groq Monitor
+    <span class="badge bg-info-subtle text-info border border-info-subtle ms-auto" style="font-size:0.62rem;">LPU</span>
+  </a>
+
   <div class="nav-label">Academics</div>
   {% if not user.is_faculty %}
   <a href="{% url 'student_list' %}" class="nav-link {% if 'student' in request.resolver_match.url_name %}active{% endif %}">
@@ -607,5 +617,8 @@ document.addEventListener('DOMContentLoaded', function() {
   updateThemeUI(isDark);
 });
 </script>
+{% if user.is_authenticated %}
+  {% include 'chatbot/widget.html' %}
+{% endif %}
 </body>
 </html>

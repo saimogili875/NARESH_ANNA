@@ -1,0 +1,75 @@
+{% extends 'chatbot/monitor/base_monitor.html' %}
+
+{% block monitor_content %}
+<div class="row g-4 mb-4">
+  <div class="col-12 col-md-4">
+    <div class="monitor-card h-100">
+      <div class="stat-label">Total Audio Transcriptions</div>
+      <div class="stat-metric text-primary">{{ total_requests }}</div>
+      <div class="text-muted small mt-2">Whisper audio API requests</div>
+    </div>
+  </div>
+
+  <div class="col-12 col-md-4">
+    <div class="monitor-card h-100">
+      <div class="stat-label">Total Audio Duration (Seconds)</div>
+      <div class="stat-metric text-info">{{ total_audio_seconds }} s</div>
+      <div class="text-muted small mt-2">Direct processed audio length</div>
+    </div>
+  </div>
+
+  <div class="col-12 col-md-4">
+    <div class="monitor-card h-100">
+      <div class="stat-label">Total Audio Duration (Minutes)</div>
+      <div class="stat-metric text-success">{{ total_audio_minutes }} min</div>
+      <div class="text-muted small mt-2">Standard Groq Whisper billing unit</div>
+    </div>
+  </div>
+</div>
+
+<div class="monitor-card mb-4">
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <div>
+      <h6 class="fw-bold mb-0">Speech-to-Text Request Logs</h6>
+      <span class="text-muted small">Tracks audio duration separately from chat tokens as required.</span>
+    </div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0" style="font-size: 0.88rem;">
+      <thead class="table-light">
+        <tr class="text-muted small">
+          <th>Timestamp</th>
+          <th>Model</th>
+          <th>Audio Length</th>
+          <th>Latency</th>
+          <th>Status</th>
+          <th>User</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in stt_logs %}
+        <tr>
+          <td class="font-monospace text-muted small">{{ log.request_timestamp|date:"Y-m-d H:i:s" }}</td>
+          <td class="font-monospace fw-semibold text-primary">{{ log.model_name }}</td>
+          <td class="font-monospace">{{ log.audio_duration_seconds }} s</td>
+          <td class="font-monospace">{{ log.response_time_ms|floatformat:1 }} ms</td>
+          <td>
+            <span class="badge {% if log.request_status == 'success' %}bg-success-subtle text-success border border-success-subtle{% else %}bg-danger-subtle text-danger border border-danger-subtle{% endif %}">
+              {{ log.get_request_status_display }}
+            </span>
+          </td>
+          <td class="text-secondary small">{{ log.user.username|default:'Anonymous' }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" class="text-center text-muted py-4">
+            No audio transcriptions logged yet. Use browser voice input or the Whisper API to test.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

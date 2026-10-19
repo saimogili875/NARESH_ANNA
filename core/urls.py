@@ -20,6 +20,8 @@ urlpatterns = [
     path('misc/', include('misc.urls')),
     path('whatsapp/', include('whatsapp.urls')),
     path('captcha/', include('captcha.urls')),
+    path('swecha/', include('chatbot.urls')),
+    path('chatbot/', include('chatbot.urls')),
 ]
 
 if settings.ENABLE_PROFILING:

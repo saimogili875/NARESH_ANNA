@@ -1,0 +1,795 @@
+<!-- Global Swecha AI Chatbot Widget -->
+<div id="swecha-widget-container">
+  <!-- Floating Trigger Button -->
+  <button id="swecha-trigger-btn" class="swecha-trigger" onclick="toggleSwechaWidget()" aria-label="Open Swecha AI Assistant" title="Ask Swecha AI">
+    <div class="swecha-avatar-glow">
+      <i class="bi bi-stars swecha-sparkle-icon"></i>
+      <i class="bi bi-robot swecha-bot-icon"></i>
+    </div>
+    <span class="swecha-btn-label">Ask Swecha <span class="badge-ai">AI</span></span>
+  </button>
+
+  <!-- Chatbot Window -->
+  <div id="swecha-window" class="swecha-window d-none">
+    <!-- Header -->
+    <div class="swecha-header">
+      <div class="d-flex align-items-center gap-2">
+        <div class="swecha-avatar-sm">
+          <i class="bi bi-robot"></i>
+          <span class="online-indicator"></span>
+        </div>
+        <div>
+          <div class="d-flex align-items-center gap-2">
+            <span class="swecha-title">Swecha</span>
+            <span class="swecha-badge">Sri NRI AI</span>
+          </div>
+          <div class="swecha-subtitle">Always ready to assist you</div>
+        </div>
+      </div>
+      <div class="swecha-header-actions">
+        <a href="{% url 'chatbot_page' %}" class="swecha-btn-icon" title="Open Fullscreen" target="_self">
+          <i class="bi bi-arrows-angle-expand"></i>
+        </a>
+        <button type="button" class="swecha-btn-icon" onclick="clearSwechaChat()" title="Clear Chat">
+          <i class="bi bi-trash3"></i>
+        </button>
+        <button type="button" class="swecha-btn-icon" onclick="toggleSwechaWidget()" title="Close">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Quick Chips Bar -->
+    <div class="swecha-chips-bar">
+      <button class="swecha-chip" onclick="sendSwechaPrompt('What is the current college overview and student enrollment?')">
+        📊 College Overview
+      </button>
+      <button class="swecha-chip" onclick="sendSwechaPrompt('What is the today attendance status?')">
+        📅 Attendance Today
+      </button>
+      <button class="swecha-chip" onclick="sendSwechaPrompt('Summarize total fee collection and pending dues.')">
+        💰 Fee Summary
+      </button>
+      <button class="swecha-chip" onclick="sendSwechaPrompt('Draft an urgent WhatsApp message to parents for student absence.')">
+        ✍️ Draft Absence Alert
+      </button>
+    </div>
+
+    <!-- Messages Container -->
+    <div id="swecha-messages" class="swecha-messages">
+      <!-- Welcome message -->
+      <div class="swecha-msg assistant">
+        <div class="swecha-msg-avatar">
+          <i class="bi bi-robot"></i>
+        </div>
+        <div class="swecha-msg-bubble">
+          <div class="swecha-msg-text">
+            Namaskaram! 🙏 I am <strong>Swecha</strong>, your AI Assistant for <strong>Sri NRI Junior College</strong>.
+            <br><br>
+            I can help you with:
+            <ul class="mb-1 ps-3">
+              <li>Student records & section stats</li>
+              <li>Attendance & fee summaries</li>
+              <li>Drafting parent WhatsApp circulars</li>
+              <li>Academic & intermediate questions (MPC, BiPC, CEC)</li>
+            </ul>
+            Feel free to type in <strong>English</strong> or <strong>Telugu</strong>!
+          </div>
+          <span class="swecha-msg-time">Just now</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Typing Indicator -->
+    <div id="swecha-typing" class="swecha-typing d-none">
+      <div class="swecha-msg-avatar">
+        <i class="bi bi-robot"></i>
+      </div>
+      <div class="swecha-typing-bubble">
+        <span></span><span></span><span></span>
+      </div>
+    </div>
+
+    <!-- Input Footer -->
+    <div class="swecha-footer">
+      <form id="swecha-form" onsubmit="handleSwechaSubmit(event)" class="d-flex align-items-center gap-2 m-0 p-0">
+        <button type="button" id="swecha-voice-btn" class="swecha-action-btn" onclick="toggleSwechaVoice()" title="Voice Input (Speech-to-Text)">
+          <i class="bi bi-mic" id="swecha-mic-icon"></i>
+        </button>
+        <input type="text" id="swecha-input" class="swecha-input" placeholder="Ask Swecha anything..." autocomplete="off">
+        <button type="submit" id="swecha-send-btn" class="swecha-send-btn" title="Send Message">
+          <i class="bi bi-send-fill"></i>
+        </button>
+      </form>
+      <div class="swecha-footer-note">
+        Powered by Groq High-Speed AI • Swecha AI
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+/* Swecha Widget Styles */
+#swecha-widget-container {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 1060;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+/* Floating Trigger Button */
+.swecha-trigger {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px 8px 10px;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 50%, #4338ca 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 999px;
+  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.45), 0 2px 6px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+  font-weight: 600;
+  font-size: 0.92rem;
+  letter-spacing: -0.01em;
+}
+
+.swecha-trigger:hover {
+  transform: translateY(-3px) scale(1.03);
+  box-shadow: 0 12px 28px rgba(37, 99, 235, 0.55), 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+.swecha-trigger:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.swecha-avatar-glow {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+  font-size: 1.15rem;
+}
+
+.swecha-sparkle-icon {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  font-size: 0.75rem;
+  color: #fde047;
+  animation: sparkle-pulse 2s infinite ease-in-out;
+}
+
+@keyframes sparkle-pulse {
+  0%, 100% { transform: scale(0.9); opacity: 0.8; }
+  50% { transform: scale(1.2); opacity: 1; }
+}
+
+.badge-ai {
+  background: #fde047;
+  color: #1e3a8a;
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 6px;
+  text-transform: uppercase;
+  margin-left: 4px;
+}
+
+/* Chatbot Floating Window */
+.swecha-window {
+  position: fixed;
+  bottom: 84px;
+  right: 24px;
+  width: 380px;
+  max-width: calc(100vw - 32px);
+  height: 580px;
+  max-height: calc(100vh - 120px);
+  background: var(--sf-surface, #ffffff);
+  border-radius: 20px;
+  box-shadow: 0 20px 48px rgba(15, 23, 42, 0.22), 0 4px 12px rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--sf-border, #e2e8f0);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: swechaPopUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 1070;
+}
+
+@keyframes swechaPopUp {
+  from { opacity: 0; transform: translateY(20px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Header */
+.swecha-header {
+  padding: 14px 16px;
+  background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 100%);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.swecha-avatar-sm {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+}
+
+.online-indicator {
+  position: absolute;
+  bottom: 1px;
+  right: 1px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #22c55e;
+  border: 2px solid #1e3a8a;
+}
+
+.swecha-title {
+  font-weight: 700;
+  font-size: 1rem;
+  letter-spacing: -0.01em;
+}
+
+.swecha-badge {
+  background: rgba(255, 255, 255, 0.22);
+  font-size: 0.65rem;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.swecha-subtitle {
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.swecha-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.swecha-btn-icon {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.85);
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.9rem;
+  text-decoration: none;
+}
+
+.swecha-btn-icon:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+}
+
+/* Quick Chips Bar */
+.swecha-chips-bar {
+  display: flex;
+  gap: 6px;
+  padding: 8px 12px;
+  overflow-x: auto;
+  background: var(--sf-bg, #f8fafc);
+  border-bottom: 1px solid var(--sf-border, #e2e8f0);
+  scrollbar-width: none;
+}
+.swecha-chips-bar::-webkit-scrollbar { display: none; }
+
+.swecha-chip {
+  white-space: nowrap;
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--sf-border, #cbd5e1);
+  background: var(--sf-surface, #ffffff);
+  color: var(--sf-text, #1e293b);
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+.swecha-chip:hover {
+  background: #2563eb;
+  color: #ffffff;
+  border-color: #2563eb;
+}
+
+/* Messages Area */
+.swecha-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: var(--sf-surface, #ffffff);
+}
+
+.swecha-msg {
+  display: flex;
+  gap: 8px;
+  max-width: 88%;
+}
+
+.swecha-msg.assistant {
+  align-self: flex-start;
+}
+
+.swecha-msg.user {
+  align-self: flex-end;
+  flex-direction: row-reverse;
+}
+
+.swecha-msg-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #2563eb;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+.swecha-msg.user .swecha-msg-avatar {
+  background: #475569;
+}
+
+.swecha-msg-bubble {
+  background: var(--sf-bg, #f1f5f9);
+  color: var(--sf-text, #0f172a);
+  padding: 10px 14px;
+  border-radius: 14px;
+  border-top-left-radius: 2px;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  word-break: break-word;
+}
+
+.swecha-msg.user .swecha-msg-bubble {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  color: #ffffff;
+  border-radius: 14px;
+  border-top-right-radius: 2px;
+}
+
+.swecha-msg-time {
+  display: block;
+  font-size: 0.68rem;
+  opacity: 0.65;
+  margin-top: 4px;
+  text-align: right;
+}
+
+.swecha-msg-bubble table {
+  width: 100%;
+  margin-top: 8px;
+  margin-bottom: 8px;
+  font-size: 0.78rem;
+  border-collapse: collapse;
+}
+
+.swecha-msg-bubble th, .swecha-msg-bubble td {
+  padding: 4px 8px;
+  border: 1px solid rgba(0,0,0,0.1);
+}
+
+.dark-mode .swecha-msg-bubble th, .dark-mode .swecha-msg-bubble td {
+  border-color: rgba(255,255,255,0.15);
+}
+
+/* Typing Indicator */
+.swecha-typing {
+  display: flex;
+  gap: 8px;
+  padding: 0 14px 10px;
+  align-items: center;
+}
+
+.swecha-typing-bubble {
+  background: var(--sf-bg, #f1f5f9);
+  padding: 8px 14px;
+  border-radius: 14px;
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.swecha-typing-bubble span {
+  width: 6px;
+  height: 6px;
+  background: #2563eb;
+  border-radius: 50%;
+  animation: typingBounce 1.4s infinite ease-in-out;
+}
+
+.swecha-typing-bubble span:nth-child(2) { animation-delay: 0.2s; }
+.swecha-typing-bubble span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes typingBounce {
+  0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
+  40% { transform: translateY(-5px); opacity: 1; }
+}
+
+/* Footer */
+.swecha-footer {
+  padding: 10px 14px;
+  border-top: 1px solid var(--sf-border, #e2e8f0);
+  background: var(--sf-surface, #ffffff);
+}
+
+.swecha-input {
+  flex: 1;
+  border: 1px solid var(--sf-border, #cbd5e1);
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 0.88rem;
+  outline: none;
+  background: var(--sf-bg, #f8fafc);
+  color: var(--sf-text, #0f172a);
+  transition: border-color 0.2s;
+}
+
+.swecha-input:focus {
+  border-color: #2563eb;
+  background: var(--sf-surface, #ffffff);
+}
+
+.swecha-action-btn, .swecha-send-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.swecha-action-btn {
+  background: var(--sf-bg, #f1f5f9);
+  color: var(--sf-muted, #64748b);
+}
+.swecha-action-btn:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+.swecha-action-btn.recording {
+  background: #ef4444;
+  color: #ffffff;
+  animation: recordingPulse 1s infinite alternate;
+}
+@keyframes recordingPulse {
+  from { transform: scale(1); }
+  to { transform: scale(1.15); }
+}
+
+.swecha-send-btn {
+  background: #2563eb;
+  color: #ffffff;
+}
+.swecha-send-btn:hover {
+  background: #1d4ed8;
+  transform: scale(1.05);
+}
+
+.swecha-footer-note {
+  font-size: 0.65rem;
+  color: var(--sf-muted, #94a3b8);
+  text-align: center;
+  margin-top: 6px;
+}
+
+/* Dark Mode Overrides */
+.dark-mode .swecha-window {
+  background: #0f172a;
+  border-color: #1e293b;
+  color: #f1f5f9;
+}
+.dark-mode .swecha-chips-bar {
+  background: #1e293b;
+  border-color: #334155;
+}
+.dark-mode .swecha-chip {
+  background: #0f172a;
+  color: #cbd5e1;
+  border-color: #334155;
+}
+.dark-mode .swecha-messages {
+  background: #0f172a;
+}
+.dark-mode .swecha-msg-bubble {
+  background: #1e293b;
+  color: #e2e8f0;
+}
+.dark-mode .swecha-typing-bubble {
+  background: #1e293b;
+}
+.dark-mode .swecha-footer {
+  background: #0f172a;
+  border-color: #1e293b;
+}
+.dark-mode .swecha-input {
+  background: #1e293b;
+  color: #f1f5f9;
+  border-color: #334155;
+}
+.dark-mode .swecha-action-btn {
+  background: #1e293b;
+  color: #94a3b8;
+}
+</style>
+
+<script>
+// Swecha Widget Logic
+let swechaRecognition = null;
+let swechaConversationId = null;
+
+function toggleSwechaWidget() {
+  const win = document.getElementById('swecha-window');
+  if (win.classList.contains('d-none')) {
+    win.classList.remove('d-none');
+    document.getElementById('swecha-input').focus();
+    scrollSwechaToBottom();
+  } else {
+    win.classList.add('d-none');
+  }
+}
+
+function scrollSwechaToBottom() {
+  const container = document.getElementById('swecha-messages');
+  if (container) {
+    container.scrollTop = container.scrollHeight;
+  }
+}
+
+function escapeSwechaHtml(str) {
+  return str.replace(/[&<>'"]/g, 
+    tag => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      "'": '&#39;',
+      '"': '&quot;'
+    }[tag] || tag)
+  );
+}
+
+function formatSwechaMarkdown(text) {
+  // Simple markdown renderer for bold, lists, code, linebreaks
+  let html = escapeSwechaHtml(text);
+
+  // Bold **text**
+  html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  // Italic *text*
+  html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+  // Inline code `code`
+  html = html.replace(/`(.*?)`/g, '<code class="px-1 py-0.5 rounded bg-secondary-subtle font-monospace">$1</code>');
+  // Linebreaks
+  html = html.replace(/\n/g, '<br>');
+
+  return html;
+}
+
+function appendSwechaMessage(sender, text, timestamp) {
+  const container = document.getElementById('swecha-messages');
+  const msgDiv = document.createElement('div');
+  msgDiv.className = `swecha-msg ${sender}`;
+
+  const timeStr = timestamp || new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+  const avatarIcon = sender === 'assistant' ? 'bi-robot' : 'bi-person-fill';
+  const formattedContent = sender === 'assistant' ? formatSwechaMarkdown(text) : escapeSwechaHtml(text);
+
+  msgDiv.innerHTML = `
+    <div class="swecha-msg-avatar">
+      <i class="bi ${avatarIcon}"></i>
+    </div>
+    <div class="swecha-msg-bubble">
+      <div class="swecha-msg-text">${formattedContent}</div>
+      <span class="swecha-msg-time">${timeStr}</span>
+    </div>
+  `;
+
+  container.appendChild(msgDiv);
+  scrollSwechaToBottom();
+}
+
+function sendSwechaPrompt(promptText) {
+  const input = document.getElementById('swecha-input');
+  input.value = promptText;
+  handleSwechaSubmit(new Event('submit'));
+}
+
+const WIDGET_SOUND_URL = '/static/chatbot_sound.mp3';
+
+function playWidgetSound() {
+  try {
+    const audio = new Audio(WIDGET_SOUND_URL);
+    audio.volume = 0.6;
+    audio.play().catch(e => console.debug('Widget sound note:', e));
+  } catch (err) {}
+}
+
+async function handleSwechaSubmit(e) {
+  if (e && e.preventDefault) e.preventDefault();
+  const input = document.getElementById('swecha-input');
+  const message = input.value.trim();
+  if (!message) return;
+
+  // Play sound on user question!
+  playWidgetSound();
+
+  // Add user bubble
+  appendSwechaMessage('user', message);
+  input.value = '';
+
+  // Show typing
+  const typing = document.getElementById('swecha-typing');
+  typing.classList.remove('d-none');
+  scrollSwechaToBottom();
+
+  // Get CSRF Token
+  const getCookie = (name) => {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  };
+  const csrftoken = getCookie('csrftoken') || '';
+
+  try {
+    const res = await fetch('/chatbot/api/chat/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrftoken,
+      },
+      body: JSON.stringify({
+        message: message,
+        conversation_id: swechaConversationId,
+      }),
+    });
+
+    const data = await res.json();
+    typing.classList.add('d-none');
+
+    if (data.status === 'ok') {
+      swechaConversationId = data.conversation_id;
+      // Play sound when agent replies!
+      playWidgetSound();
+      appendSwechaMessage('assistant', data.reply);
+    } else {
+      appendSwechaMessage('assistant', '⚠️ ' + (data.error || 'Failed to get response.'));
+    }
+  } catch (err) {
+    typing.classList.add('d-none');
+    appendSwechaMessage('assistant', '⚠️ Connection error. Please check your network and try again.');
+  }
+}
+
+async function clearSwechaChat() {
+  if (!confirm('Clear your conversation with Swecha?')) return;
+  const getCookie = (name) => {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  };
+  const csrftoken = getCookie('csrftoken') || '';
+
+  try {
+    await fetch('/chatbot/api/clear/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrftoken,
+      },
+      body: JSON.stringify({ conversation_id: swechaConversationId }),
+    });
+    const container = document.getElementById('swecha-messages');
+    container.innerHTML = `
+      <div class="swecha-msg assistant">
+        <div class="swecha-msg-avatar"><i class="bi bi-robot"></i></div>
+        <div class="swecha-msg-bubble">
+          <div class="swecha-msg-text">Conversation cleared. How can I help you next? 😊</div>
+          <span class="swecha-msg-time">Just now</span>
+        </div>
+      </div>
+    `;
+  } catch(e) {}
+}
+
+function toggleSwechaVoice() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    alert("Speech recognition is not supported in this browser. Please use Chrome, Edge, or Safari.");
+    return;
+  }
+
+  const voiceBtn = document.getElementById('swecha-voice-btn');
+  const micIcon = document.getElementById('swecha-mic-icon');
+  const input = document.getElementById('swecha-input');
+
+  if (swechaRecognition) {
+    swechaRecognition.stop();
+    swechaRecognition = null;
+    voiceBtn.classList.remove('recording');
+    micIcon.className = 'bi bi-mic';
+    return;
+  }
+
+  swechaRecognition = new SpeechRecognition();
+  swechaRecognition.lang = 'en-IN'; // Supports Indian English & Telugu keywords
+  swechaRecognition.interimResults = false;
+
+  voiceBtn.classList.add('recording');
+  micIcon.className = 'bi bi-mic-fill';
+
+  swechaRecognition.onresult = (event) => {
+    const transcript = event.results[0][0].transcript;
+    input.value = transcript;
+    voiceBtn.classList.remove('recording');
+    micIcon.className = 'bi bi-mic';
+    swechaRecognition = null;
+    handleSwechaSubmit(new Event('submit'));
+  };
+
+  swechaRecognition.onerror = () => {
+    voiceBtn.classList.remove('recording');
+    micIcon.className = 'bi bi-mic';
+    swechaRecognition = null;
+  };
+
+  swechaRecognition.onend = () => {
+    voiceBtn.classList.remove('recording');
+    micIcon.className = 'bi bi-mic';
+    swechaRecognition = null;
+  };
+
+  swechaRecognition.start();
+}
+</script>

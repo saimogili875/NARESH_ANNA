@@ -20,8 +20,10 @@
       <td class="small">{{ f.date_of_joining|date:"d M Y" }}</td>
       <td>
         <a href="{% url 'faculty_edit' f.pk %}" class="btn btn-sm btn-light"><i class="bi bi-pencil"></i></a>
-        <a href="{% url 'faculty_delete' f.pk %}" class="btn btn-sm btn-light text-danger"
-          onclick="return confirm('Remove {{ f.name }}?')"><i class="bi bi-trash"></i></a>
+        <form method="post" action="{% url 'faculty_delete' f.pk %}?{{ request.GET.urlencode }}" class="d-inline m-0" onsubmit="return confirm('Remove {{ f.name|escapejs }}?')">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-sm btn-light text-danger"><i class="bi bi-trash"></i></button>
+        </form>
       </td>
     </tr>
     {% empty %}

@@ -1,0 +1,66 @@
+{% extends 'chatbot/monitor/base_monitor.html' %}
+
+{% block monitor_content %}
+<div class="monitor-card mb-4">
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <div>
+      <h6 class="fw-bold mb-0">Model Quota & Limit Configuration</h6>
+      <span class="text-muted small">Configure model-specific daily and minute token/request limits. Unspecified limits are accurately labeled as unknown.</span>
+    </div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0" style="font-size: 0.88rem;">
+      <thead class="table-light">
+        <tr class="text-muted small">
+          <th>Model Identifier</th>
+          <th>RPM Limit</th>
+          <th>RPD Limit</th>
+          <th>TPM Limit</th>
+          <th>TPD Limit (Daily Tokens)</th>
+          <th>Tier / Type</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for q in quotas %}
+        <tr>
+          <form method="POST" action="{% url 'monitor_quotas' %}">
+            {% csrf_token %}
+            <input type="hidden" name="model_id" value="{{ q.id }}">
+            <td class="font-monospace fw-bold text-primary">{{ q.model_name }}</td>
+            <td style="width: 110px;">
+              <input type="number" name="rpm" class="form-control form-control-sm font-monospace" value="{{ q.requests_per_minute|default:'' }}" placeholder="None">
+            </td>
+            <td style="width: 120px;">
+              <input type="number" name="rpd" class="form-control form-control-sm font-monospace" value="{{ q.requests_per_day|default:'' }}" placeholder="None">
+            </td>
+            <td style="width: 120px;">
+              <input type="number" name="tpm" class="form-control form-control-sm font-monospace" value="{{ q.tokens_per_minute|default:'' }}" placeholder="None">
+            </td>
+            <td style="width: 140px;">
+              <input type="number" name="tpd" class="form-control form-control-sm font-monospace" value="{{ q.tokens_per_day|default:'' }}" placeholder="None">
+            </td>
+            <td style="width: 150px;">
+              <select name="quota_type" class="form-select form-select-sm">
+                <option value="free_tier" {% if q.quota_type == 'free_tier' %}selected{% endif %}>Free Tier</option>
+                <option value="tier_1" {% if q.quota_type == 'tier_1' %}selected{% endif %}>Developer Tier 1</option>
+                <option value="pay_as_you_go" {% if q.quota_type == 'pay_as_you_go' %}selected{% endif %}>Pay As You Go</option>
+                <option value="custom" {% if q.quota_type == 'custom' %}selected{% endif %}>Custom</option>
+              </select>
+            </td>
+            <td style="width: 90px;">
+              <button type="submit" class="btn btn-sm btn-primary rounded-pill px-3 py-1">Save</button>
+            </td>
+          </form>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7" class="text-center text-muted py-4">No model quotas configured yet.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

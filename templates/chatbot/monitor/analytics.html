@@ -1,0 +1,93 @@
+{% extends 'chatbot/monitor/base_monitor.html' %}
+
+{% block monitor_content %}
+<div class="row g-4 mb-4">
+  <!-- Key Metrics Row -->
+  <div class="col-12 col-md-4">
+    <div class="monitor-card h-100">
+      <div class="stat-label">Prompt-to-Completion Ratio</div>
+      <div class="stat-metric text-primary">
+        {% if analytics.total_output_tokens > 0 %}
+          {{ analytics.total_input_tokens|floatformat:0 }} : {{ analytics.total_output_tokens|floatformat:0 }}
+        {% else %}
+          1 : 0
+        {% endif %}
+      </div>
+      <div class="text-muted small mt-2">Tokens input vs output balance</div>
+    </div>
+  </div>
+
+  <div class="col-12 col-md-4">
+    <div class="monitor-card h-100">
+      <div class="stat-label">Average Tokens / Request</div>
+      <div class="stat-metric text-success">
+        {% if analytics.total_requests > 0 %}
+          {% widthratio analytics.total_tokens analytics.total_requests 1 %}
+        {% else %}
+          0
+        {% endif %}
+      </div>
+      <div class="text-muted small mt-2">Mean payload size per inference</div>
+    </div>
+  </div>
+
+  <div class="col-12 col-md-4">
+    <div class="monitor-card h-100">
+      <div class="stat-label">Success Rate</div>
+      <div class="stat-metric text-dark">
+        {% if analytics.total_requests > 0 %}
+          {% widthratio analytics.successful_requests analytics.total_requests 100 %}%
+        {% else %}
+          100%
+        {% endif %}
+      </div>
+      <div class="text-muted small mt-2">Successful HTTP 200 API calls</div>
+    </div>
+  </div>
+</div>
+
+<!-- Daily Aggregated Summaries Table -->
+<div class="monitor-card mb-4">
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <div>
+      <h6 class="fw-bold mb-0">Daily Aggregated Usage Summary</h6>
+      <span class="text-muted small">Pre-aggregated daily totals from DailyUsageSummary database table.</span>
+    </div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0" style="font-size: 0.88rem;">
+      <thead class="table-light">
+        <tr class="text-muted small">
+          <th>Date</th>
+          <th>Model</th>
+          <th>Total Requests</th>
+          <th>Successful</th>
+          <th>Failed</th>
+          <th>Input Tokens</th>
+          <th>Output Tokens</th>
+          <th>Total Tokens</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in daily_summaries %}
+        <tr>
+          <td class="font-monospace fw-semibold">{{ s.date|date:"Y-m-d (D)" }}</td>
+          <td class="font-monospace text-primary">{{ s.model_name }}</td>
+          <td class="font-monospace">{{ s.total_requests }}</td>
+          <td class="font-monospace text-success">{{ s.successful_requests }}</td>
+          <td class="font-monospace {% if s.failed_requests > 0 %}text-danger fw-bold{% else %}text-muted{% endif %}">{{ s.failed_requests }}</td>
+          <td class="font-monospace">{{ s.input_tokens }}</td>
+          <td class="font-monospace">{{ s.output_tokens }}</td>
+          <td class="font-monospace fw-bold">{{ s.total_tokens }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="8" class="text-center text-muted py-4">No daily summaries recorded yet.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

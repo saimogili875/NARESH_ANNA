@@ -1,0 +1,86 @@
+{% extends 'chatbot/monitor/base_monitor.html' %}
+
+{% block monitor_content %}
+<!-- Rate-Limit Threshold Status Cards -->
+<div class="row g-3 mb-4">
+  {% for card in status_cards %}
+  <div class="col-12 col-md-6 col-lg-4">
+    <div class="monitor-card h-100">
+      <div class="d-flex align-items-center justify-content-between mb-2">
+        <span class="fw-bold font-monospace text-primary text-truncate">{{ card.model_name }}</span>
+        <span class="badge bg-light text-secondary border">{{ card.quota_type }}</span>
+      </div>
+
+      <div class="d-flex justify-content-between align-items-baseline mb-2">
+        <span class="text-muted small">Daily Usage:</span>
+        <span class="fw-bold font-monospace">
+          {% if card.pct is not None %}{{ card.pct }}%{% else %}N/A{% endif %}
+        </span>
+      </div>
+
+      <div class="progress mb-3" style="height: 8px;">
+        <div class="progress-bar {% if card.pct > 90 %}bg-danger{% elif card.pct > 70 %}bg-warning{% else %}bg-success{% endif %}" 
+             role="progressbar" 
+             style="width: {{ card.pct|default:0 }}%;"></div>
+      </div>
+
+      <div class="row g-2 text-muted small border-top pt-2" style="font-size: 0.78rem;">
+        <div class="col-6">RPM: <strong>{{ card.rpm|default:'Unknown' }}</strong></div>
+        <div class="col-6">TPM: <strong>{{ card.tpm|default:'Unknown' }}</strong></div>
+        <div class="col-6">Tokens Used: <strong>{{ card.used_tokens }}</strong></div>
+        <div class="col-6">Remaining: <strong>{{ card.remaining_tokens|default:'Unknown' }}</strong></div>
+      </div>
+    </div>
+  </div>
+  {% empty %}
+  <div class="col-12">
+    <div class="alert alert-info border-0 rounded-4 shadow-sm">No active rate-limit profiles configured.</div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Captured Snapshots from API Headers -->
+<div class="monitor-card mb-4">
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <div>
+      <h6 class="fw-bold mb-0">Observed Rate-Limit Snapshots (From API Headers)</h6>
+      <span class="text-muted small">Values extracted from <code>x-ratelimit-remaining-*</code> headers during recent Groq API calls.</span>
+    </div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0" style="font-size: 0.88rem;">
+      <thead class="table-light">
+        <tr class="text-muted small">
+          <th>Captured At</th>
+          <th>Model</th>
+          <th>Limit Requests</th>
+          <th>Remaining Requests</th>
+          <th>Limit Tokens</th>
+          <th>Remaining Tokens</th>
+          <th>Reset Tokens</th>
+          <th>Source</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for snap in snapshots %}
+        <tr>
+          <td class="font-monospace small text-muted">{{ snap.captured_at|date:"Y-m-d H:i:s" }}</td>
+          <td class="font-monospace fw-semibold text-primary">{{ snap.model_name }}</td>
+          <td class="font-monospace">{{ snap.limit_requests|default:'-' }}</td>
+          <td class="font-monospace">{{ snap.remaining_requests|default:'-' }}</td>
+          <td class="font-monospace">{{ snap.limit_tokens|default:'-' }}</td>
+          <td class="font-monospace fw-bold text-success">{{ snap.remaining_tokens|default:'-' }}</td>
+          <td class="font-monospace small">{{ snap.reset_tokens|default:'-' }}</td>
+          <td><span class="badge bg-light text-secondary border">{{ snap.source }}</span></td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="8" class="text-center text-muted py-4">No header snapshots captured yet. Make API calls to record live headers.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -18,6 +18,7 @@ push.log
 refactor_script.py
 fix_local_migration_history.py
 *_import_ready.xlsx
+query_script.py
 
 
 
