@@ -72,6 +72,8 @@ FACULTY_ALLOWED_PATHS = [
     '/students/',
     '/logout/',
     '/static/',
+    '/chatbot/',
+    '/swecha/',
 ]
 
 
