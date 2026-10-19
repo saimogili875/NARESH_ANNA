@@ -11,11 +11,11 @@
 <style>
 :root{
   --ink:#1c1c1c;
-  --bot-bg:rgba(255,255,255,.14);
-  --bot-text:#fff;
-  --user-bg:rgba(255,255,255,.88);
-  --user-text:#1c1c1c;
-  --bar-bg:rgba(255,255,255,.82);
+  --bot-bg:rgba(22, 24, 30, 0.94);
+  --bot-text:#f8fafc;
+  --user-bg:#ffffff;
+  --user-text:#0f172a;
+  --bar-bg:rgba(255,255,255,.92);
   --bar-text:#161616;
   --bar-hint:#5b5b6b;
   box-sizing:border-box;
@@ -159,19 +159,19 @@ header span.sub{
 }
 .bot{
   align-self:flex-start;
-  background:var(--bot-bg);
-  color:var(--bot-text);
+  background:rgba(22, 24, 30, 0.94);
+  color:#f8fafc;
   border-bottom-left-radius:6px;
-  backdrop-filter:blur(14px);
-  -webkit-backdrop-filter:blur(14px);
-  border:1px solid rgba(255,255,255,.16);
+  border:1px solid rgba(255,255,255,.14);
+  box-shadow:0 8px 30px rgba(0,0,0,.45);
 }
 .user{
   align-self:flex-end;
-  background:var(--user-bg);
-  color:var(--user-text);
+  background:#ffffff;
+  color:#0f172a;
   border-bottom-right-radius:6px;
-  box-shadow:0 4px 14px rgba(0,0,0,.15);
+  box-shadow:0 4px 16px rgba(0,0,0,.25);
+  font-weight:500;
 }
 @keyframes in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 
