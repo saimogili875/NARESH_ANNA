@@ -9,7 +9,30 @@
         <h6 class="mb-0">{{ title }}</h6>
       </div>
       <div class="card-body">
-        <form method="post" enctype="multipart/form-data">
+
+        {% if form.errors %}
+        <div class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
+          <div class="d-flex align-items-center mb-1">
+            <i class="bi bi-exclamation-triangle-fill fs-5 me-2"></i>
+            <strong>Please resolve the following errors before saving:</strong>
+          </div>
+          <ul class="mb-0 mt-2 ps-3">
+            {% for field, error_list in form.errors.items %}
+              {% for err in error_list %}
+                <li>
+                  {% if field != '__all__' %}
+                    <strong>{{ field|title }}:</strong>
+                  {% endif %}
+                  {{ err }}
+                </li>
+              {% endfor %}
+            {% endfor %}
+          </ul>
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endif %}
+
+        <form method="post" enctype="multipart/form-data" novalidate>
           {% csrf_token %}
 
           <h6 class="text-primary fw-bold mb-3 border-bottom pb-2">
@@ -17,29 +40,34 @@
           </h6>
           <div class="row g-3 mb-3">
             <div class="col-md-6">
-              <label class="form-label small fw-500">Admission Number *</label>
+              <label class="form-label small fw-500">Admission Number <span class="text-danger">*</span></label>
               {{ form.admission_number }}
+              {% if form.admission_number.errors %}<div class="text-danger small mt-1"><i class="bi bi-x-circle"></i> {{ form.admission_number.errors.0 }}</div>{% endif %}
             </div>
             <div class="col-md-6">
               <label class="form-label small fw-500">Hall Ticket Number</label>
               {{ form.hall_ticket_number }}
-              {% if form.hall_ticket_number.errors %}<div class="text-danger small mt-1">{{ form.hall_ticket_number.errors.0 }}</div>{% endif %}
+              {% if form.hall_ticket_number.errors %}<div class="text-danger small mt-1"><i class="bi bi-x-circle"></i> {{ form.hall_ticket_number.errors.0 }}</div>{% endif %}
             </div>
             <div class="col-md-6">
-              <label class="form-label small fw-500">Student Name *</label>
+              <label class="form-label small fw-500">Student Name <span class="text-danger">*</span></label>
               {{ form.name }}
+              {% if form.name.errors %}<div class="text-danger small mt-1"><i class="bi bi-x-circle"></i> {{ form.name.errors.0 }}</div>{% endif %}
             </div>
             <div class="col-md-6">
               <label class="form-label small fw-500">Father Name</label>
               {{ form.father_name }}
+              {% if form.father_name.errors %}<div class="text-danger small mt-1"><i class="bi bi-x-circle"></i> {{ form.father_name.errors.0 }}</div>{% endif %}
             </div>
             <div class="col-md-6">
               <label class="form-label small fw-500">Mother Name</label>
               {{ form.mother_name }}
+              {% if form.mother_name.errors %}<div class="text-danger small mt-1"><i class="bi bi-x-circle"></i> {{ form.mother_name.errors.0 }}</div>{% endif %}
             </div>
             <div class="col-md-6">
               <label class="form-label small fw-500">Aadhaar Number</label>
               {{ form.aadhaar }}
+              {% if form.aadhaar.errors %}<div class="text-danger small mt-1"><i class="bi bi-x-circle"></i> {{ form.aadhaar.errors.0 }}</div>{% endif %}
             </div>
           </div>
 
@@ -48,28 +76,29 @@
           </h6>
           <div class="row g-3 mb-3">
             <div class="col-md-6">
-              <label class="form-label small fw-500">Mobile Number 1 (Parent) *</label>
+              <label class="form-label small fw-500">Mobile Number 1 (Parent) <span class="text-danger">*</span></label>
               {{ form.mobile }}
-              {% if form.mobile.errors %}<div class="text-danger small mt-1">{{ form.mobile.errors.0 }}</div>{% endif %}
+              {% if form.mobile.errors %}<div class="text-danger small mt-1"><i class="bi bi-x-circle"></i> {{ form.mobile.errors.0 }}</div>{% endif %}
             </div>
             <div class="col-md-6">
               <label class="form-label small fw-500">Mobile Number 2 <span class="text-muted">(Optional)</span></label>
               {{ form.second_mobile }}
-              {% if form.second_mobile.errors %}<div class="text-danger small mt-1">{{ form.second_mobile.errors.0 }}</div>{% endif %}
+              {% if form.second_mobile.errors %}<div class="text-danger small mt-1"><i class="bi bi-x-circle"></i> {{ form.second_mobile.errors.0 }}</div>{% endif %}
             </div>
             <div class="col-md-6">
               <label class="form-label small fw-500">Mobile Number 3 <span class="text-muted">(Optional)</span></label>
               {{ form.third_mobile }}
-              {% if form.third_mobile.errors %}<div class="text-danger small mt-1">{{ form.third_mobile.errors.0 }}</div>{% endif %}
+              {% if form.third_mobile.errors %}<div class="text-danger small mt-1"><i class="bi bi-x-circle"></i> {{ form.third_mobile.errors.0 }}</div>{% endif %}
             </div>
             <div class="col-md-6">
               <label class="form-label small fw-500">Mobile Number 4 <span class="text-muted">(Optional)</span></label>
               {{ form.fourth_mobile }}
-              {% if form.fourth_mobile.errors %}<div class="text-danger small mt-1">{{ form.fourth_mobile.errors.0 }}</div>{% endif %}
+              {% if form.fourth_mobile.errors %}<div class="text-danger small mt-1"><i class="bi bi-x-circle"></i> {{ form.fourth_mobile.errors.0 }}</div>{% endif %}
             </div>
             <div class="col-12">
               <label class="form-label small fw-500">Address</label>
               {{ form.address }}
+              {% if form.address.errors %}<div class="text-danger small mt-1"><i class="bi bi-x-circle"></i> {{ form.address.errors.0 }}</div>{% endif %}
             </div>
           </div>
 
@@ -86,6 +115,7 @@
               </label>
               {{ form.apaar_id }}
               <div class="form-text">Academic Bank of Credits ID (12-digit)</div>
+              {% if form.apaar_id.errors %}<div class="text-danger small mt-1"><i class="bi bi-x-circle"></i> {{ form.apaar_id.errors.0 }}</div>{% endif %}
             </div>
             <div class="col-md-6">
               <label class="form-label small fw-500">
@@ -93,20 +123,23 @@
               </label>
               {{ form.sport }}
               <div class="form-text">e.g. Cricket, Kabaddi, Chess, etc.</div>
+              {% if form.sport.errors %}<div class="text-danger small mt-1"><i class="bi bi-x-circle"></i> {{ form.sport.errors.0 }}</div>{% endif %}
             </div>
             <div class="col-md-6">
               <label class="form-label small fw-500">Section</label>
               {{ form.section }}
+              {% if form.section.errors %}<div class="text-danger small mt-1"><i class="bi bi-x-circle"></i> {{ form.section.errors.0 }}</div>{% endif %}
             </div>
             <div class="col-md-6">
               <label class="form-label small fw-500">Academic Year</label>
               {{ form.academic_year }}
+              {% if form.academic_year.errors %}<div class="text-danger small mt-1"><i class="bi bi-x-circle"></i> {{ form.academic_year.errors.0 }}</div>{% endif %}
             </div>
             <div class="col-md-6">
               <label class="form-label small fw-500">Photo</label>
               {{ form.photo }}
-              <div class="form-text">File size: 50 KB – 100 KB only</div>
-              {% if form.photo.errors %}<div class="text-danger small mt-1">{{ form.photo.errors.0 }}</div>{% endif %}
+              <div class="form-text">File size: max 10 MB</div>
+              {% if form.photo.errors %}<div class="text-danger small mt-1"><i class="bi bi-x-circle"></i> {{ form.photo.errors.0 }}</div>{% endif %}
             </div>
           </div>
 
@@ -117,10 +150,12 @@
             <div class="col-md-6">
               <label class="form-label small fw-500">School Name</label>
               {{ form.prev_school_name }}
+              {% if form.prev_school_name.errors %}<div class="text-danger small mt-1"><i class="bi bi-x-circle"></i> {{ form.prev_school_name.errors.0 }}</div>{% endif %}
             </div>
             <div class="col-md-6">
               <label class="form-label small fw-500">School Location</label>
               {{ form.prev_school_location }}
+              {% if form.prev_school_location.errors %}<div class="text-danger small mt-1"><i class="bi bi-x-circle"></i> {{ form.prev_school_location.errors.0 }}</div>{% endif %}
             </div>
           </div>
 
@@ -131,34 +166,42 @@
             <div class="col-md-3 col-6">
               <label class="form-label small fw-500">Telugu</label>
               {{ form.marks_telugu }}
+              {% if form.marks_telugu.errors %}<div class="text-danger small mt-1">{{ form.marks_telugu.errors.0 }}</div>{% endif %}
             </div>
             <div class="col-md-3 col-6">
               <label class="form-label small fw-500">Hindi</label>
               {{ form.marks_hindi }}
+              {% if form.marks_hindi.errors %}<div class="text-danger small mt-1">{{ form.marks_hindi.errors.0 }}</div>{% endif %}
             </div>
             <div class="col-md-3 col-6">
               <label class="form-label small fw-500">English</label>
               {{ form.marks_english }}
+              {% if form.marks_english.errors %}<div class="text-danger small mt-1">{{ form.marks_english.errors.0 }}</div>{% endif %}
             </div>
             <div class="col-md-3 col-6">
               <label class="form-label small fw-500">Maths</label>
               {{ form.marks_maths }}
+              {% if form.marks_maths.errors %}<div class="text-danger small mt-1">{{ form.marks_maths.errors.0 }}</div>{% endif %}
             </div>
             <div class="col-md-3 col-6">
               <label class="form-label small fw-500">Physics</label>
               {{ form.marks_physics }}
+              {% if form.marks_physics.errors %}<div class="text-danger small mt-1">{{ form.marks_physics.errors.0 }}</div>{% endif %}
             </div>
             <div class="col-md-3 col-6">
               <label class="form-label small fw-500">Biology</label>
               {{ form.marks_biology }}
+              {% if form.marks_biology.errors %}<div class="text-danger small mt-1">{{ form.marks_biology.errors.0 }}</div>{% endif %}
             </div>
             <div class="col-md-3 col-6">
               <label class="form-label small fw-500">Social</label>
               {{ form.marks_social }}
+              {% if form.marks_social.errors %}<div class="text-danger small mt-1">{{ form.marks_social.errors.0 }}</div>{% endif %}
             </div>
             <div class="col-md-3 col-6">
               <label class="form-label small fw-500 text-success">Total Marks</label>
               {{ form.marks_total }}
+              {% if form.marks_total.errors %}<div class="text-danger small mt-1">{{ form.marks_total.errors.0 }}</div>{% endif %}
             </div>
           </div>
 

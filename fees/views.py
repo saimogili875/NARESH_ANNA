@@ -12,6 +12,7 @@ from students.models import Student
 from accounts.models import AcademicYear
 from accounts.decorators import admin_accounts_required, all_roles_required
 from accounts.utils import _get_faculty_sections
+from whatsapp.services import send_whatsapp_media
 from django.views.decorators.http import require_POST
 from datetime import datetime, date as Date
 
@@ -29,6 +30,13 @@ def parse_flexible_date(date_str, fallback=None):
         return Date.fromisoformat(date_str)
     except ValueError:
         return fallback or timezone.localdate()
+
+def _get_scoped_student(user, pk):
+    """Scope student lookup: Admin/Accounts see all students; faculty see only their assigned sections."""
+    if user.is_superuser or getattr(user, 'role', None) in ['admin', 'accounts']:
+        return get_object_or_404(Student, pk=pk)
+    allowed_sections = _get_faculty_sections(user)
+    return get_object_or_404(Student, pk=pk, section__in=allowed_sections)
 
 @admin_accounts_required
 def fee_type_manage(request):
@@ -133,7 +141,8 @@ def fee_type_assign(request, pk):
         try:
             amount = Decimal(amount_str)
         except (InvalidOperation, TypeError, ValueError):
-            amount = Decimal('0')
+            messages.error(request, 'Please enter a valid numeric fee amount.')
+            return redirect('fee_type_assign', pk=pk)
 
         if amount < 0:
             messages.error(request, 'Fee amount cannot be negative.')
@@ -145,15 +154,17 @@ def fee_type_assign(request, pk):
 
         students = Student.objects.filter(is_active=True, section_id__in=section_ids)
         updated_count = 0
-        for student in students:
-            charge, _ = StudentFeeCharge.objects.get_or_create(
-                student=student, 
-                fee_type=fee_type,
-                defaults={'amount_assigned': amount}
-            )
-            charge.amount_assigned = amount
-            charge.save()
-            updated_count += 1
+        from django.db import transaction
+        with transaction.atomic():
+            for student in students:
+                charge, _ = StudentFeeCharge.objects.get_or_create(
+                    student=student, 
+                    fee_type=fee_type,
+                    defaults={'amount_assigned': amount}
+                )
+                charge.amount_assigned = amount
+                charge.save()
+                updated_count += 1
         
         messages.success(request, f"Fee '{fee_type.name}' updated to ₹{amount:.0f} for {updated_count} students.")
         return redirect('fee_type_manage')
@@ -204,49 +215,51 @@ def fee_type_assign_individual(request, pk):
         updated = 0
         payments_collected = 0
 
-        for sid in ids:
-            key = f'amount_{sid}'
-            pay_key = f'pay_{sid}'
-            raw_amt = request.POST.get(key, '').strip() if key in request.POST else ''
-            raw_pay = request.POST.get(pay_key, '').strip() if pay_key in request.POST else ''
+        from django.db import transaction
+        with transaction.atomic():
+            for sid in ids:
+                key = f'amount_{sid}'
+                pay_key = f'pay_{sid}'
+                raw_amt = request.POST.get(key, '').strip() if key in request.POST else ''
+                raw_pay = request.POST.get(pay_key, '').strip() if pay_key in request.POST else ''
 
-            student = Student.objects.filter(pk=sid).first()
-            if not student:
-                continue
+                student = Student.objects.filter(pk=sid).first()
+                if not student:
+                    continue
 
-            if raw_amt != '':
-                try:
-                    amount = Decimal(raw_amt)
-                    if amount >= 0:
-                        charge, _ = StudentFeeCharge.objects.get_or_create(
-                            student=student, fee_type=fee_type, defaults={'amount_assigned': amount}
-                        )
-                        charge.amount_assigned = amount
-                        charge.save()
-                        updated += 1
-                except (InvalidOperation, TypeError, ValueError):
-                    pass
+                if raw_amt != '':
+                    try:
+                        amount = Decimal(raw_amt)
+                        if amount >= 0:
+                            charge, _ = StudentFeeCharge.objects.get_or_create(
+                                student=student, fee_type=fee_type, defaults={'amount_assigned': amount}
+                            )
+                            charge.amount_assigned = amount
+                            charge.save()
+                            updated += 1
+                    except (InvalidOperation, TypeError, ValueError):
+                        pass
 
-            if raw_pay != '':
-                try:
-                    pay_amount = Decimal(raw_pay)
-                    if pay_amount > 0:
-                        charge, _ = StudentFeeCharge.objects.get_or_create(
-                            student=student, fee_type=fee_type, defaults={'amount_assigned': 0}
-                        )
-                        receipt_number = 'RCP' + str(uuid.uuid4())[:8].upper()
-                        FeePayment.objects.create(
-                            fee_charge=charge,
-                            amount=pay_amount,
-                            payment_date=timezone.localdate(),
-                            payment_mode='cash',
-                            receipt_number=receipt_number,
-                            collected_by=request.user.get_full_name() or request.user.username,
-                            remarks=f"Payment for {fee_type.name} via Manage Fee",
-                        )
-                        payments_collected += 1
-                except ValueError:
-                    pass
+                if raw_pay != '':
+                    try:
+                        pay_amount = Decimal(raw_pay)
+                        if pay_amount > 0:
+                            charge, _ = StudentFeeCharge.objects.get_or_create(
+                                student=student, fee_type=fee_type, defaults={'amount_assigned': 0}
+                            )
+                            receipt_number = 'RCP' + str(uuid.uuid4())[:8].upper()
+                            FeePayment.objects.create(
+                                fee_charge=charge,
+                                amount=pay_amount,
+                                payment_date=timezone.localdate(),
+                                payment_mode='cash',
+                                receipt_number=receipt_number,
+                                collected_by=request.user.get_full_name() or request.user.username,
+                                remarks=f"Payment for {fee_type.name} via Manage Fee",
+                            )
+                            payments_collected += 1
+                    except (InvalidOperation, ValueError, TypeError):
+                        pass
 
         msg = f"'{fee_type.name}' updated for {updated} student(s)."
         if payments_collected > 0:
@@ -320,7 +333,10 @@ def fee_type_delete(request, pk):
     
     if request.method == 'POST':
         name = fee_type.name
-        fee_type.delete()  # Hard delete as requested
+        if FeePayment.objects.filter(fee_charge__fee_type=fee_type).exists():
+            messages.error(request, f"Cannot delete fee type '{name}' because payments have already been recorded on its charges.")
+            return redirect('fee_type_manage')
+        fee_type.delete()
         messages.success(request, f"Fee type '{name}' has been completely deleted along with all its records.")
         return redirect('fee_type_manage')
         
@@ -349,17 +365,26 @@ def fee_list(request):
         )
     student_list = list(students)
     student_ids = [s.pk for s in student_list]
+    student_year_map = {s.pk: (s.academic_year_id or (active_year.pk if active_year else None)) for s in student_list}
+    active_ay_ids = {ay_id for ay_id in student_year_map.values() if ay_id}
 
     fee_types = list(FeeType.objects.all().order_by('created_at'))
 
     # 1. Compute summary totals via direct DB aggregates BEFORE per-student loop
-    summary = StudentFee.objects.filter(student_id__in=student_ids).aggregate(
+    summary = StudentFee.objects.filter(
+        student_id__in=student_ids,
+        academic_year_id__in=active_ay_ids
+    ).aggregate(
         total_fee_sum=Sum('total_fee'),
     )
     paid_summary = FeePayment.objects.filter(
-        Q(student_fee__student_id__in=student_ids) | Q(fee_charge__student_id__in=student_ids)
+        Q(student_fee__student_id__in=student_ids, student_fee__academic_year_id__in=active_ay_ids) |
+        Q(fee_charge__student_id__in=student_ids, fee_charge__fee_type__academic_year_id__in=active_ay_ids)
     ).aggregate(total_paid_sum=Sum('amount'))
-    charge_summary = StudentFeeCharge.objects.filter(student_id__in=student_ids).aggregate(
+    charge_summary = StudentFeeCharge.objects.filter(
+        student_id__in=student_ids,
+        fee_type__academic_year_id__in=active_ay_ids
+    ).aggregate(
         total_assigned_sum=Sum('amount_assigned'),
     )
 
@@ -397,24 +422,27 @@ def fee_list(request):
         return 'partial'
 
     if student_ids:
-        existing_fees = {
-            sf.student_id: sf
-            for sf in StudentFee.objects.filter(
-                student_id__in=student_ids
-            ).prefetch_related('payments')
-        }
+        existing_fees = {}
+        for sf in StudentFee.objects.filter(
+            student_id__in=student_ids
+        ).prefetch_related('payments'):
+            target_ay_id = student_year_map.get(sf.student_id)
+            if target_ay_id and sf.academic_year_id == target_ay_id:
+                existing_fees[sf.student_id] = sf
 
         missing_ids = [pk for pk in student_ids if pk not in existing_fees]
         if missing_ids:
-            missing_students = Student.objects.filter(pk__in=missing_ids)
+            missing_students = [s for s in student_list if s.pk in missing_ids]
             StudentFee.objects.bulk_create(
-                [StudentFee(student_id=s.pk, academic_year=s.academic_year or active_year, total_fee=0) for s in missing_students],
+                [StudentFee(student_id=s.pk, academic_year_id=s.academic_year_id or (active_year.pk if active_year else None), total_fee=0) for s in missing_students],
                 ignore_conflicts=True,
             )
             for sf in StudentFee.objects.filter(
                 student_id__in=missing_ids
             ).prefetch_related('payments'):
-                existing_fees[sf.student_id] = sf
+                target_ay_id = student_year_map.get(sf.student_id)
+                if target_ay_id and sf.academic_year_id == target_ay_id:
+                    existing_fees[sf.student_id] = sf
 
         charges_by_student = {}
         if fee_types:
@@ -531,7 +559,12 @@ def fee_set_bulk(request):
         try:
             amount = Decimal(amount_str)
         except (InvalidOperation, TypeError, ValueError):
-            amount = Decimal('0')
+            messages.error(request, 'Please enter a valid numeric fee amount.')
+            return redirect('fee_set_bulk')
+
+        if amount < 0:
+            messages.error(request, 'Fee amount cannot be negative.')
+            return redirect('fee_set_bulk')
 
         if not section_ids:
             messages.error(request, 'Please select at least one section.')
@@ -539,18 +572,20 @@ def fee_set_bulk(request):
 
         students = Student.objects.filter(is_active=True, section_id__in=section_ids)
         updated_count = 0
-        for student in students:
-            student_ay = student.academic_year or active_year
-            student_fee = StudentFee.objects.filter(student=student, academic_year=student_ay).first()
-            if not student_fee:
-                student_fee, _ = StudentFee.objects.get_or_create(
-                    student=student, 
-                    academic_year=student_ay,
-                    defaults={'total_fee': amount}
-                )
-            student_fee.total_fee = amount
-            student_fee.save()
-            updated_count += 1
+        from django.db import transaction
+        with transaction.atomic():
+            for student in students:
+                student_ay = student.academic_year or active_year
+                student_fee = StudentFee.objects.filter(student=student, academic_year=student_ay).first()
+                if not student_fee:
+                    student_fee, _ = StudentFee.objects.get_or_create(
+                        student=student, 
+                        academic_year=student_ay,
+                        defaults={'total_fee': amount}
+                    )
+                student_fee.total_fee = amount
+                student_fee.save()
+                updated_count += 1
         
         selected_sections = Section.objects.filter(id__in=section_ids).values_list('name', flat=True)
         sections_str = ", ".join(selected_sections)
@@ -565,7 +600,7 @@ def fee_set_bulk(request):
 
 @all_roles_required
 def fee_detail(request, pk):
-    student = get_object_or_404(Student, pk=pk)
+    student = _get_scoped_student(request.user, pk)
     active_year = student.academic_year or AcademicYear.objects.filter(is_active=True).first()
     student_fee = StudentFee.objects.filter(student=student, academic_year=active_year).first()
     if not student_fee:
@@ -665,9 +700,15 @@ def fee_collect(request, pk):
 
         try:
             with transaction.atomic():
+                # Lock target StudentFee or StudentFeeCharge row first before duplicate check
+                if target_student_fee:
+                    target_student_fee = StudentFee.objects.select_for_update().get(pk=target_student_fee.pk)
+                elif target_fee_charge:
+                    target_fee_charge = StudentFeeCharge.objects.select_for_update().get(pk=target_fee_charge.pk)
+
                 # Double-submit protection: reject identical submission within 5 seconds + idempotency check
                 recent_window = timezone.now() - timezone.timedelta(seconds=5)
-                recent_duplicate = FeePayment.objects.select_for_update().filter(
+                recent_duplicate = FeePayment.objects.filter(
                     amount=amount,
                     created_at__gte=recent_window,
                 )
@@ -715,7 +756,7 @@ def fee_collect(request, pk):
 
 @admin_accounts_required
 def payment_edit(request, pk, payment_id):
-    student = get_object_or_404(Student, pk=pk)
+    student = _get_scoped_student(request.user, pk)
     payment = get_object_or_404(FeePayment, pk=payment_id)
 
     if not (payment.student_fee and payment.student_fee.student == student) and not (payment.fee_charge and payment.fee_charge.student == student):
@@ -782,7 +823,7 @@ def payment_edit(request, pk, payment_id):
 
 @admin_accounts_required
 def payment_delete(request, pk, payment_id):
-    student = get_object_or_404(Student, pk=pk)
+    student = _get_scoped_student(request.user, pk)
     payment = get_object_or_404(FeePayment, pk=payment_id)
 
     if not (payment.student_fee and payment.student_fee.student == student) and not (payment.fee_charge and payment.fee_charge.student == student):
@@ -877,33 +918,65 @@ def payment_adjust(request, pk):
         else:
             target_fee_charge = get_object_or_404(StudentFeeCharge, pk=fee_head_id, student=student)
 
-        FeePayment.objects.create(
-            student_fee=target_student_fee,
-            fee_charge=target_fee_charge,
-            amount=amount,
-            payment_date=payment_date,
-            payment_mode='cash',
-            receipt_number=receipt_number,
-            collected_by=request.user.get_full_name() or request.user.username,
-            remarks=remarks,
-        )
+        idempotency_key = request.POST.get('idempotency_key', '').strip() or uuid.uuid4().hex
+
+        from django.db import transaction, IntegrityError
+        try:
+            with transaction.atomic():
+                # Lock target fee or charge row
+                if target_student_fee:
+                    target_student_fee = StudentFee.objects.select_for_update().get(pk=target_student_fee.pk)
+                elif target_fee_charge:
+                    target_fee_charge = StudentFeeCharge.objects.select_for_update().get(pk=target_fee_charge.pk)
+
+                # Double-submit protection: reject identical submission within 5 seconds + idempotency check
+                recent_window = timezone.now() - timezone.timedelta(seconds=5)
+                recent_duplicate = FeePayment.objects.filter(
+                    amount=amount,
+                    created_at__gte=recent_window,
+                )
+                if target_student_fee:
+                    recent_duplicate = recent_duplicate.filter(student_fee=target_student_fee)
+                elif target_fee_charge:
+                    recent_duplicate = recent_duplicate.filter(fee_charge=target_fee_charge)
+
+                if (idempotency_key and FeePayment.objects.filter(idempotency_key=idempotency_key).exists()) or recent_duplicate.exists():
+                    messages.warning(request, 'A payment adjustment with identical amount and fee head was just processed. Duplicate submission prevented.')
+                    return redirect('fee_detail', pk=pk)
+
+                FeePayment.objects.create(
+                    student_fee=target_student_fee,
+                    fee_charge=target_fee_charge,
+                    amount=amount,
+                    payment_date=payment_date,
+                    payment_mode='cash',
+                    receipt_number=receipt_number,
+                    collected_by=request.user.get_full_name() or request.user.username,
+                    remarks=remarks,
+                    idempotency_key=idempotency_key,
+                )
+        except IntegrityError:
+            messages.warning(request, 'A payment adjustment with identical amount and fee head was just processed. Duplicate submission prevented.')
+            return redirect('fee_detail', pk=pk)
+
         messages.success(request, f'Fee adjustment of ₹{amount} saved! Receipt: {receipt_number}')
         return redirect('fee_detail', pk=pk)
 
+    idempotency_key = uuid.uuid4().hex
     return render(request, 'fees/payment_adjust.html', {
         'student': student,
         'student_fee': student_fee,
         'other_charges': other_charges,
         'active_year': active_year,
         'today': timezone.localdate(),
+        'idempotency_key': idempotency_key,
     })
 
 
 @all_roles_required
 def receipt_download(request, pk, payment_id):
     """Generate and download/view the fee receipt PDF for a payment."""
-    allowed_sections = _get_faculty_sections(request.user)
-    student = get_object_or_404(Student.objects.filter(section__in=allowed_sections), pk=pk)
+    student = _get_scoped_student(request.user, pk)
     payment = get_object_or_404(FeePayment, pk=payment_id)
     if not (payment.student_fee and payment.student_fee.student == student) and not (payment.fee_charge and payment.fee_charge.student == student):
         return HttpResponse("Unauthorized", status=401)
@@ -921,7 +994,7 @@ def receipt_download(request, pk, payment_id):
 def receipt_send_whatsapp(request, pk, payment_id):
     """Generate the fee receipt PDF, upload it, and send it to the student's
     registered mobile number via WhatsApp."""
-    student = get_object_or_404(Student, pk=pk)
+    student = _get_scoped_student(request.user, pk)
     payment = get_object_or_404(FeePayment, pk=payment_id)
     if not (payment.student_fee and payment.student_fee.student == student) and not (payment.fee_charge and payment.fee_charge.student == student):
         return HttpResponse("Unauthorized", status=401)
@@ -979,22 +1052,47 @@ def fee_export(request):
     if year_filter:
         students = students.filter(section__year=year_filter)
 
-    student_ids = list(students.values_list('pk', flat=True))
-    fees_by_student = {
-        sf.student_id: sf
-        for sf in StudentFee.objects.filter(student_id__in=student_ids).prefetch_related('payments')
-    }
+    student_list = list(students)
+    student_ids = [s.pk for s in student_list]
+    student_year_map = {s.pk: (s.academic_year_id or (active_year.pk if active_year else None)) for s in student_list}
+
+    fees_by_student = {}
+    for sf in StudentFee.objects.filter(
+        student_id__in=student_ids
+    ).prefetch_related('payments'):
+        target_ay_id = student_year_map.get(sf.student_id)
+        if target_ay_id and sf.academic_year_id == target_ay_id:
+            fees_by_student[sf.student_id] = sf
+
+    charges_by_student = {}
+    for c in StudentFeeCharge.objects.filter(
+        student_id__in=student_ids
+    ).select_related('fee_type').prefetch_related('payments'):
+        charges_by_student.setdefault(c.student_id, []).append(c)
 
     fee_rows = []
-    for student in students:
+    for student in student_list:
         sf = fees_by_student.get(student.pk)
+        tuition_total = sf.total_fee if sf else Decimal('0.00')
+        tuition_paid = Decimal(str(sf.total_paid)) if sf else Decimal('0.00')
+        tuition_pending = sf.total_pending if sf else Decimal('0.00')
+
+        charges = charges_by_student.get(student.pk, [])
+        charges_total = sum((c.amount_assigned for c in charges), Decimal('0.00'))
+        charges_paid = sum((Decimal(str(c.total_paid)) for c in charges), Decimal('0.00'))
+        charges_pending = sum((c.total_pending for c in charges), Decimal('0.00'))
+
+        combined_total = float(tuition_total + charges_total)
+        combined_paid = float(tuition_paid + charges_paid)
+        combined_pending = float(tuition_pending + charges_pending)
+
         fee_rows.append({
             'name':    student.name,
             'section': str(student.section) if student.section else '—',
             'year':    student.section.get_year_display() if student.section else '—',
-            'total':   float(sf.total_fee) if sf else 0.0,
-            'paid':    float(sf.total_paid) if sf else 0.0,
-            'pending': float(sf.total_pending) if sf else 0.0,
+            'total':   combined_total,
+            'paid':    combined_paid,
+            'pending': combined_pending,
             'phone':   student.mobile or '—',
         })
 
@@ -1221,10 +1319,12 @@ def fee_classifier(request):
         student_ids = [s.pk for s in student_list]
 
         if student_ids:
-            existing_fees = {
-                sf.student_id: sf
-                for sf in StudentFee.objects.filter(student_id__in=student_ids).prefetch_related('payments')
-            }
+            student_year_map = {s.pk: (s.academic_year_id or (active_year.pk if active_year else None)) for s in student_list}
+            existing_fees = {}
+            for sf in StudentFee.objects.filter(student_id__in=student_ids).prefetch_related('payments'):
+                target_ay_id = student_year_map.get(sf.student_id)
+                if target_ay_id and sf.academic_year_id == target_ay_id:
+                    existing_fees[sf.student_id] = sf
             charges_by_student = {}
             for c in StudentFeeCharge.objects.filter(student_id__in=student_ids).prefetch_related('payments'):
                 charges_by_student.setdefault(c.student_id, []).append(c)

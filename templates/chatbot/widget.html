@@ -526,6 +526,26 @@
   text-align: center;
   margin-top: 6px;
 }
+
+/* Draggable Widget Styles */
+.swecha-trigger,
+.swecha-header {
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: grab;
+}
+
+.swecha-trigger:active,
+.swecha-header:active {
+  cursor: grabbing;
+}
+
+.swecha-header-actions button,
+.swecha-header-actions a {
+  cursor: pointer;
+  touch-action: auto;
+}
 </style>
 
 <script>
@@ -772,4 +792,323 @@ function toggleSwechaVoice() {
 
   swechaRecognition.start();
 }
+
+// --- Draggable Swecha Widget IIFE ---
+(function() {
+  const container = document.getElementById('swecha-widget-container');
+  const btn = document.getElementById('swecha-trigger-btn');
+  const win = document.getElementById('swecha-window');
+  if (!container || !btn || !win) return;
+
+  const header = win.querySelector('.swecha-header');
+
+  function clamp(val, min, max) {
+    return Math.min(Math.max(val, min), max);
+  }
+
+  function clampPosition(el, x, y) {
+    const w = el.offsetWidth || 0;
+    const h = el.offsetHeight || 0;
+    const maxX = Math.max(0, window.innerWidth - w);
+    const maxY = Math.max(0, window.innerHeight - h);
+    return {
+      x: clamp(x, 0, maxX),
+      y: clamp(y, 0, maxY)
+    };
+  }
+
+  function getSaved(key) {
+    try {
+      const item = localStorage.getItem(key);
+      if (item) {
+        const parsed = JSON.parse(item);
+        if (parsed && typeof parsed.x === 'number' && typeof parsed.y === 'number') {
+          return parsed;
+        }
+      }
+    } catch (e) {}
+    return null;
+  }
+
+  function setSaved(key, pos) {
+    try {
+      localStorage.setItem(key, JSON.stringify(pos));
+    } catch (e) {}
+  }
+
+  function removeSaved(key) {
+    try {
+      localStorage.removeItem(key);
+    } catch (e) {}
+  }
+
+  // Restore button position on page load
+  const savedBtn = getSaved('swechaBtnPos');
+  if (savedBtn) {
+    const clamped = clampPosition(container, savedBtn.x, savedBtn.y);
+    container.style.left = clamped.x + 'px';
+    container.style.top = clamped.y + 'px';
+    container.style.right = 'auto';
+    container.style.bottom = 'auto';
+  }
+
+  function positionSwechaWindow() {
+    if (!win || win.classList.contains('d-none')) return;
+
+    const savedWin = getSaved('swechaWinPos');
+    if (savedWin) {
+      const clamped = clampPosition(win, savedWin.x, savedWin.y);
+      win.style.left = clamped.x + 'px';
+      win.style.top = clamped.y + 'px';
+      win.style.right = 'auto';
+      win.style.bottom = 'auto';
+      return;
+    }
+
+    // No saved window position. Place relative to button if button was moved
+    const savedBtnPos = getSaved('swechaBtnPos');
+    const btnWasMoved = !!(savedBtnPos || (container.style.left && container.style.left !== 'auto'));
+
+    if (btnWasMoved) {
+      const btnRect = btn.getBoundingClientRect();
+      const winWidth = win.offsetWidth || Math.min(390, window.innerWidth - 32);
+      const winHeight = win.offsetHeight || Math.min(590, window.innerHeight - 120);
+
+      // Right-aligned to the button
+      const targetX = btnRect.right - winWidth;
+
+      // Above if in lower half of screen, below otherwise
+      const screenMidY = window.innerHeight / 2;
+      const btnCenterY = btnRect.top + btnRect.height / 2;
+      let targetY;
+      if (btnCenterY >= screenMidY) {
+        targetY = btnRect.top - winHeight - 12;
+      } else {
+        targetY = btnRect.bottom + 12;
+      }
+
+      const clamped = clampPosition(win, targetX, targetY);
+      win.style.left = clamped.x + 'px';
+      win.style.top = clamped.y + 'px';
+      win.style.right = 'auto';
+      win.style.bottom = 'auto';
+    } else {
+      win.style.left = '';
+      win.style.top = '';
+      win.style.right = '';
+      win.style.bottom = '';
+    }
+  }
+
+  if (win && !win.classList.contains('d-none')) {
+    positionSwechaWindow();
+  }
+
+  // Re-clamp on window resize
+  window.addEventListener('resize', function() {
+    if (container.style.left && container.style.left !== 'auto') {
+      const curX = parseFloat(container.style.left) || 0;
+      const curY = parseFloat(container.style.top) || 0;
+      const clamped = clampPosition(container, curX, curY);
+      container.style.left = clamped.x + 'px';
+      container.style.top = clamped.y + 'px';
+      setSaved('swechaBtnPos', clamped);
+    }
+    if (win && !win.classList.contains('d-none') && win.style.left && win.style.left !== 'auto') {
+      const curX = parseFloat(win.style.left) || 0;
+      const curY = parseFloat(win.style.top) || 0;
+      const clamped = clampPosition(win, curX, curY);
+      win.style.left = clamped.x + 'px';
+      win.style.top = clamped.y + 'px';
+      if (getSaved('swechaWinPos')) {
+        setSaved('swechaWinPos', clamped);
+      }
+    }
+  });
+
+  // Wrap window.toggleSwechaWidget
+  const origToggle = window.toggleSwechaWidget;
+  window.toggleSwechaWidget = function() {
+    if (typeof origToggle === 'function') {
+      origToggle.apply(this, arguments);
+    }
+    if (win && !win.classList.contains('d-none')) {
+      positionSwechaWindow();
+    }
+  };
+
+  // --- Button Dragging Logic ---
+  let btnPointerId = null;
+  let btnStartX = 0;
+  let btnStartY = 0;
+  let btnInitLeft = 0;
+  let btnInitTop = 0;
+  let btnIsDragging = false;
+  let dragJustEnded = false;
+
+  btn.addEventListener('pointerdown', function(e) {
+    if (e.button !== 0 && e.pointerType === 'mouse') return;
+
+    btnPointerId = e.pointerId;
+    btnStartX = e.clientX;
+    btnStartY = e.clientY;
+    btnIsDragging = false;
+
+    const rect = container.getBoundingClientRect();
+    btnInitLeft = rect.left;
+    btnInitTop = rect.top;
+
+    try {
+      btn.setPointerCapture(e.pointerId);
+    } catch (err) {}
+  });
+
+  btn.addEventListener('pointermove', function(e) {
+    if (btnPointerId === null || e.pointerId !== btnPointerId) return;
+
+    const dx = e.clientX - btnStartX;
+    const dy = e.clientY - btnStartY;
+
+    if (!btnIsDragging) {
+      if (Math.hypot(dx, dy) >= 6) {
+        btnIsDragging = true;
+      }
+    }
+
+    if (btnIsDragging) {
+      const rawX = btnInitLeft + dx;
+      const rawY = btnInitTop + dy;
+      const clamped = clampPosition(container, rawX, rawY);
+      container.style.left = clamped.x + 'px';
+      container.style.top = clamped.y + 'px';
+      container.style.right = 'auto';
+      container.style.bottom = 'auto';
+
+      removeSaved('swechaWinPos');
+      if (win && !win.classList.contains('d-none')) {
+        positionSwechaWindow();
+      }
+    }
+  });
+
+  function onBtnPointerEnd(e) {
+    if (btnPointerId === null || e.pointerId !== btnPointerId) return;
+
+    try {
+      btn.releasePointerCapture(e.pointerId);
+    } catch (err) {}
+
+    btnPointerId = null;
+
+    if (btnIsDragging) {
+      btnIsDragging = false;
+      dragJustEnded = true;
+      setTimeout(function() {
+        dragJustEnded = false;
+      }, 120);
+
+      const rect = container.getBoundingClientRect();
+      const clamped = clampPosition(container, rect.left, rect.top);
+      container.style.left = clamped.x + 'px';
+      container.style.top = clamped.y + 'px';
+      container.style.right = 'auto';
+      container.style.bottom = 'auto';
+
+      setSaved('swechaBtnPos', clamped);
+      removeSaved('swechaWinPos');
+
+      if (win && !win.classList.contains('d-none')) {
+        positionSwechaWindow();
+      }
+    }
+  }
+
+  btn.addEventListener('pointerup', onBtnPointerEnd);
+  btn.addEventListener('pointercancel', onBtnPointerEnd);
+
+  // Capture-phase click listener on container to block click right after a drag
+  container.addEventListener('click', function(e) {
+    if (dragJustEnded) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+    }
+  }, true);
+
+  // --- Window Dragging Logic ---
+  if (header) {
+    let winPointerId = null;
+    let winStartX = 0;
+    let winStartY = 0;
+    let winInitLeft = 0;
+    let winInitTop = 0;
+    let winIsDragging = false;
+
+    header.addEventListener('pointerdown', function(e) {
+      if (e.button !== 0 && e.pointerType === 'mouse') return;
+      if (e.target.closest('.swecha-header-actions')) return;
+
+      winPointerId = e.pointerId;
+      winStartX = e.clientX;
+      winStartY = e.clientY;
+      winIsDragging = false;
+
+      const rect = win.getBoundingClientRect();
+      winInitLeft = rect.left;
+      winInitTop = rect.top;
+
+      try {
+        header.setPointerCapture(e.pointerId);
+      } catch (err) {}
+    });
+
+    header.addEventListener('pointermove', function(e) {
+      if (winPointerId === null || e.pointerId !== winPointerId) return;
+
+      const dx = e.clientX - winStartX;
+      const dy = e.clientY - winStartY;
+
+      if (!winIsDragging) {
+        if (Math.hypot(dx, dy) >= 6) {
+          winIsDragging = true;
+        }
+      }
+
+      if (winIsDragging) {
+        const rawX = winInitLeft + dx;
+        const rawY = winInitTop + dy;
+        const clamped = clampPosition(win, rawX, rawY);
+        win.style.left = clamped.x + 'px';
+        win.style.top = clamped.y + 'px';
+        win.style.right = 'auto';
+        win.style.bottom = 'auto';
+      }
+    });
+
+    function onWinPointerEnd(e) {
+      if (winPointerId === null || e.pointerId !== winPointerId) return;
+
+      try {
+        header.releasePointerCapture(e.pointerId);
+      } catch (err) {}
+
+      winPointerId = null;
+
+      if (winIsDragging) {
+        winIsDragging = false;
+        const rect = win.getBoundingClientRect();
+        const clamped = clampPosition(win, rect.left, rect.top);
+        win.style.left = clamped.x + 'px';
+        win.style.top = clamped.y + 'px';
+        win.style.right = 'auto';
+        win.style.bottom = 'auto';
+
+        setSaved('swechaWinPos', clamped);
+      }
+    }
+
+    header.addEventListener('pointerup', onWinPointerEnd);
+    header.addEventListener('pointercancel', onWinPointerEnd);
+  }
+})();
 </script>

@@ -6,7 +6,7 @@ class Student(models.Model):
     admission_number = models.CharField(max_length=20, unique=True)
     hall_ticket_number = models.CharField(max_length=20, blank=True)
     name = models.CharField(max_length=100)
-    father_name = models.CharField(max_length=100)
+    father_name = models.CharField(max_length=100, blank=True)
     mother_name = models.CharField(max_length=100, blank=True)
     mobile = models.CharField(max_length=15)
     second_mobile = models.CharField(max_length=15, blank=True, help_text='Secondary contact number (parent/guardian)')
@@ -34,8 +34,8 @@ class Student(models.Model):
 
     # PROTECT: deleting a Section, Group, or Academic Year is refused if
     # students belong to it — preserving historical student records from accidental deletion.
-    section = models.ForeignKey(Section, on_delete=models.PROTECT, null=True, related_name='students')
-    academic_year = models.ForeignKey(AcademicYear, on_delete=models.PROTECT, null=True)
+    section = models.ForeignKey(Section, on_delete=models.PROTECT, null=True, blank=True, related_name='students')
+    academic_year = models.ForeignKey(AcademicYear, on_delete=models.PROTECT, null=True, blank=True)
 
     date_of_admission = models.DateField(auto_now_add=True)
     is_active = models.BooleanField(default=True)

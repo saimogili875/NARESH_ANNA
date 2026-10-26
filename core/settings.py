@@ -8,7 +8,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Load environment variables from .env file into os.environ
 load_dotenv(BASE_DIR / '.env')
 
-SECRET_KEY = config('SECRET_KEY')
+SECRET_KEY = config('SECRET_KEY', default='django-insecure-naresh-anna-local-dev-fallback-key')
 DEBUG = config('DEBUG', default=False, cast=bool)
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='*').split(',') + ['.onrender.com', 'localhost', '127.0.0.1', '*']
 
@@ -149,7 +149,6 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [BASE_DIR / 'static']
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 WHITENOISE_MANIFEST_STRICT = config('WHITENOISE_MANIFEST_STRICT', default=False, cast=bool)
 
 # --- Cloud Storage (AWS S3) Configuration for Media Files ---
@@ -174,8 +173,6 @@ if HAS_STORAGES and AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY and AWS_STORAGE_
         'CacheControl': 'max-age=86400',
     }
     AWS_QUERYSTRING_AUTH = True
-    
-    DEFAULT_FILE_STORAGE = 'storages.backends.s3.S3Storage'
     
     STORAGES = {
         "default": {
@@ -202,7 +199,6 @@ if HAS_STORAGES and AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY and AWS_STORAGE_
         MEDIA_URL = f'https://{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com/{AWS_LOCATION}/'
     MEDIA_ROOT = BASE_DIR / 'media'
 else:
-    DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
     MEDIA_URL = '/media/'
     MEDIA_ROOT = BASE_DIR / 'media'
     

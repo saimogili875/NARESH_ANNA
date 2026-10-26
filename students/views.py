@@ -64,22 +64,32 @@ def student_list(request):
 
 @admin_accounts_required
 def student_add(request):
-    form = StudentForm(request.POST or None, request.FILES or None)
-    if form.is_valid():
-        form.save()
-        messages.success(request, 'Student added successfully.')
-        return redirect('student_list')
+    if request.method == 'POST':
+        form = StudentForm(request.POST, request.FILES)
+        if form.is_valid():
+            student = form.save()
+            messages.success(request, f'Student "{student.name}" added successfully.')
+            return redirect('student_list')
+        else:
+            messages.error(request, 'Could not save student. Please fix the errors highlighted below.')
+    else:
+        form = StudentForm()
     return render(request, 'students/form.html', {'form': form, 'title': 'Add Student'})
 
 
 @admin_accounts_required
 def student_edit(request, pk):
     obj = get_object_or_404(Student, pk=pk)
-    form = StudentForm(request.POST or None, request.FILES or None, instance=obj)
-    if form.is_valid():
-        form.save()
-        messages.success(request, 'Student updated.')
-        return redirect('student_list')
+    if request.method == 'POST':
+        form = StudentForm(request.POST, request.FILES, instance=obj)
+        if form.is_valid():
+            student = form.save()
+            messages.success(request, f'Student "{student.name}" updated successfully.')
+            return redirect('student_list')
+        else:
+            messages.error(request, 'Could not update student. Please fix the errors highlighted below.')
+    else:
+        form = StudentForm(instance=obj)
     return render(request, 'students/form.html', {'form': form, 'title': 'Edit Student', 'student': obj})
 
 
